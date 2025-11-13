@@ -1,0 +1,1517 @@
+import 'dart:convert';
+import 'dart:io';
+import 'package:http/http.dart' as http;
+
+class ApiService {
+  // Production API URL
+ // static const String baseUrl = 'https://localhost/transport_api/api.php';
+  static const String baseUrl = 'http://localhost:8000/api/v1';
+
+  // Get all trucks
+  static Future<List<dynamic>> getTrucks() async {
+    try {
+      final response = await http.get(Uri.parse('$baseUrl?request=trucks'));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success']) {
+          return data['data'];
+        }
+      }
+      return [];
+    } catch (e) {
+      print('Error fetching trucks: $e');
+      return [];
+    }
+  }
+
+  // Add new truck
+  static Future<Map<String, dynamic>?> addTruck({
+    required String number,
+    required String type,
+    String? supplier,
+    String? location,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl?request=trucks'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'number': number,
+          'type': type,
+          'supplier': supplier,
+          'location': location,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success']) {
+          return data['data'];
+        }
+      }
+      return null;
+    } catch (e) {
+      print('Error adding truck: $e');
+      return null;
+    }
+  }
+
+  // Get all suppliers
+  static Future<List<dynamic>> getSuppliers() async {
+    try {
+      final response = await http.get(Uri.parse('$baseUrl?request=suppliers'));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success']) {
+          return data['data'];
+        }
+      }
+      return [];
+    } catch (e) {
+      print('Error fetching suppliers: $e');
+      return [];
+    }
+  }
+
+  // Add new supplier
+  static Future<Map<String, dynamic>?> addSupplier({
+    required String name,
+    required String phone,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl?request=suppliers'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'name': name,
+          'phone': phone,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success']) {
+          return data['data'];
+        }
+      }
+      return null;
+    } catch (e) {
+      print('Error adding supplier: $e');
+      return null;
+    }
+  }
+
+  // Get truck details
+  static Future<Map<String, dynamic>?> getTruckDetails(int truckId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl?request=truck_details&id=$truckId'),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success']) {
+          return data['data'];
+        }
+      }
+      return null;
+    } catch (e) {
+      print('Error fetching truck details: $e');
+      return null;
+    }
+  }
+
+  // Add new trip
+  static Future<Map<String, dynamic>?> addTrip({
+    required int truckId,
+    required String truckNumber,
+    required String partyName,
+    required String origin,
+    required String destination,
+    required String billingType,
+    required String freightAmount,
+    required String startDate,
+    String? driverName,
+    String? supplierName,
+    String? supplierBillingType,
+    String? truckHireCost,
+    String? rate,
+    String? quantity,
+    String? supplierRate,
+    String? supplierQuantity,
+    bool sendSMS = false,
+  }) async {
+    try {
+      final Map<String, dynamic> tripData = {
+        'truckId': truckId,
+        'truckNumber': truckNumber,
+        'partyName': partyName,
+        'origin': origin,
+        'destination': destination,
+        'billingType': billingType,
+        'freightAmount': freightAmount,
+        'startDate': startDate,
+      };
+
+      if (driverName != null && driverName.isNotEmpty) {
+        tripData['driverName'] = driverName;
+      }
+
+      // Add rate and quantity for Per Ton/Per Kg billing
+      if (rate != null && rate.isNotEmpty) {
+        tripData['rate'] = rate;
+      }
+      if (quantity != null && quantity.isNotEmpty) {
+        tripData['quantity'] = quantity;
+      }
+
+      if (supplierName != null && supplierName.isNotEmpty) {
+        tripData['supplierName'] = supplierName;
+        tripData['supplierBillingType'] = supplierBillingType;
+        tripData['truckHireCost'] = truckHireCost;
+        tripData['sendSMS'] = sendSMS;
+
+        // Add supplier rate and quantity for Per Ton/Per Kg billing
+        if (supplierRate != null && supplierRate.isNotEmpty) {
+          tripData['supplierRate'] = supplierRate;
+        }
+        if (supplierQuantity != null && supplierQuantity.isNotEmpty) {
+          tripData['supplierQuantity'] = supplierQuantity;
+        }
+      }
+
+      final response = await http.post(
+        Uri.parse('$baseUrl?request=trips'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(tripData),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success']) {
+          return data['data'];
+        }
+      }
+      return null;
+    } catch (e) {
+      print('Error adding trip: $e');
+      return null;
+    }
+  }
+
+  // Get all cities
+  static Future<List<String>> getCities() async {
+    try {
+      final response = await http.get(Uri.parse('$baseUrl?request=cities'));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success']) {
+          return List<String>.from(data['data']);
+        }
+      }
+      return [];
+    } catch (e) {
+      print('Error fetching cities: $e');
+      return [];
+    }
+  }
+
+  // Get expenses by truck ID
+  static Future<List<dynamic>> getExpenses(int truckId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl?request=expenses&truckId=$truckId'),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success']) {
+          return data['data'];
+        }
+      }
+      return [];
+    } catch (e) {
+      print('Error fetching expenses: $e');
+      return [];
+    }
+  }
+
+  // Add new expense
+  static Future<Map<String, dynamic>?> addExpense(Map<String, dynamic> expenseData) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl?request=expenses'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(expenseData),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success']) {
+          return data['data'];
+        }
+      }
+      return null;
+    } catch (e) {
+      print('Error adding expense: $e');
+      return null;
+    }
+  }
+
+  // Get documents by truck ID
+  static Future<List<dynamic>> getDocuments(int truckId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl?request=documents&truckId=$truckId'),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success']) {
+          return data['data'];
+        }
+      }
+      return [];
+    } catch (e) {
+      print('Error fetching documents: $e');
+      return [];
+    }
+  }
+
+  // Add new document
+  static Future<Map<String, dynamic>?> addDocument({
+    required int truckId,
+    required String name,
+    required String expiryDate,
+    String? documentNumber,
+    String? issueDate,
+    String? imagePath,
+    String status = 'Active',
+  }) async {
+    try {
+      // Use multipart request to upload image
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$baseUrl?request=documents'),
+      );
+
+      // Add text fields
+      request.fields['truckId'] = truckId.toString();
+      request.fields['name'] = name;
+      request.fields['expiryDate'] = expiryDate;
+      request.fields['status'] = status;
+
+      if (documentNumber != null) {
+        request.fields['documentNumber'] = documentNumber;
+      }
+
+      if (issueDate != null) {
+        request.fields['issueDate'] = issueDate;
+      }
+
+      // Add image file if provided
+      if (imagePath != null && imagePath.isNotEmpty) {
+        final file = File(imagePath);
+        if (await file.exists()) {
+          final multipartFile = await http.MultipartFile.fromPath(
+            'image',
+            imagePath,
+          );
+          request.files.add(multipartFile);
+        }
+      }
+
+      // Send request
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success']) {
+          return data['data'];
+        }
+      }
+      return null;
+    } catch (e) {
+      print('Error adding document: $e');
+      return null;
+    }
+  }
+
+  // Get EMIs by truck ID
+  static Future<List<dynamic>> getEmis(int truckId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl?request=emis&truckId=$truckId'),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success']) {
+          return data['data'];
+        }
+      }
+      return [];
+    } catch (e) {
+      print('Error fetching EMIs: $e');
+      return [];
+    }
+  }
+
+  // Add new EMI
+  static Future<Map<String, dynamic>?> addEmi({
+    required int truckId,
+    required String loanProvider,
+    required String loanAmount,
+    required String emiAmount,
+    required String totalEmis,
+    required String nextDueDate,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl?request=emis'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'truckId': truckId,
+          'loanProvider': loanProvider,
+          'loanAmount': loanAmount,
+          'emiAmount': emiAmount,
+          'totalEmis': totalEmis,
+          'nextDueDate': nextDueDate,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success']) {
+          return data['data'];
+        }
+      }
+      return null;
+    } catch (e) {
+      print('Error adding EMI: $e');
+      return null;
+    }
+  }
+
+  // Get all trips
+  static Future<List<dynamic>> getAllTrips() async {
+    try {
+      final response = await http.get(Uri.parse('$baseUrl?request=trips'));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success']) {
+          return data['data'] as List;
+        }
+      }
+      return [];
+    } catch (e) {
+      print('Error fetching trips: $e');
+      return [];
+    }
+  }
+
+  // Get trips by truck ID
+  static Future<List<dynamic>> getTripsByTruck(int truckId) async {
+    try {
+      final response = await http.get(Uri.parse('$baseUrl?request=trips'));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success']) {
+          final allTrips = data['data'] as List;
+          return allTrips.where((trip) => trip['truckId'] == truckId).toList();
+        }
+      }
+      return [];
+    } catch (e) {
+      print('Error fetching trips: $e');
+      return [];
+    }
+  }
+
+  // Get trip details by trip ID
+  static Future<Map<String, dynamic>?> getTripDetails(int tripId) async {
+    try {
+      final response = await http.get(Uri.parse('$baseUrl?request=trip_details&id=$tripId'));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success']) {
+          return data['data'];
+        }
+      }
+      return null;
+    } catch (e) {
+      print('Error fetching trip details: $e');
+      return null;
+    }
+  }
+
+  // Add note to trip
+  static Future<Map<String, dynamic>?> addTripNote({
+    required int tripId,
+    required String note,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl?request=trip_note'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'tripId': tripId,
+          'note': note,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success']) {
+          return data['data'];
+        }
+      }
+      return null;
+    } catch (e) {
+      print('Error adding trip note: $e');
+      return null;
+    }
+  }
+
+  // Add trip expense
+  static Future<Map<String, dynamic>?> addTripExpense({
+    required int tripId,
+    required String expenseType,
+    required String amount,
+    required String date,
+    required String paymentMode,
+    String? notes,
+    String? imagePath,
+  }) async {
+    try {
+      // Use multipart request to upload image
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$baseUrl?request=trip_expense'),
+      );
+
+      // Add text fields
+      request.fields['tripId'] = tripId.toString();
+      request.fields['expenseType'] = expenseType;
+      request.fields['amount'] = amount;
+      request.fields['date'] = date;
+      request.fields['paymentMode'] = paymentMode;
+
+      if (notes != null) {
+        request.fields['notes'] = notes;
+      }
+
+      // Add image file if provided
+      if (imagePath != null && imagePath.isNotEmpty) {
+        final file = File(imagePath);
+        if (await file.exists()) {
+          final multipartFile = await http.MultipartFile.fromPath(
+            'image',
+            imagePath,
+          );
+          request.files.add(multipartFile);
+        }
+      }
+
+      // Send request
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success']) {
+          return data['data'];
+        }
+      }
+      return null;
+    } catch (e) {
+      print('Error adding trip expense: $e');
+      return null;
+    }
+  }
+
+  // Add driver transaction (gave/got)
+  static Future<Map<String, dynamic>?> addDriverTransaction({
+    required int tripId,
+    required String type, // 'gave' or 'got'
+    required String amount,
+    required String reason,
+    required String date,
+    String? note,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl?request=driver_transaction'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'tripId': tripId,
+          'type': type,
+          'amount': amount,
+          'reason': reason,
+          'date': date,
+          'note': note,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success']) {
+          return data['data'];
+        }
+      }
+      return null;
+    } catch (e) {
+      print('Error adding driver transaction: $e');
+      return null;
+    }
+  }
+
+  // Get all parties
+  static Future<List<dynamic>> getParties() async {
+    try {
+      final response = await http.get(Uri.parse('$baseUrl?request=parties'));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success']) {
+          return data['data'] as List;
+        }
+      }
+      return [];
+    } catch (e) {
+      print('Error fetching parties: $e');
+      return [];
+    }
+  }
+
+  // Add new party
+  static Future<Map<String, dynamic>?> addParty({
+    required String name,
+    required String phone,
+    String? email,
+    String? address,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl?request=parties'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'name': name,
+          'phone': phone,
+          'email': email,
+          'address': address,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success']) {
+          return data['data'];
+        }
+      }
+      return null;
+    } catch (e) {
+      print('Error adding party: $e');
+      return null;
+    }
+  }
+
+  // Get all invoices
+  static Future<List<dynamic>> getInvoices() async {
+    try {
+      final response = await http.get(Uri.parse('$baseUrl?request=invoices'));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success']) {
+          return data['data'] as List;
+        }
+      }
+      return [];
+    } catch (e) {
+      print('Error fetching invoices: $e');
+      return [];
+    }
+  }
+
+  // Get invoice by ID
+  static Future<Map<String, dynamic>?> getInvoiceById(int invoiceId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl?request=invoices&id=$invoiceId'),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success']) {
+          return data['data'];
+        }
+      }
+      return null;
+    } catch (e) {
+      print('Error fetching invoice: $e');
+      return null;
+    }
+  }
+
+  // Create new invoice
+  static Future<Map<String, dynamic>?> createInvoice({
+    required String partyName,
+    required String partyAddress,
+    required String partyGST,
+    required String invoiceDate,
+    required String dueDate,
+    required double totalAmount,
+    required List<Map<String, dynamic>> trips,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl?request=invoices'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'partyName': partyName,
+          'partyAddress': partyAddress,
+          'partyGST': partyGST,
+          'invoiceDate': invoiceDate,
+          'dueDate': dueDate,
+          'totalAmount': totalAmount,
+          'trips': trips,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success']) {
+          return data['data'];
+        }
+      }
+      return null;
+    } catch (e) {
+      print('Error creating invoice: $e');
+      return null;
+    }
+  }
+
+  // Get all collection reminders
+  static Future<List<dynamic>> getCollectionReminders() async {
+    try {
+      final response = await http.get(Uri.parse('$baseUrl?request=collection_reminders'));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success']) {
+          return data['data'] as List;
+        }
+      }
+      return [];
+    } catch (e) {
+      print('Error fetching collection reminders: $e');
+      return [];
+    }
+  }
+
+  // Get collection reminder by ID
+  static Future<Map<String, dynamic>?> getCollectionReminderById(int reminderId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl?request=collection_reminders&id=$reminderId'),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success']) {
+          return data['data'];
+        }
+      }
+      return null;
+    } catch (e) {
+      print('Error fetching collection reminder: $e');
+      return null;
+    }
+  }
+
+  // Send collection reminder
+  static Future<bool> sendCollectionReminder(int reminderId) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl?request=collection_reminders'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'id': reminderId,
+          'action': 'send_reminder',
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return data['success'] ?? false;
+      }
+      return false;
+    } catch (e) {
+      print('Error sending collection reminder: $e');
+      return false;
+    }
+  }
+
+  // Create collection reminder
+  static Future<Map<String, dynamic>?> createCollectionReminder({
+    required String partyName,
+    required String partyPhone,
+    required String partyEmail,
+    required double outstandingAmount,
+    required String dueDate,
+    required int daysPastDue,
+    required String invoiceNumber,
+    String? notes,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl?request=collection_reminders'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'partyName': partyName,
+          'partyPhone': partyPhone,
+          'partyEmail': partyEmail,
+          'outstandingAmount': outstandingAmount,
+          'dueDate': dueDate,
+          'daysPastDue': daysPastDue,
+          'invoiceNumber': invoiceNumber,
+          'notes': notes,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success']) {
+          return data['data'];
+        }
+      }
+      return null;
+    } catch (e) {
+      print('Error creating collection reminder: $e');
+      return null;
+    }
+  }
+
+  // Get all drivers
+  static Future<List<dynamic>> getDrivers() async {
+    try {
+      final response = await http.get(Uri.parse('$baseUrl?request=drivers'));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success']) {
+          return data['data'] as List;
+        }
+      }
+      return [];
+    } catch (e) {
+      print('Error fetching drivers: $e');
+      return [];
+    }
+  }
+
+  // Add new driver
+  static Future<Map<String, dynamic>?> addDriver({
+    required String name,
+    required String phone,
+    double openingBalance = 0.0,
+    bool enableSMS = false,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl?request=drivers'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'name': name,
+          'phone': phone,
+          'openingBalance': openingBalance,
+          'enableSMS': enableSMS,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success']) {
+          return data['data'];
+        }
+      }
+      return null;
+    } catch (e) {
+      print('Error adding driver: $e');
+      return null;
+    }
+  }
+
+  // Get driver details by ID
+  static Future<Map<String, dynamic>?> getDriverDetails(int driverId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl?request=driver_details&id=$driverId'),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success']) {
+          return data['data'];
+        }
+      }
+      return null;
+    } catch (e) {
+      print('Error fetching driver details: $e');
+      return null;
+    }
+  }
+
+  // Add driver balance transaction (gave/got)
+  static Future<Map<String, dynamic>?> addDriverBalanceTransaction({
+    required int driverId,
+    required String type, // 'gave' or 'got'
+    required String amount,
+    required String reason,
+    required String date,
+    String? note,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl?request=driver_balance_transaction'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'driverId': driverId,
+          'type': type,
+          'amount': amount,
+          'reason': reason,
+          'date': date,
+          'note': note,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success']) {
+          return data['data'];
+        }
+      }
+      return null;
+    } catch (e) {
+      print('Error adding driver balance transaction: $e');
+      return null;
+    }
+  }
+
+  // Get all shops
+  static Future<List<dynamic>> getShops() async {
+    try {
+      final response = await http.get(Uri.parse('$baseUrl?request=shops'));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success']) {
+          return data['data'] as List;
+        }
+      }
+      return [];
+    } catch (e) {
+      print('Error fetching shops: $e');
+      return [];
+    }
+  }
+
+  // Add new shop
+  static Future<Map<String, dynamic>?> addShop({
+    required String name,
+    required String phone,
+    double openingBalance = 0.0,
+    bool enableSMS = false,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl?request=shops'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'name': name,
+          'phone': phone,
+          'openingBalance': openingBalance,
+          'enableSMS': enableSMS,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success']) {
+          return data['data'];
+        }
+      }
+      return null;
+    } catch (e) {
+      print('Error adding shop: $e');
+      return null;
+    }
+  }
+
+  // Get shop details by ID
+  static Future<Map<String, dynamic>?> getShopDetails(int shopId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl?request=shop_details&id=$shopId'),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success']) {
+          return data['data'];
+        }
+      }
+      return null;
+    } catch (e) {
+      print('Error fetching shop details: $e');
+      return null;
+    }
+  }
+
+  // Add shop transaction (credit/payment)
+  static Future<Map<String, dynamic>?> addShopTransaction({
+    required int shopId,
+    required String type, // 'credit' or 'payment'
+    required String amount,
+    required String reason,
+    required String date,
+    String? note,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl?request=shop_transaction'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'shopId': shopId,
+          'type': type,
+          'amount': amount,
+          'reason': reason,
+          'date': date,
+          'note': note,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success']) {
+          return data['data'];
+        }
+      }
+      return null;
+    } catch (e) {
+      print('Error adding shop transaction: $e');
+      return null;
+    }
+  }
+
+  // Get my expenses (filtered by category and optional date range)
+  static Future<List<dynamic>> getMyExpenses({
+    String? category, // 'truck_expense', 'trip_expense', 'office_expense'
+    String? startDate,
+    String? endDate,
+  }) async {
+    try {
+      String url = '$baseUrl?request=my_expenses';
+      if (category != null) {
+        url += '&category=$category';
+      }
+      if (startDate != null) {
+        url += '&startDate=$startDate';
+      }
+      if (endDate != null) {
+        url += '&endDate=$endDate';
+      }
+
+      final response = await http.get(Uri.parse(url));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success']) {
+          return data['data'] as List;
+        }
+      }
+      return [];
+    } catch (e) {
+      print('Error fetching my expenses: $e');
+      return [];
+    }
+  }
+
+  // Add my expense
+  static Future<Map<String, dynamic>?> addMyExpense({
+    required String category, // 'truck_expense', 'trip_expense', 'office_expense'
+    required String expenseType,
+    required String amount,
+    required String paymentMode,
+    required String date,
+    String? truckNumber,
+    int? tripId,
+    String? note,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl?request=my_expenses'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'category': category,
+          'expenseType': expenseType,
+          'amount': amount,
+          'paymentMode': paymentMode,
+          'date': date,
+          'truckNumber': truckNumber,
+          'tripId': tripId,
+          'note': note,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success']) {
+          return data['data'];
+        }
+      }
+      return null;
+    } catch (e) {
+      print('Error adding my expense: $e');
+      return null;
+    }
+  }
+
+  // Start Trip
+  static Future<bool> startTrip({
+    required int tripId,
+    required String tripStartDate,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl?request=start_trip'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'tripId': tripId,
+          'tripStartDate': tripStartDate,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return data['success'] ?? false;
+      }
+      return false;
+    } catch (e) {
+      print('Error starting trip: $e');
+      return false;
+    }
+  }
+
+  // Complete Trip
+  static Future<bool> completeTrip({
+    required int tripId,
+    required String tripEndDate,
+    required String totalKm,
+  }) async {
+    try {
+      print('=== COMPLETE TRIP REQUEST ===');
+      print('Trip ID: $tripId');
+      print('Trip End Date: $tripEndDate');
+      print('Total KM: $totalKm');
+
+      final response = await http.post(
+        Uri.parse('$baseUrl?request=complete_trip'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'tripId': tripId,
+          'tripEndDate': tripEndDate,
+          'totalKm': totalKm,
+        }),
+      );
+
+      print('Response status code: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final success = data['success'] ?? false;
+        print('Complete Trip success: $success');
+        if (data['message'] != null) {
+          print('Message: ${data['message']}');
+        }
+        if (!success && data['error'] != null) {
+          print('Error: ${data['error']}');
+        }
+        return success;
+      }
+      return false;
+    } catch (e) {
+      print('Error completing trip: $e');
+      return false;
+    }
+  }
+
+  // POD Received
+  static Future<bool> podReceived({
+    required int tripId,
+    required String podReceivedDate,
+    required List<String> podPhotos,
+  }) async {
+    try {
+      print('=== POD RECEIVED REQUEST ===');
+      print('Trip ID: $tripId');
+      print('POD Received Date: $podReceivedDate');
+      print('Number of photos: ${podPhotos.length}');
+
+      // Use multipart request to upload multiple images
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$baseUrl?request=pod_received'),
+      );
+
+      // Add text fields
+      request.fields['tripId'] = tripId.toString();
+      request.fields['podReceivedDate'] = podReceivedDate;
+
+      print('Request fields: ${request.fields}');
+
+      // Add multiple image files
+      for (int i = 0; i < podPhotos.length; i++) {
+        final imagePath = podPhotos[i];
+        if (imagePath.isNotEmpty) {
+          final file = File(imagePath);
+          if (await file.exists()) {
+            final multipartFile = await http.MultipartFile.fromPath(
+              'podPhotos[]', // Use array notation for multiple files
+              imagePath,
+            );
+            request.files.add(multipartFile);
+            print('Added photo $i: $imagePath');
+          } else {
+            print('Photo $i file does not exist: $imagePath');
+          }
+        }
+      }
+
+      print('Total files attached: ${request.files.length}');
+
+      // Send request
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      print('Response status code: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final success = data['success'] ?? false;
+        print('POD Received success: $success');
+        if (data['message'] != null) {
+          print('Message: ${data['message']}');
+        }
+        if (!success && data['error'] != null) {
+          print('Error: ${data['error']}');
+        }
+        return success;
+      }
+      print('Request failed with status code: ${response.statusCode}');
+      return false;
+    } catch (e) {
+      print('Error marking POD received: $e');
+      return false;
+    }
+  }
+
+  // POD Submitted
+  static Future<bool> podSubmitted({
+    required int tripId,
+    required String podSubmittedDate,
+  }) async {
+    try {
+      print('=== POD SUBMITTED REQUEST ===');
+      print('Trip ID: $tripId');
+      print('POD Submitted Date: $podSubmittedDate');
+
+      final response = await http.post(
+        Uri.parse('$baseUrl?request=pod_submitted'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'tripId': tripId,
+          'podSubmittedDate': podSubmittedDate,
+        }),
+      );
+
+      print('Response status code: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final success = data['success'] ?? false;
+        print('POD Submitted success: $success');
+        if (data['message'] != null) {
+          print('Message: ${data['message']}');
+        }
+        if (!success && data['error'] != null) {
+          print('Error: ${data['error']}');
+        }
+        return success;
+      }
+      return false;
+    } catch (e) {
+      print('Error submitting POD: $e');
+      return false;
+    }
+  }
+
+  // Settle Trip
+  static Future<bool> settleTrip({
+    required int tripId,
+    required String settleAmount,
+    required String settlePaymentMode,
+    required String settleDate,
+    String? settleNotes,
+  }) async {
+    try {
+      print('=== SETTLE TRIP REQUEST ===');
+      print('Trip ID: $tripId');
+      print('Settle Amount: $settleAmount');
+      print('Payment Mode: $settlePaymentMode');
+      print('Settle Date: $settleDate');
+      print('Notes: $settleNotes');
+
+      final response = await http.post(
+        Uri.parse('$baseUrl?request=settle_trip'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'tripId': tripId,
+          'settleAmount': settleAmount,
+          'settlePaymentMode': settlePaymentMode,
+          'settleDate': settleDate,
+          'settleNotes': settleNotes,
+        }),
+      );
+
+      print('Response status code: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final success = data['success'] ?? false;
+        print('Settle Trip success: $success');
+        if (data['message'] != null) {
+          print('Message: ${data['message']}');
+        }
+        if (!success && data['error'] != null) {
+          print('Error: ${data['error']}');
+        }
+        return success;
+      }
+      return false;
+    } catch (e) {
+      print('Error settling trip: $e');
+      return false;
+    }
+  }
+
+  // Verify Phone Number
+  static Future<Map<String, dynamic>> verifyPhone(String phone) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl?request=verify_phone'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'phone': phone}),
+      );
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      }
+      return {'success': false, 'message': 'Network error'};
+    } catch (e) {
+      print('Error verifying phone: $e');
+      return {'success': false, 'message': 'Network error'};
+    }
+  }
+
+  // Verify OTP
+  static Future<Map<String, dynamic>> verifyOTP(String phone, String otp) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl?request=verify_otp'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'phone': phone, 'otp': otp}),
+      );
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      }
+      return {'success': false, 'message': 'Network error'};
+    } catch (e) {
+      print('Error verifying OTP: $e');
+      return {'success': false, 'message': 'Network error'};
+    }
+  }
+
+  // Add supplier payment with covered trips
+  static Future<Map<String, dynamic>?> addSupplierPayment({
+    required int supplierId,
+    required String supplierName,
+    required double amount,
+    required String paymentMethod,
+    required String date,
+    String? note,
+    List<int>? coveredTripIds,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl?request=supplier_payment'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'supplierId': supplierId,
+          'supplierName': supplierName,
+          'amount': amount,
+          'paymentMethod': paymentMethod,
+          'date': date,
+          'note': note,
+          'coveredTripIds': coveredTripIds ?? [],
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success']) {
+          return data['data'];
+        }
+      }
+      return null;
+    } catch (e) {
+      print('Error adding supplier payment: $e');
+      return null;
+    }
+  }
+
+  // Get truck revenue report
+  static Future<Map<String, dynamic>?> getTruckRevenueReport() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl?request=truck_revenue_report'),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success']) {
+          return data['data'];
+        }
+      }
+      return null;
+    } catch (e) {
+      print('Error fetching truck revenue report: $e');
+      return null;
+    }
+  }
+
+  // Get party revenue report
+  static Future<Map<String, dynamic>?> getPartyRevenueReport() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl?request=party_revenue_report'),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success']) {
+          return data['data'];
+        }
+      }
+      return null;
+    } catch (e) {
+      print('Error fetching party revenue report: $e');
+      return null;
+    }
+  }
+
+  // Get profit/loss report
+  static Future<Map<String, dynamic>?> getProfitLossReport() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl?request=profit_loss_report'),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success']) {
+          return data['data'];
+        }
+      }
+      return null;
+    } catch (e) {
+      print('Error fetching profit/loss report: $e');
+      return null;
+    }
+  }
+
+  // Update truck
+  static Future<bool> updateTruck({
+    required int truckId,
+    required String truckNumber,
+  }) async {
+    try {
+      final response = await http.put(
+        Uri.parse('$baseUrl?request=trucks'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'id': truckId,
+          'truckNumber': truckNumber,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return data['success'] ?? false;
+      }
+      return false;
+    } catch (e) {
+      print('Error updating truck: $e');
+      return false;
+    }
+  }
+
+  // Update trip
+  static Future<bool> updateTrip({
+    required int tripId,
+    required String origin,
+    required String destination,
+    required String startDate,
+    required String endDate,
+    required String lrNumber,
+    required String freightAmount,
+  }) async {
+    try {
+      final response = await http.put(
+        Uri.parse('$baseUrl?request=trips'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'id': tripId,
+          'origin': origin,
+          'destination': destination,
+          'startDate': startDate,
+          'endDate': endDate,
+          'lrNumber': lrNumber,
+          'freightAmount': freightAmount,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return data['success'] ?? false;
+      }
+      return false;
+    } catch (e) {
+      print('Error updating trip: $e');
+      return false;
+    }
+  }
+}

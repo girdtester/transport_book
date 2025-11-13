@@ -1,0 +1,98 @@
+ TransportBook is a comprehensive transport management system for managing trucks, trips, parties (customers), suppliers, drivers, expenses, and
+  billing.
+
+  Key Features Identified:
+
+  1. Authentication - Phone + OTP verification
+  2. Trip Management - Create, track, and settle trips
+  3. Party Management - Customer ledger with balance tracking
+  4. Truck Management - Own trucks and Market trucks (rented)
+  5. Supplier Management - Track truck suppliers
+  6. Driver Management - Driver accounts with balance tracking
+  7. Shop Management - Shop ledger with balance tracking
+  8. Expense Tracking - Truck, trip, and office expenses
+  9. Document Management - Truck documents (insurance, permits, etc.)
+  10. EMI Tracking - Loan EMI management
+  11. Invoice Generation - Digital invoices with PDF export
+  12. Collection Reminders - Payment reminder system
+  13. Reports - Revenue reports by truck and party
+
+  All Screens Identified (47 screens):
+
+  Auth Screens:
+  - login_screen.dart (lib/features/auth/screens)
+  - otp_verification_screen.dart
+
+  Dashboard:
+  - dashboard_screen.dart (lib/features/dashboard/screens)
+
+  Party Screens:
+  - party_khata_screen.dart (lib/features/party/screens)
+  - party_detail_screen.dart
+  - party_trips_screen.dart
+  - party_balance_detail_screen.dart
+  - party_ledger_pdf_screen.dart
+
+  Trip Screens:
+  - add_trip_screen.dart (lib/features/trips/screens)
+  - add_trip_from_dashboard_screen.dart
+  - my_trips_screen.dart
+  - trip_details_screen.dart
+  - trip_bill_screen.dart
+  - trip_book_screen.dart
+  - unpaid_trips_screen.dart
+  - pod_trips_screen.dart
+
+  Truck Screens:
+  - my_trucks_screen.dart (lib/features/trucks/screens)
+  - truck_details_screen.dart
+
+  Supplier Screens:
+  - supplier_khata_screen.dart (lib/features/supplier/screens)
+  - supplier_detail_screen.dart
+  - supplier_trips_screen.dart
+  - supplier_reports_screen.dart
+
+  Driver Screens:
+  - driver_khata_screen.dart (lib/features/driver/screens)
+  - driver_detail_screen.dart
+  - driver_report_screen.dart
+
+  Shop Screens:
+  - shop_khata_screen.dart (lib/features/shop/screens)
+  - shop_detail_screen.dart
+  - shop_report_screen.dart
+
+  Expense Screens:
+  - expense_list_screen.dart (lib/features/expenses/screens)
+  - add_expense_screen.dart
+  - my_expenses_screen.dart
+  - add_my_expense_screen.dart
+
+  Document Screens:
+  - documents_screen.dart (lib/features/documents/screens)
+  - add_document_screen.dart
+  - documents_book_screen.dart
+
+  EMI Screens:
+  - emi_book_screen.dart (lib/features/emi/screens)
+
+  Invoice Screens:
+  - digital_invoice_list_screen.dart (lib/features/invoices/screens)
+  - invoice_details_screen.dart
+  - invoice_pdf_screen.dart
+
+  Collection Reminder Screens:
+  - collection_reminder_list_screen.dart (lib/features/collection_reminders/screens)
+  - collection_reminder_details_screen.dart
+
+  Report Screens:
+  - reports_screen.dart (lib/features/reports/screens)
+  - truck_revenue_report_screen.dart
+  - party_revenue_report_screen.dart
+  - balance_report_screen.dart (lib/features/balance_report/screens)
+
+  Profile:
+  - profile_screen.dart (lib/features/profile/screens)
+
+  ---
