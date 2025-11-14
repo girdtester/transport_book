@@ -212,13 +212,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
               title: 'Active Trips',
               value: _isLoading ? '...' : _activeTripsCount.toString(),
               valueColor: const Color(0xFF4CAF50),
-              onTap: () {
-                Navigator.push(
+              onTap: () async {
+                await Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (context) => const MyTripsScreen(),
                   ),
                 );
+                _loadDashboardData();
               },
             ),
             const SizedBox(height: 12),
@@ -229,13 +230,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
               title: 'Inactive Trucks',
               value: _isLoading ? '...' : _inactiveTrucksCount.toString(),
               valueColor: const Color(0xFFF44336),
-              onTap: () {
-                Navigator.push(
+              onTap: () async {
+                await Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (context) => const MyTrucksScreen(),
                   ),
                 );
+                _loadDashboardData();
               },
             ),
             const SizedBox(height: 12),
@@ -246,13 +248,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
               title: 'Party Balance',
               value: _isLoading ? '...' : _formatCurrency(_partyBalance),
               valueColor: const Color(0xFF2196F3),
-              onTap: () {
-                Navigator.push(
+              onTap: () async {
+                await Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (context) => const PartyKhataScreen(),
                   ),
                 );
+                _loadDashboardData();
               },
             ),
             const SizedBox(height: 12),
@@ -263,13 +266,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
               title: 'Truck Suppliers',
               value: _isLoading ? '...' : _formatCurrency(_supplierBalance),
               valueColor: const Color(0xFF9C27B0),
-              onTap: () {
-                Navigator.push(
+              onTap: () async {
+                await Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (context) => const SupplierKhataScreen(),
                   ),
                 );
+                _loadDashboardData();
               },
             ),
 
@@ -296,13 +300,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     bgColor: Colors.white,
                     textColor: Colors.black87,
                     borderColor: const Color(0xFF4CAF50),
-                    onTap: () {
-                      Navigator.push(
+                    onTap: () async {
+                      await Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (context) => const AddTripFromDashboardScreen(),
                         ),
                       );
+                      _loadDashboardData();
                     },
                   ),
                 ),
@@ -314,13 +319,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     bgColor: Colors.white,
                     textColor: Colors.black87,
                     borderColor: Colors.grey.shade300,
-                    onTap: () {
-                      Navigator.push(
+                    onTap: () async {
+                      await Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (context) => const MyExpensesScreen(),
                         ),
                       );
+                      _loadDashboardData();
                     },
                   ),
                 ),
@@ -336,13 +342,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     bgColor: Colors.white,
                     textColor: Colors.black87,
                     borderColor: Colors.grey.shade300,
-                    onTap: () {
-                      Navigator.push(
+                    onTap: () async {
+                      await Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (context) => const DriverKhataScreen(),
                         ),
                       );
+                      _loadDashboardData();
                     },
                   ),
                 ),
@@ -354,13 +361,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     bgColor: Colors.white,
                     textColor: Colors.black87,
                     borderColor: Colors.grey.shade300,
-                    onTap: () {
-                      Navigator.push(
+                    onTap: () async {
+                      await Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (context) => const ReportsScreen(),
                         ),
                       );
+                      _loadDashboardData();
                     },
                   ),
                 ),

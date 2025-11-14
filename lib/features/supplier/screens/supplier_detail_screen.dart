@@ -79,24 +79,29 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> with Single
         return supplierName == supplier['name'] && truckType == 'Market';
       }).toList();
 
-      // Calculate balance from unsettled trips
-      double balance = 0.0;
-      for (var trip in supplierTrips) {
-        final status = trip['status']?.toString() ?? '';
-        if (status != 'Settled') {
-          balance += double.tryParse(trip['truckHireCost']?.toString() ?? '0') ?? 0.0;
-        }
-      }
-
       // Load supplier transactions (advances, charges, payments)
       final transactionsData = await ApiService.getSupplierTransactions(widget.supplierId);
       final transactions = transactionsData?['transactions'] as List? ?? [];
+
+      // Use API's calculated balance (includes hire cost + charges - advances - payments)
+      final apiBalance = transactionsData?['supplierBalance'] as double? ?? 0.0;
+
+      // Fallback: Calculate balance from unsettled trips if API balance not available
+      double fallbackBalance = 0.0;
+      for (var trip in supplierTrips) {
+        final status = trip['status']?.toString() ?? '';
+        if (status != 'Settled') {
+          fallbackBalance += double.tryParse(trip['truckHireCost']?.toString() ?? '0') ?? 0.0;
+        }
+      }
+
+      final calculatedBalance = apiBalance != 0.0 ? apiBalance : fallbackBalance;
 
       setState(() {
         _supplierData = {
           'id': widget.supplierId,
           'name': supplier['name'],
-          'balance': balance,
+          'balance': calculatedBalance,
           'phone': supplier['phone'] ?? '',
         };
         _supplierTrips = supplierTrips;

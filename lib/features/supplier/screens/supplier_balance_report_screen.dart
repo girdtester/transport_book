@@ -51,6 +51,7 @@ class _SupplierBalanceReportScreenState extends State<SupplierBalanceReportScree
       List<Map<String, dynamic>> reportData = [];
 
       for (var supplier in widget.suppliers) {
+        final supplierId = supplier['id'] as int?;
         final supplierName = supplier['name']?.toString() ?? '';
         final supplierPhone = supplier['phone']?.toString() ?? '';
         final balance = double.tryParse(supplier['balance']?.toString() ?? '0') ?? 0.0;
@@ -58,22 +59,61 @@ class _SupplierBalanceReportScreenState extends State<SupplierBalanceReportScree
         // Only include suppliers with non-zero balance
         if (balance <= 0) continue;
 
-        // Filter unsettled trips for this supplier (market trucks only)
-        final supplierTrips = allTrips.where((trip) {
-          final tripSupplierName = trip['supplierName']?.toString() ?? '';
-          final status = trip['status']?.toString() ?? '';
-          final truckType = trip['truckType']?.toString() ?? '';
-          return tripSupplierName == supplierName &&
-                 status != 'Settled' &&
-                 truckType == 'Market';
-        }).toList();
+        // Load transactions for this supplier
+        Map<String, dynamic>? transactionData;
+        List<dynamic> transactions = [];
+
+        if (supplierId != null) {
+          transactionData = await ApiService.getSupplierTransactions(supplierId);
+          transactions = transactionData?['transactions'] as List? ?? [];
+        }
+
+        // Calculate totals from transactions
+        double totalHireCost = 0.0;
+        double totalAdvances = 0.0;
+        double totalCharges = 0.0;
+        double totalPayments = 0.0;
+
+        for (var txn in transactions) {
+          final amount = double.tryParse(txn['amount']?.toString() ?? '0') ?? 0.0;
+          final type = txn['type']?.toString() ?? '';
+
+          if (type == 'advance') {
+            totalAdvances += amount;
+          } else if (type == 'charge') {
+            totalCharges += amount;
+          } else if (type == 'payment') {
+            totalPayments += amount;
+          }
+        }
+
+        // Calculate hire cost from unsettled trips
+        for (var txn in transactions) {
+          final tripId = txn['tripId'];
+          if (tripId != null) {
+            final trip = allTrips.firstWhere((t) => t['id'] == tripId, orElse: () => {});
+            if (trip.isNotEmpty) {
+              final hireCost = double.tryParse(trip['truckHireCost']?.toString() ?? '0') ?? 0.0;
+              // Only count each trip once
+              if (!reportData.any((rd) =>
+                  (rd['transactions'] as List).any((t) => t['tripId'] == tripId))) {
+                totalHireCost += hireCost;
+              }
+            }
+          }
+        }
 
         reportData.add({
+          'supplierId': supplierId,
           'supplierName': supplierName,
           'supplierPhone': supplierPhone,
           'balance': balance,
-          'trips': supplierTrips,
-          'tripCount': supplierTrips.length,
+          'transactions': transactions,
+          'totalHireCost': totalHireCost,
+          'totalAdvances': totalAdvances,
+          'totalCharges': totalCharges,
+          'totalPayments': totalPayments,
+          'trips': allTrips, // Keep all trips for lookup
         });
       }
 
@@ -400,7 +440,13 @@ class _SupplierBalanceReportScreenState extends State<SupplierBalanceReportScree
   }
 
   Widget _buildSupplierSection(Map<String, dynamic> supplierData) {
-    final trips = supplierData['trips'] as List<dynamic>;
+    final transactions = supplierData['transactions'] as List<dynamic>;
+    final allTrips = supplierData['trips'] as List<dynamic>;
+    final totalHireCost = supplierData['totalHireCost'] as double;
+    final totalAdvances = supplierData['totalAdvances'] as double;
+    final totalCharges = supplierData['totalCharges'] as double;
+    final totalPayments = supplierData['totalPayments'] as double;
+    final balance = supplierData['balance'] as double;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 24),
@@ -443,7 +489,7 @@ class _SupplierBalanceReportScreenState extends State<SupplierBalanceReportScree
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    '₹${supplierData['balance'].toStringAsFixed(0)}',
+                    '₹${balance.toStringAsFixed(0)}',
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -452,7 +498,7 @@ class _SupplierBalanceReportScreenState extends State<SupplierBalanceReportScree
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '${supplierData['tripCount']} ${supplierData['tripCount'] == 1 ? 'Trip' : 'Trips'}',
+                    '${transactions.length} ${transactions.length == 1 ? 'Transaction' : 'Transactions'}',
                     style: TextStyle(
                       fontSize: 12,
                       color: Colors.grey.shade600,
@@ -463,97 +509,146 @@ class _SupplierBalanceReportScreenState extends State<SupplierBalanceReportScree
             ],
           ),
 
-          if (trips.isNotEmpty) ...[
-            const SizedBox(height: 16),
+          const SizedBox(height: 16),
+          const Divider(),
+          const SizedBox(height: 12),
+
+          // Balance Breakdown
+          Text(
+            'Balance Breakdown',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey.shade700,
+            ),
+          ),
+          const SizedBox(height: 8),
+          _buildBalanceRow('Total Hire Cost', totalHireCost, Colors.black87),
+          if (totalCharges > 0) _buildBalanceRow('Charges (+)', totalCharges, Colors.orange),
+          if (totalAdvances > 0) _buildBalanceRow('Advances (-)', -totalAdvances, Colors.green),
+          if (totalPayments > 0) _buildBalanceRow('Payments (-)', -totalPayments, Colors.green),
+          const Divider(height: 20),
+          _buildBalanceRow('Balance to Pay', balance, Colors.red, isBold: true),
+
+          if (transactions.isNotEmpty) ...[
+            const SizedBox(height: 20),
             const Divider(),
             const SizedBox(height: 12),
 
-            // Trips Header
-            Row(
-              children: [
-                Expanded(
-                  flex: 3,
-                  child: Text(
-                    'Route',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey.shade700,
-                    ),
-                  ),
-                ),
-                Expanded(
-                  flex: 2,
-                  child: Text(
-                    'Truck No.',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey.shade700,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-                Expanded(
-                  flex: 2,
-                  child: Text(
-                    'Hire Cost',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey.shade700,
-                    ),
-                    textAlign: TextAlign.right,
-                  ),
-                ),
-              ],
+            // Transactions Header
+            Text(
+              'Transactions',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey.shade700,
+              ),
             ),
-
             const SizedBox(height: 8),
 
-            // Trip List
-            ...trips.map((trip) {
-              final origin = trip['origin']?.toString() ?? '';
-              final destination = trip['destination']?.toString() ?? '';
-              final truckNumber = trip['truckNumber']?.toString() ?? '';
-              final amount = double.tryParse(trip['truckHireCost']?.toString() ?? '0') ?? 0.0;
+            // Transaction List
+            ...transactions.map((txn) {
+              final type = txn['type']?.toString() ?? '';
+              final amount = double.tryParse(txn['amount']?.toString() ?? '0') ?? 0.0;
+              final date = txn['date']?.toString() ?? '';
+              final tripId = txn['tripId'];
 
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 6),
-                child: Row(
+              // Find trip details
+              String tripInfo = '';
+              if (tripId != null) {
+                final trip = allTrips.firstWhere((t) => t['id'] == tripId, orElse: () => {});
+                if (trip.isNotEmpty) {
+                  final origin = trip['origin']?.toString() ?? '';
+                  final destination = trip['destination']?.toString() ?? '';
+                  final truckNumber = trip['truckNumber']?.toString() ?? '';
+                  if (origin.isNotEmpty && destination.isNotEmpty) {
+                    tripInfo = '$origin → $destination';
+                    if (truckNumber.isNotEmpty) {
+                      tripInfo += ' ($truckNumber)';
+                    }
+                  }
+                }
+              }
+
+              // Format date
+              String formattedDate = date;
+              if (date.isNotEmpty) {
+                try {
+                  final dateObj = DateTime.parse(date);
+                  formattedDate = DateFormat('dd MMM yyyy').format(dateObj);
+                } catch (e) {
+                  formattedDate = date;
+                }
+              }
+
+              String typeLabel = '';
+              Color typeColor = Colors.grey;
+              if (type == 'advance') {
+                typeLabel = 'Advance';
+                typeColor = Colors.orange;
+              } else if (type == 'charge') {
+                typeLabel = 'Charge';
+                typeColor = Colors.red;
+              } else if (type == 'payment') {
+                typeLabel = 'Payment';
+                typeColor = Colors.green;
+              }
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      flex: 3,
-                      child: Text(
-                        '$origin → $destination',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.black87,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: typeColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            typeLabel,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: typeColor,
+                            ),
+                          ),
                         ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                        Text(
+                          '₹${amount.toStringAsFixed(0)}',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: typeColor,
+                          ),
+                        ),
+                      ],
                     ),
-                    Expanded(
-                      flex: 2,
-                      child: Text(
-                        truckNumber,
+                    if (tripInfo.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        tripInfo,
                         style: const TextStyle(
-                          fontSize: 12,
+                          fontSize: 11,
                           color: Colors.black87,
                         ),
-                        textAlign: TextAlign.center,
                       ),
-                    ),
-                    Expanded(
-                      flex: 2,
-                      child: Text(
-                        '₹${amount.toStringAsFixed(0)}',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black87,
-                        ),
-                        textAlign: TextAlign.right,
+                    ],
+                    const SizedBox(height: 4),
+                    Text(
+                      formattedDate,
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Colors.grey.shade600,
                       ),
                     ),
                   ],
@@ -561,6 +656,33 @@ class _SupplierBalanceReportScreenState extends State<SupplierBalanceReportScree
               );
             }).toList(),
           ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBalanceRow(String label, double amount, Color color, {bool isBold = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+              color: Colors.black87,
+            ),
+          ),
+          Text(
+            '₹${amount.abs().toStringAsFixed(0)}',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
+              color: color,
+            ),
+          ),
         ],
       ),
     );
@@ -713,7 +835,13 @@ class _SupplierBalanceReportScreenState extends State<SupplierBalanceReportScree
   }
 
   pw.Widget _buildPdfSupplierSection(Map<String, dynamic> supplierData) {
-    final trips = supplierData['trips'] as List<dynamic>;
+    final transactions = supplierData['transactions'] as List<dynamic>;
+    final allTrips = supplierData['trips'] as List<dynamic>;
+    final totalHireCost = supplierData['totalHireCost'] as double;
+    final totalAdvances = supplierData['totalAdvances'] as double;
+    final totalCharges = supplierData['totalCharges'] as double;
+    final totalPayments = supplierData['totalPayments'] as double;
+    final balance = supplierData['balance'] as double;
 
     return pw.Container(
       margin: const pw.EdgeInsets.only(bottom: 24),
@@ -752,7 +880,7 @@ class _SupplierBalanceReportScreenState extends State<SupplierBalanceReportScree
                 crossAxisAlignment: pw.CrossAxisAlignment.end,
                 children: [
                   pw.Text(
-                    '₹${supplierData['balance'].toStringAsFixed(0)}',
+                    '₹${balance.toStringAsFixed(0)}',
                     style: pw.TextStyle(
                       fontSize: 16,
                       fontWeight: pw.FontWeight.bold,
@@ -761,7 +889,7 @@ class _SupplierBalanceReportScreenState extends State<SupplierBalanceReportScree
                   ),
                   pw.SizedBox(height: 4),
                   pw.Text(
-                    '${supplierData['tripCount']} ${supplierData['tripCount'] == 1 ? 'Trip' : 'Trips'}',
+                    '${transactions.length} ${transactions.length == 1 ? 'Transaction' : 'Transactions'}',
                     style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700),
                   ),
                 ],
@@ -769,93 +897,163 @@ class _SupplierBalanceReportScreenState extends State<SupplierBalanceReportScree
             ],
           ),
 
-          if (trips.isNotEmpty) ...[
+          pw.SizedBox(height: 12),
+          pw.Divider(),
+          pw.SizedBox(height: 8),
+
+          // Balance Breakdown
+          pw.Text(
+            'Balance Breakdown',
+            style: pw.TextStyle(
+              fontSize: 11,
+              fontWeight: pw.FontWeight.bold,
+            ),
+          ),
+          pw.SizedBox(height: 6),
+          _buildPdfBalanceRow('Total Hire Cost', totalHireCost, PdfColors.black),
+          if (totalCharges > 0) _buildPdfBalanceRow('Charges (+)', totalCharges, PdfColors.orange),
+          if (totalAdvances > 0) _buildPdfBalanceRow('Advances (-)', -totalAdvances, PdfColors.green),
+          if (totalPayments > 0) _buildPdfBalanceRow('Payments (-)', -totalPayments, PdfColors.green),
+          pw.Divider(height: 12),
+          _buildPdfBalanceRow('Balance to Pay', balance, PdfColors.red700, isBold: true),
+
+          if (transactions.isNotEmpty) ...[
             pw.SizedBox(height: 12),
             pw.Divider(),
             pw.SizedBox(height: 8),
 
-            // Trips Header
-            pw.Row(
-              children: [
-                pw.Expanded(
-                  flex: 3,
-                  child: pw.Text(
-                    'Route',
-                    style: pw.TextStyle(
-                      fontSize: 10,
-                      fontWeight: pw.FontWeight.bold,
-                    ),
-                  ),
-                ),
-                pw.Expanded(
-                  flex: 2,
-                  child: pw.Text(
-                    'Truck No.',
-                    style: pw.TextStyle(
-                      fontSize: 10,
-                      fontWeight: pw.FontWeight.bold,
-                    ),
-                    textAlign: pw.TextAlign.center,
-                  ),
-                ),
-                pw.Expanded(
-                  flex: 2,
-                  child: pw.Text(
-                    'Hire Cost',
-                    style: pw.TextStyle(
-                      fontSize: 10,
-                      fontWeight: pw.FontWeight.bold,
-                    ),
-                    textAlign: pw.TextAlign.right,
-                  ),
-                ),
-              ],
+            // Transactions Header
+            pw.Text(
+              'Transactions',
+              style: pw.TextStyle(
+                fontSize: 11,
+                fontWeight: pw.FontWeight.bold,
+              ),
             ),
+            pw.SizedBox(height: 6),
 
-            pw.SizedBox(height: 8),
+            // Transaction List
+            ...transactions.map((txn) {
+              final type = txn['type']?.toString() ?? '';
+              final amount = double.tryParse(txn['amount']?.toString() ?? '0') ?? 0.0;
+              final date = txn['date']?.toString() ?? '';
+              final tripId = txn['tripId'];
 
-            // Trip List
-            ...trips.map((trip) {
-              final origin = trip['origin']?.toString() ?? '';
-              final destination = trip['destination']?.toString() ?? '';
-              final truckNumber = trip['truckNumber']?.toString() ?? '';
-              final amount = double.tryParse(trip['truckHireCost']?.toString() ?? '0') ?? 0.0;
+              // Find trip details
+              String tripInfo = '';
+              if (tripId != null) {
+                final trip = allTrips.firstWhere((t) => t['id'] == tripId, orElse: () => {});
+                if (trip.isNotEmpty) {
+                  final origin = trip['origin']?.toString() ?? '';
+                  final destination = trip['destination']?.toString() ?? '';
+                  final truckNumber = trip['truckNumber']?.toString() ?? '';
+                  if (origin.isNotEmpty && destination.isNotEmpty) {
+                    tripInfo = '$origin → $destination';
+                    if (truckNumber.isNotEmpty) {
+                      tripInfo += ' ($truckNumber)';
+                    }
+                  }
+                }
+              }
 
-              return pw.Padding(
-                padding: const pw.EdgeInsets.symmetric(vertical: 4),
-                child: pw.Row(
+              // Format date
+              String formattedDate = date;
+              if (date.isNotEmpty) {
+                try {
+                  final dateObj = DateTime.parse(date);
+                  formattedDate = DateFormat('dd MMM yyyy').format(dateObj);
+                } catch (e) {
+                  formattedDate = date;
+                }
+              }
+
+              String typeLabel = '';
+              PdfColor typeColor = PdfColors.grey;
+              if (type == 'advance') {
+                typeLabel = 'Advance';
+                typeColor = PdfColors.orange;
+              } else if (type == 'charge') {
+                typeLabel = 'Charge';
+                typeColor = PdfColors.red700;
+              } else if (type == 'payment') {
+                typeLabel = 'Payment';
+                typeColor = PdfColors.green;
+              }
+
+              return pw.Container(
+                margin: const pw.EdgeInsets.only(bottom: 8),
+                padding: const pw.EdgeInsets.all(8),
+                decoration: pw.BoxDecoration(
+                  color: PdfColors.grey200,
+                  borderRadius: pw.BorderRadius.circular(4),
+                ),
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
-                    pw.Expanded(
-                      flex: 3,
-                      child: pw.Text(
-                        '$origin → $destination',
-                        style: const pw.TextStyle(fontSize: 10),
-                      ),
-                    ),
-                    pw.Expanded(
-                      flex: 2,
-                      child: pw.Text(
-                        truckNumber,
-                        style: const pw.TextStyle(fontSize: 10),
-                        textAlign: pw.TextAlign.center,
-                      ),
-                    ),
-                    pw.Expanded(
-                      flex: 2,
-                      child: pw.Text(
-                        '₹${amount.toStringAsFixed(0)}',
-                        style: pw.TextStyle(
-                          fontSize: 10,
-                          fontWeight: pw.FontWeight.bold,
+                    pw.Row(
+                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                      children: [
+                        pw.Text(
+                          typeLabel,
+                          style: pw.TextStyle(
+                            fontSize: 10,
+                            fontWeight: pw.FontWeight.bold,
+                            color: typeColor,
+                          ),
                         ),
-                        textAlign: pw.TextAlign.right,
+                        pw.Text(
+                          '₹${amount.toStringAsFixed(0)}',
+                          style: pw.TextStyle(
+                            fontSize: 10,
+                            fontWeight: pw.FontWeight.bold,
+                            color: typeColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (tripInfo.isNotEmpty) ...[
+                      pw.SizedBox(height: 4),
+                      pw.Text(
+                        tripInfo,
+                        style: const pw.TextStyle(fontSize: 9),
                       ),
+                    ],
+                    pw.SizedBox(height: 2),
+                    pw.Text(
+                      formattedDate,
+                      style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
                     ),
                   ],
                 ),
               );
             }).toList(),
           ],
+        ],
+      ),
+    );
+  }
+
+  pw.Widget _buildPdfBalanceRow(String label, double amount, PdfColor color, {bool isBold = false}) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.symmetric(vertical: 2),
+      child: pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Text(
+            label,
+            style: pw.TextStyle(
+              fontSize: 10,
+              fontWeight: isBold ? pw.FontWeight.bold : pw.FontWeight.normal,
+            ),
+          ),
+          pw.Text(
+            '₹${amount.abs().toStringAsFixed(0)}',
+            style: pw.TextStyle(
+              fontSize: 10,
+              fontWeight: isBold ? pw.FontWeight.bold : pw.FontWeight.bold,
+              color: color,
+            ),
+          ),
         ],
       ),
     );

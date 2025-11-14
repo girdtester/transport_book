@@ -7,11 +7,11 @@ import 'auth_storage.dart';
 /// Updated for JWT authentication and RESTful endpoints
 class ApiService {
   // For local development, use:
-  static const String baseUrl = 'http://localhost:8000/api/v1';
+  // static const String baseUrl = 'http://localhost:8000/api/v1';
 
   // FastAPI Backend URL - Production Server
   // Using HTTP because HTTPS certificate is invalid (ERR_CERT_AUTHORITY_INVALID)
-  // static const String baseUrl = 'http://mb-app.tms-support.in/api/v1';
+  static const String baseUrl = 'http://mb-app.tms-support.in/api/v1';
 
   // HTTPS URL (currently has SSL certificate issues)
   // static const String baseUrl = 'https://mb-app.tms-support.in/api/v1';
@@ -830,7 +830,23 @@ class ApiService {
       }
       return null;
     } catch (e) {
-      print('Error fetching supplier transactions: $e');
+      return null;
+    }
+  }
+
+  /// Get party transactions (advances, charges, payments, settlements)
+  static Future<Map<String, dynamic>?> getPartyTransactions(int partyId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/parties/$partyId/transactions'),
+        headers: await _getHeaders(),
+      );
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      }
+      return null;
+    } catch (e) {
       return null;
     }
   }
@@ -1974,7 +1990,7 @@ class ApiService {
   }) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/invoices'),
+        Uri.parse('$baseUrl/invoices/'),
         headers: await _getHeaders(),
         body: json.encode({
           'invoice_number': invoiceNumber,
@@ -2052,7 +2068,7 @@ class ApiService {
   }) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/collection-reminders'),
+        Uri.parse('$baseUrl/collection-reminders/'),
         headers: await _getHeaders(),
         body: json.encode({
           'type': type,
