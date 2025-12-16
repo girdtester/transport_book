@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../utils/app_colors.dart';
+import '../../../utils/custom_dropdown.dart';
+import '../../../utils/appbar.dart';
 
 class HelpScreen extends StatefulWidget {
   const HelpScreen({super.key});
@@ -27,52 +29,56 @@ class _HelpScreenState extends State<HelpScreen> with SingleTickerProviderStateM
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
-      appBar: AppBar(
-        backgroundColor: AppColors.appBarColor,
-        foregroundColor: AppColors.appBarTextColor,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: AppColors.appBarTextColor),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          'Help & Guide',
-          style: TextStyle(
-            color: AppColors.appBarTextColor,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        bottom: TabBar(
-          controller: _tabController,
-          isScrollable: true,
-          labelColor: Colors.blue,
-          unselectedLabelColor: Colors.grey,
-          indicatorColor: Colors.blue,
-          indicatorSize: TabBarIndicatorSize.tab,
-          labelStyle: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
-          tabs: const [
-            Tab(text: 'Trucks'),
-            Tab(text: 'Trips'),
-            Tab(text: 'Suppliers'),
-            Tab(text: 'Party'),
-            Tab(text: 'Drivers'),
-            Tab(text: 'Reports'),
-          ],
-        ),
+      appBar: CustomAppBar(
+        title: 'Help & Guide',
+        showBackButton: false,
+        showDashboardLayout: false,
       ),
-      body: TabBarView(
-        controller: _tabController,
+      body: Column(
         children: [
-          _buildTrucksHelp(),
-          _buildTripsHelp(),
-          _buildSuppliersHelp(),
-          _buildPartyHelp(),
-          _buildDriversHelp(),
-          _buildReportsHelp(),
+          Container(
+            color: Colors.white,
+            child: TabBar(
+              isScrollable: true,
+              controller: _tabController,
+              labelColor: AppColors.info,
+              unselectedLabelColor: Colors.grey.shade600,
+              indicator: RoundedTabIndicator(
+                color: AppColors.info,
+                radius: 3,
+              ),
+              indicatorWeight: 3,
+              labelPadding: const EdgeInsets.symmetric(horizontal: 20),
+              indicatorSize: TabBarIndicatorSize.tab,
+              padding: EdgeInsets.zero,
+              tabAlignment: TabAlignment.start,
+              labelStyle: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+              tabs: const [
+                Tab(text: 'Trucks'),
+                Tab(text: 'Trips'),
+                Tab(text: 'Suppliers'),
+                Tab(text: 'Party'),
+                Tab(text: 'Drivers'),
+                Tab(text: 'Reports'),
+              ],
+            ),
+          ),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildTrucksHelp(),
+                _buildTripsHelp(),
+                _buildSuppliersHelp(),
+                _buildPartyHelp(),
+                _buildDriversHelp(),
+                _buildReportsHelp(),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -80,7 +86,7 @@ class _HelpScreenState extends State<HelpScreen> with SingleTickerProviderStateM
 
   Widget _buildTrucksHelp() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -97,7 +103,7 @@ class _HelpScreenState extends State<HelpScreen> with SingleTickerProviderStateM
             icon: Icons.local_shipping,
             color: Colors.orange,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           _buildInfoCard(
             title: 'Viewing Truck Details',
             steps: [
@@ -107,10 +113,11 @@ class _HelpScreenState extends State<HelpScreen> with SingleTickerProviderStateM
               'Access the Trip Book for detailed records',
               'Manage documents from the Documents Book',
             ],
-            icon: Icons.remove_red_eye,
-            color: Colors.blue,
+            icon: Icons.visibility,
+            color: AppColors.info,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
+          // Example with image asset instead of icon
           _buildInfoCard(
             title: 'Documents Management',
             steps: [
@@ -130,7 +137,7 @@ class _HelpScreenState extends State<HelpScreen> with SingleTickerProviderStateM
 
   Widget _buildTripsHelp() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -147,10 +154,10 @@ class _HelpScreenState extends State<HelpScreen> with SingleTickerProviderStateM
               'For market trucks, add truck hire cost',
               'Tap "Save Trip" to create',
             ],
-            icon: Icons.add_circle,
-            color: Colors.blue,
+            icon: Icons.add_circle_outline,
+            color: AppColors.info,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           _buildInfoCard(
             title: 'Viewing Trips',
             steps: [
@@ -160,10 +167,10 @@ class _HelpScreenState extends State<HelpScreen> with SingleTickerProviderStateM
               'Check profit/loss for each trip',
               'Track payment status',
             ],
-            icon: Icons.content_copy,
+            icon: Icons.visibility_outlined,
             color: Colors.indigo,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           _buildInfoCard(
             title: 'Managing Unpaid Trips',
             steps: [
@@ -173,10 +180,10 @@ class _HelpScreenState extends State<HelpScreen> with SingleTickerProviderStateM
               'Add payment details and date',
               'Generate digital invoices for customers',
             ],
-            icon: Icons.money_off,
+            icon: Icons.payment,
             color: Colors.red,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           _buildInfoCard(
             title: 'POD (Proof of Delivery)',
             steps: [
@@ -196,7 +203,7 @@ class _HelpScreenState extends State<HelpScreen> with SingleTickerProviderStateM
 
   Widget _buildSuppliersHelp() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -210,10 +217,10 @@ class _HelpScreenState extends State<HelpScreen> with SingleTickerProviderStateM
               'Add initial balance if any',
               'Save supplier information',
             ],
-            icon: Icons.person_add,
+            icon: Icons.inventory_2,
             color: Colors.purple,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           _buildInfoCard(
             title: 'Recording Transactions',
             steps: [
@@ -223,10 +230,10 @@ class _HelpScreenState extends State<HelpScreen> with SingleTickerProviderStateM
               'Add "You Got" for amounts received from supplier',
               'View running balance and transaction history',
             ],
-            icon: Icons.account_balance_wallet,
+            icon: Icons.receipt_long,
             color: Colors.green,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           _buildInfoCard(
             title: 'Supplier Reports',
             steps: [
@@ -237,7 +244,7 @@ class _HelpScreenState extends State<HelpScreen> with SingleTickerProviderStateM
               'Download reports for accounting',
             ],
             icon: Icons.assessment,
-            color: Colors.blue,
+            color: AppColors.info,
           ),
         ],
       ),
@@ -246,7 +253,7 @@ class _HelpScreenState extends State<HelpScreen> with SingleTickerProviderStateM
 
   Widget _buildPartyHelp() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -261,10 +268,10 @@ class _HelpScreenState extends State<HelpScreen> with SingleTickerProviderStateM
               'Set credit limit if required',
               'Save party details',
             ],
-            icon: Icons.business,
+            icon: Icons.person_add,
             color: Colors.green,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           _buildInfoCard(
             title: 'Managing Party Accounts',
             steps: [
@@ -275,10 +282,10 @@ class _HelpScreenState extends State<HelpScreen> with SingleTickerProviderStateM
               'Check outstanding balance',
               'View trip history with the party',
             ],
-            icon: Icons.account_balance,
-            color: Colors.blue,
+            icon: Icons.account_balance_wallet,
+            color: AppColors.info,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           _buildInfoCard(
             title: 'Digital Invoices',
             steps: [
@@ -289,10 +296,10 @@ class _HelpScreenState extends State<HelpScreen> with SingleTickerProviderStateM
               'Generate and share PDF invoice',
               'Track invoice payment status',
             ],
-            icon: Icons.receipt,
+            icon: Icons.receipt_long,
             color: Colors.orange,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           _buildInfoCard(
             title: 'Collection Reminders',
             steps: [
@@ -312,7 +319,7 @@ class _HelpScreenState extends State<HelpScreen> with SingleTickerProviderStateM
 
   Widget _buildDriversHelp() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -327,10 +334,10 @@ class _HelpScreenState extends State<HelpScreen> with SingleTickerProviderStateM
               'Upload driver\'s license photo',
               'Save driver information',
             ],
-            icon: Icons.person_add,
+            icon: Icons.person,
             color: Colors.teal,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           _buildInfoCard(
             title: 'Driver Account Management',
             steps: [
@@ -341,10 +348,10 @@ class _HelpScreenState extends State<HelpScreen> with SingleTickerProviderStateM
               'View trip assignments',
               'Check outstanding balance',
             ],
-            icon: Icons.person,
-            color: Colors.blue,
+            icon: Icons.account_balance_outlined,
+            color: AppColors.info,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           _buildInfoCard(
             title: 'Assigning Trips',
             steps: [
@@ -354,7 +361,7 @@ class _HelpScreenState extends State<HelpScreen> with SingleTickerProviderStateM
               'Assign trip to available driver',
               'Track trip completion by driver',
             ],
-            icon: Icons.assignment,
+            icon: Icons.add_circle_outline,
             color: Colors.orange,
           ),
         ],
@@ -364,7 +371,7 @@ class _HelpScreenState extends State<HelpScreen> with SingleTickerProviderStateM
 
   Widget _buildReportsHelp() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -378,10 +385,10 @@ class _HelpScreenState extends State<HelpScreen> with SingleTickerProviderStateM
               'Net profit = Revenue - Expenses',
               'Updated in real-time with each trip',
             ],
-            icon: Icons.balance,
+            icon: Icons.account_balance,
             color: Colors.amber,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           _buildInfoCard(
             title: 'Truck Revenue Report',
             steps: [
@@ -394,7 +401,7 @@ class _HelpScreenState extends State<HelpScreen> with SingleTickerProviderStateM
             icon: Icons.local_shipping,
             color: Colors.orange,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           _buildInfoCard(
             title: 'Party Revenue Report',
             steps: [
@@ -404,10 +411,10 @@ class _HelpScreenState extends State<HelpScreen> with SingleTickerProviderStateM
               'Identify top customers',
               'Export data for business planning',
             ],
-            icon: Icons.people,
+            icon: Icons.account_balance_wallet,
             color: Colors.green,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           _buildInfoCard(
             title: 'Balance Reports',
             steps: [
@@ -417,8 +424,8 @@ class _HelpScreenState extends State<HelpScreen> with SingleTickerProviderStateM
               'Filter by balance amount',
               'Track payment collection progress',
             ],
-            icon: Icons.account_balance_wallet,
-            color: Colors.blue,
+            icon: Icons.receipt_long,
+            color: AppColors.info,
           ),
         ],
       ),
@@ -427,11 +434,11 @@ class _HelpScreenState extends State<HelpScreen> with SingleTickerProviderStateM
 
   Widget _buildSectionTitle(String title) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.only(bottom: 12),
       child: Text(
         title,
         style: const TextStyle(
-          fontSize: 22,
+          fontSize: 18,
           fontWeight: FontWeight.bold,
           color: Colors.black87,
         ),
@@ -448,11 +455,11 @@ class _HelpScreenState extends State<HelpScreen> with SingleTickerProviderStateM
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
+            blurRadius: 4,
             offset: const Offset(0, 2),
           ),
         ],
@@ -462,28 +469,28 @@ class _HelpScreenState extends State<HelpScreen> with SingleTickerProviderStateM
         children: [
           // Header
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: color.withOpacity(0.1),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
             ),
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
                     color: color,
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(icon, color: Colors.white, size: 24),
+                  child: Icon(icon, color: Colors.white, size: 22),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     title,
                     style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
                       color: Colors.black87,
                     ),
                   ),
@@ -493,22 +500,22 @@ class _HelpScreenState extends State<HelpScreen> with SingleTickerProviderStateM
           ),
           // Steps
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(14),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: steps.asMap().entries.map((entry) {
                 final index = entry.key;
                 final step = entry.value;
                 return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.only(bottom: 10),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Container(
-                        width: 24,
-                        height: 24,
+                        width: 22,
+                        height: 22,
                         decoration: BoxDecoration(
-                          color: color.withOpacity(0.2),
+                          color: color.withOpacity(0.15),
                           shape: BoxShape.circle,
                         ),
                         child: Center(
@@ -516,7 +523,7 @@ class _HelpScreenState extends State<HelpScreen> with SingleTickerProviderStateM
                             '${index + 1}',
                             style: TextStyle(
                               fontSize: 12,
-                              fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.w600,
                               color: color,
                             ),
                           ),
@@ -527,9 +534,9 @@ class _HelpScreenState extends State<HelpScreen> with SingleTickerProviderStateM
                         child: Text(
                           step,
                           style: const TextStyle(
-                            fontSize: 14,
+                            fontSize: 13,
                             color: Colors.black87,
-                            height: 1.5,
+                            height: 1.4,
                           ),
                         ),
                       ),

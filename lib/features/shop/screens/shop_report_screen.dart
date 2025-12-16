@@ -1,7 +1,9 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../services/api_service.dart';
 import '../../../utils/app_colors.dart';
+import 'package:transport_book_app/utils/toast_helper.dart';
+import 'package:transport_book_app/utils/app_loader.dart';
 
 class ShopReportScreen extends StatefulWidget {
   final int shopId;
@@ -45,7 +47,7 @@ class _ShopReportScreenState extends State<ShopReportScreen> {
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ToastHelper.showSnackBarToast(context, 
           SnackBar(content: Text('Error loading report: $e')),
         );
       }
@@ -73,27 +75,40 @@ class _ShopReportScreenState extends State<ShopReportScreen> {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        backgroundColor: AppColors.appBarColor,
-        foregroundColor: AppColors.appBarTextColor,
+        backgroundColor: AppColors.info,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            bottom: Radius.circular(20),
+          ),
+        ),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Shop Report'),
+            const Text(
+              'Shop Report',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
             Text(
               widget.shopName,
               style: const TextStyle(
+                color: Colors.white,
                 fontSize: 14,
                 fontWeight: FontWeight.normal,
               ),
             ),
           ],
         ),
-        elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.share),
+            icon: const Icon(Icons.share, color: Colors.white),
             onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
+              ToastHelper.showSnackBarToast(context, 
                 const SnackBar(content: Text('Share feature coming soon')),
               );
             },
@@ -101,7 +116,7 @@ class _ShopReportScreenState extends State<ShopReportScreen> {
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: AppLoader())
           : Column(
               children: [
                 // Opening Balance
@@ -338,3 +353,5 @@ class _ShopReportScreenState extends State<ShopReportScreen> {
     );
   }
 }
+
+

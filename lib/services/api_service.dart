@@ -1,17 +1,17 @@
 import 'dart:convert';
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'auth_storage.dart';
 
-/// API Service for TMS Prime - FastAPI Backend
+/// API Service for TMS Book - FastAPI Backend
 /// Updated for JWT authentication and RESTful endpoints
 class ApiService {
   // For local development, use:
-  // static const String baseUrl = 'http://localhost:8000/api/v1';
+  static const String baseUrl = 'http://localhost:8000/api/v1';
 
   // FastAPI Backend URL - Production Server
   // Using HTTP because HTTPS certificate is invalid (ERR_CERT_AUTHORITY_INVALID)
-  static const String baseUrl = 'http://mb-app.tms-support.in/api/v1';
+  // static const String baseUrl = 'http://mb-app.tms-support.in/api/v1';
 
   // HTTPS URL (currently has SSL certificate issues)
   // static const String baseUrl = 'https://mb-app.tms-support.in/api/v1';
@@ -63,7 +63,7 @@ class ApiService {
   static Future<Map<String, dynamic>> verifyPhone(String phone) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/auth/verify-phone'),
+        Uri.parse('$baseUrl/auth/verify-phone/'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({'phone': phone}),
       );
@@ -87,7 +87,7 @@ class ApiService {
   }) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/auth/verify-otp'),
+        Uri.parse('$baseUrl/auth/verify-otp/'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'phone': phone,
@@ -136,7 +136,7 @@ class ApiService {
       final token = await AuthStorage.getToken();
       if (token != null) {
         await http.post(
-          Uri.parse('$baseUrl/auth/logout'),
+          Uri.parse('$baseUrl/auth/logout/'),
           headers: await _getHeaders(),
           body: json.encode({'token': token}),
         );
@@ -147,6 +147,31 @@ class ApiService {
       print('Error logging out: $e');
       await AuthStorage.clearAll(); // Clear anyway
       return false;
+    }
+  }
+
+  /// Update user profile
+  static Future<Map<String, dynamic>> updateProfile({
+    String? businessName,
+    String? ownerName,
+  }) async {
+    try {
+      final response = await http.put(
+        Uri.parse('$baseUrl/auth/update-profile'),
+        headers: await _getHeaders(),
+        body: json.encode({
+          'business_name': businessName,
+          'owner_name': ownerName,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      }
+      return {'success': false, 'message': 'Failed to update profile'};
+    } catch (e) {
+      print('Error updating profile: $e');
+      return {'success': false, 'message': 'Network error. Please try again.'};
     }
   }
 
@@ -221,12 +246,18 @@ class ApiService {
   static Future<bool> updateTruck({
     required int truckId,
     required String truckNumber,
+    String? truckType,
   }) async {
     try {
+      final Map<String, dynamic> body = {'number': truckNumber};
+      if (truckType != null) {
+        body['type'] = truckType;
+      }
+
       final response = await http.put(
         Uri.parse('$baseUrl/trucks/$truckId'),
         headers: await _getHeaders(),
-        body: json.encode({'number': truckNumber}),
+        body: json.encode(body),
       );
 
       return response.statusCode == 200;
@@ -315,6 +346,8 @@ class ApiService {
     int? partyId,
     int? driverId,
     int? supplierId,
+    int? originId,
+    int? destinationId,
   }) async {
     try {
       final Map<String, dynamic> tripData = {
@@ -322,12 +355,20 @@ class ApiService {
         'truck_number': truckNumber,
         'truck_type': 'Own',  // Required field
         'party_name': partyName,
-        'origin': origin,
-        'destination': destination,
         'billing_type': billingType,
         'freight_amount': double.parse(freightAmount),
         'start_date': startDate,
       };
+
+      // Add city IDs if provided (preferred for proper foreign key relationship)
+      if (originId != null && destinationId != null) {
+        tripData['origin'] = originId;
+        tripData['destination'] = destinationId;
+      } else {
+        // Fallback to city names if IDs not provided
+        tripData['origin'] = origin;
+        tripData['destination'] = destination;
+      }
 
       // Add party_id if provided (preferred for proper foreign key relationship)
       if (partyId != null) {
@@ -393,7 +434,7 @@ class ApiService {
   }) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/trips/$tripId/start'),
+        Uri.parse('$baseUrl/trips/$tripId/start/'),
         headers: await _getHeaders(),
         body: json.encode({'trip_start_date': tripStartDate}),
       );
@@ -421,7 +462,7 @@ class ApiService {
       }
 
       final response = await http.post(
-        Uri.parse('$baseUrl/trips/$tripId/complete'),
+        Uri.parse('$baseUrl/trips/$tripId/complete/'),
         headers: await _getHeaders(),
         body: json.encode(body),
       );
@@ -450,13 +491,14 @@ class ApiService {
   static Future<bool> podReceived({
     required int tripId,
     required String podReceivedDate,
-    required List<String> podPhotos,
+    required List<Uint8List> podPhotosBytes,
+    List<String>? fileNames,
   }) async {
     try {
       // Use multipart request to upload multiple images
       var request = http.MultipartRequest(
         'POST',
-        Uri.parse('$baseUrl/trips/$tripId/pod-received'),
+        Uri.parse('$baseUrl/trips/$tripId/pod-received/'),
       );
 
       // Add auth headers
@@ -466,18 +508,18 @@ class ApiService {
       // Add text fields
       request.fields['pod_received_date'] = podReceivedDate;
 
-      // Add multiple image files
-      for (int i = 0; i < podPhotos.length; i++) {
-        final imagePath = podPhotos[i];
-        if (imagePath.isNotEmpty) {
-          final file = File(imagePath);
-          if (await file.exists()) {
-            final multipartFile = await http.MultipartFile.fromPath(
-              'pod_photos',
-              imagePath,
-            );
-            request.files.add(multipartFile);
-          }
+      // Add multiple image files (using bytes for cross-platform support)
+      for (int i = 0; i < podPhotosBytes.length; i++) {
+        final bytes = podPhotosBytes[i];
+        if (bytes.isNotEmpty) {
+          final fileName = (fileNames != null && i < fileNames.length)
+              ? fileNames[i]
+              : 'pod_$i.jpg';
+          request.files.add(http.MultipartFile.fromBytes(
+            'pod_photos',
+            bytes,
+            filename: fileName,
+          ));
         }
       }
 
@@ -499,7 +541,7 @@ class ApiService {
   }) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/trips/$tripId/pod-submitted'),
+        Uri.parse('$baseUrl/trips/$tripId/pod-submitted/'),
         headers: await _getHeaders(),
         body: json.encode({'pod_submitted_date': podSubmittedDate}),
       );
@@ -520,7 +562,7 @@ class ApiService {
   }) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/trips/$tripId/settle'),
+        Uri.parse('$baseUrl/trips/$tripId/settle/'),
         headers: await _getHeaders(),
         body: json.encode({
           'settle_amount': settleAmount,
@@ -548,7 +590,7 @@ class ApiService {
   }) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/trips/$tripId/notes'),
+        Uri.parse('$baseUrl/trips/$tripId/notes/'),
         headers: await _getHeaders(),
         body: json.encode({'note': note}),
       );
@@ -571,13 +613,14 @@ class ApiService {
     required String date,
     required String paymentMode,
     String? notes,
-    String? imagePath,
+    Uint8List? imageBytes,
+    String? fileName,
   }) async {
     try {
       // Use multipart request to upload image
       var request = http.MultipartRequest(
         'POST',
-        Uri.parse('$baseUrl/trips/$tripId/expenses'),
+        Uri.parse('$baseUrl/trips/$tripId/expenses/'),
       );
 
       // Add auth headers
@@ -594,16 +637,13 @@ class ApiService {
         request.fields['notes'] = notes;
       }
 
-      // Add image file if provided
-      if (imagePath != null && imagePath.isNotEmpty) {
-        final file = File(imagePath);
-        if (await file.exists()) {
-          final multipartFile = await http.MultipartFile.fromPath(
-            'image',
-            imagePath,
-          );
-          request.files.add(multipartFile);
-        }
+      // Add image file if provided (using bytes for cross-platform support)
+      if (imageBytes != null && imageBytes.isNotEmpty) {
+        request.files.add(http.MultipartFile.fromBytes(
+          'image',
+          imageBytes,
+          filename: fileName ?? 'expense.jpg',
+        ));
       }
 
       // Send request
@@ -1262,6 +1302,26 @@ class ApiService {
     }
   }
 
+  /// Update trip status only
+  static Future<Map<String, dynamic>?> updateTripStatus(int tripId, int status) async {
+    try {
+      final response = await http.patch(
+        Uri.parse('$baseUrl/trips/$tripId/status'),
+        headers: await _getHeaders(),
+        body: json.encode({'status': status}),
+      );
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      }
+      print('Error updating trip status: ${response.statusCode} ${response.body}');
+      return null;
+    } catch (e) {
+      print('Error updating trip status: $e');
+      return null;
+    }
+  }
+
   // ==================== PARTIES ====================
 
   /// Get all parties
@@ -1664,7 +1724,7 @@ class ApiService {
   static Future<bool> settleDriverBalance({required int driverId}) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/drivers/$driverId/settle'),
+        Uri.parse('$baseUrl/drivers/$driverId/settle/'),
         headers: await _getHeaders(),
         body: json.encode({}),
       );
@@ -1701,7 +1761,7 @@ class ApiService {
   static Future<List<dynamic>> getShops() async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/shops'),
+        Uri.parse('$baseUrl/shops/'),
         headers: await _getHeaders(),
       );
 
@@ -1724,7 +1784,7 @@ class ApiService {
   }) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/shops'),
+        Uri.parse('$baseUrl/shops/'),
         headers: await _getHeaders(),
         body: json.encode({
           'name': name,
@@ -1885,7 +1945,7 @@ class ApiService {
   static Future<bool> settleShopBalance({required int shopId}) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/shops/$shopId/settle'),
+        Uri.parse('$baseUrl/shops/$shopId/settle/'),
         headers: await _getHeaders(),
         body: json.encode({}),
       );
@@ -1918,8 +1978,8 @@ class ApiService {
 
   // ==================== CITIES ====================
 
-  /// Get all cities
-  static Future<List<String>> getCities() async {
+  /// Get all cities (returns list of city objects with id and name)
+  static Future<List<Map<String, dynamic>>> getCities() async {
     try {
       final response = await http.get(
         Uri.parse('$baseUrl/cities'),
@@ -1928,12 +1988,120 @@ class ApiService {
 
       if (response.statusCode == 200) {
         final cities = List<dynamic>.from(json.decode(response.body));
-        return cities.map((city) => city['name'] as String).toList();
+        return cities.map((city) => {
+          'id': city['id'],
+          'name': city['name'] as String,
+        }).toList();
       }
       return [];
     } catch (e) {
       print('Error fetching cities: $e');
       return [];
+    }
+  }
+
+  /// Add a new city
+  static Future<Map<String, dynamic>?> addCity(String cityName) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/cities/'),
+        headers: await _getHeaders(),
+        body: json.encode({'name': cityName}),
+      );
+
+      if (response.statusCode == 201) {
+        return json.decode(response.body);
+      }
+      return null;
+    } catch (e) {
+      print('Error adding city: $e');
+      return null;
+    }
+  }
+
+  // ==================== CHARGE TYPES ====================
+
+  /// Get all charge types
+  static Future<List<Map<String, dynamic>>> getChargeTypes() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/charge-types'),
+        headers: await _getHeaders(),
+      );
+
+      if (response.statusCode == 200) {
+        final types = List<dynamic>.from(json.decode(response.body));
+        return types.map((type) => {
+          'id': type['id'],
+          'name': type['name'] as String,
+        }).toList();
+      }
+      return [];
+    } catch (e) {
+      print('Error fetching charge types: $e');
+      return [];
+    }
+  }
+
+  /// Add a new charge type
+  static Future<Map<String, dynamic>?> addChargeType(String typeName) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/charge-types/'),
+        headers: await _getHeaders(),
+        body: json.encode({'name': typeName}),
+      );
+
+      if (response.statusCode == 201) {
+        return json.decode(response.body);
+      }
+      return null;
+    } catch (e) {
+      print('Error adding charge type: $e');
+      return null;
+    }
+  }
+
+  // ==================== EXPENSE TYPES ====================
+
+  /// Get all expense types
+  static Future<List<Map<String, dynamic>>> getExpenseTypes() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/expense-types'),
+        headers: await _getHeaders(),
+      );
+
+      if (response.statusCode == 200) {
+        final types = List<dynamic>.from(json.decode(response.body));
+        return types.map((type) => {
+          'id': type['id'],
+          'name': type['name'] as String,
+        }).toList();
+      }
+      return [];
+    } catch (e) {
+      print('Error fetching expense types: $e');
+      return [];
+    }
+  }
+
+  /// Add a new expense type
+  static Future<Map<String, dynamic>?> addExpenseType(String typeName) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/expense-types/'),
+        headers: await _getHeaders(),
+        body: json.encode({'name': typeName}),
+      );
+
+      if (response.statusCode == 201) {
+        return json.decode(response.body);
+      }
+      return null;
+    } catch (e) {
+      print('Error adding expense type: $e');
+      return null;
     }
   }
 
@@ -2185,6 +2353,7 @@ class ApiService {
     required String date,
     String? truckNumber,
     int? tripId,
+    int? shopId,
     String? note,
   }) async {
     try {
@@ -2199,6 +2368,7 @@ class ApiService {
           'date': date,
           if (truckNumber != null) 'truckNumber': truckNumber,
           if (tripId != null) 'tripId': tripId,
+          if (shopId != null) 'shopId': shopId,
           if (note != null) 'note': note,
         }),
       );
@@ -2319,39 +2489,62 @@ class ApiService {
     }
   }
 
-  /// Add new document
+  /// Add new document with file upload
   static Future<Map<String, dynamic>?> addDocument({
     required int truckId,
     required String name,
     required String expiryDate,
     String? documentNumber,
     String? issueDate,
-    String? imagePath,
+    Uint8List? imageBytes,
+    String? fileName,
     String status = 'Active',
   }) async {
     try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/documents'),
-        headers: await _getHeaders(),
-        body: json.encode({
-          'truck_id': truckId,
-          'name': name,
-          'expiry_date': expiryDate,
-          if (documentNumber != null) 'document_number': documentNumber,
-          if (issueDate != null) 'issue_date': issueDate,
-          if (imagePath != null) 'image_path': imagePath,
-          'status': status,
-        }),
+      // Use multipart request for file upload
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$baseUrl/documents/upload/'),
       );
+
+      // Add auth header
+      final headers = await _getHeaders();
+      request.headers['Authorization'] = headers['Authorization'] ?? '';
+
+      // Add form fields
+      request.fields['truck_id'] = truckId.toString();
+      request.fields['name'] = name;
+      request.fields['expiry_date'] = expiryDate;
+      request.fields['status'] = status;
+      if (documentNumber != null) request.fields['document_number'] = documentNumber;
+      if (issueDate != null) request.fields['issue_date'] = issueDate;
+
+      // Add file if provided (using bytes for cross-platform support)
+      if (imageBytes != null && imageBytes.isNotEmpty) {
+        request.files.add(http.MultipartFile.fromBytes(
+          'file',
+          imageBytes,
+          filename: fileName ?? 'document.jpg',
+        ));
+      }
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
 
       if (response.statusCode == 201) {
         return json.decode(response.body);
       }
+      print('Error response: ${response.body}');
       return null;
     } catch (e) {
       print('Error adding document: $e');
       return null;
     }
+  }
+
+  /// Get document file URL
+  static String getDocumentFileUrl(String filename) {
+    return '$baseUrl/documents/file/$filename';
   }
 
   /// Update document
@@ -2684,28 +2877,42 @@ class ApiService {
   /// Upload POD photos for a trip
   static Future<Map<String, dynamic>?> uploadPODPhotos({
     required int tripId,
-    required List<String> imagePaths,
+    required List<Uint8List> imageBytesList,
+    List<String>? fileNames,
   }) async {
     try {
-      final uri = Uri.parse('$baseUrl/trips/$tripId/pod-photos');
+      final uri = Uri.parse('$baseUrl/trips/$tripId/pod-photos/');
+      print('DEBUG: Uploading POD photos to: $uri');
+
       final request = http.MultipartRequest('POST', uri);
 
       // Add headers
       final headers = await _getHeaders();
       request.headers.addAll(headers);
 
-      // Add image files
-      for (String path in imagePaths) {
-        final file = await http.MultipartFile.fromPath('files', path);
-        request.files.add(file);
+      // Add image files (using bytes for cross-platform support)
+      for (int i = 0; i < imageBytesList.length; i++) {
+        final bytes = imageBytesList[i];
+        final fileName = (fileNames != null && i < fileNames.length)
+            ? fileNames[i]
+            : 'pod_$i.jpg';
+        print('DEBUG: Adding file: $fileName (${bytes.length} bytes)');
+        request.files.add(http.MultipartFile.fromBytes(
+          'files',
+          bytes,
+          filename: fileName,
+        ));
       }
 
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
 
+      print('DEBUG: Upload response: ${response.statusCode} ${response.body}');
+
       if (response.statusCode == 200) {
         return json.decode(response.body);
       }
+      print('DEBUG: Upload failed with status ${response.statusCode}');
       return null;
     } catch (e) {
       print('Error uploading POD photos: $e');
@@ -2721,9 +2928,27 @@ class ApiService {
         headers: await _getHeaders(),
       );
 
+      print('DEBUG: getPODPhotos response: ${response.statusCode} ${response.body}');
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        return List<String>.from(data['podPhotos'] ?? []);
+        final photos = List<String>.from(data['podPhotos'] ?? []);
+
+        // Get server URL without /api/v1
+        final serverUrl = baseUrl.replaceAll('/api/v1', '');
+
+        // Convert relative URLs to full URLs
+        return photos.map((photo) {
+          if (photo.startsWith('http')) {
+            return photo;
+          } else if (photo.startsWith('/api/v1/')) {
+            // URL like /api/v1/trips/1/pod-photos/file/abc.jpg
+            return '$serverUrl$photo';
+          } else if (photo.startsWith('/')) {
+            return '$serverUrl$photo';
+          }
+          return '$serverUrl/$photo';
+        }).toList();
       }
       return [];
     } catch (e) {

@@ -1,8 +1,13 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:transport_book_app/utils/appbar.dart';
+import 'package:transport_book_app/utils/custom_textfield.dart';
+import 'package:transport_book_app/utils/app_loader.dart';
+import 'package:transport_book_app/utils/toast_helper.dart';
 import '../../../services/api_service.dart';
 import '../../../utils/app_colors.dart';
 import 'package:intl/intl.dart';
+import '../../../utils/custom_button.dart' show CustomButton;
 import '../../trucks/screens/my_trucks_screen.dart';
 
 class AddTripScreen extends StatefulWidget {
@@ -43,7 +48,7 @@ class _AddTripScreenState extends State<AddTripScreen> {
   bool _isLoading = false;
   bool _showMoreDetails = false;
   bool _showValidationErrors = false;
-  List<String> _cities = [];
+  List<Map<String, dynamic>> _cities = [];
   List<dynamic> _parties = [];
   List<dynamic> _drivers = [];
   List<dynamic> _allTrucks = [];
@@ -54,11 +59,13 @@ class _AddTripScreenState extends State<AddTripScreen> {
   int? _selectedPartyId;
   int? _selectedDriverId;
   int? _selectedSupplierId;
+  int? _selectedOriginId;
+  int? _selectedDestinationId;
 
   // Additional detail controllers
   final TextEditingController _lrNumberController = TextEditingController();
   final TextEditingController _materialController = TextEditingController();
-  final TextEditingController _weightController = TextEditingController();
+  final TextEditingController _startKmController = TextEditingController();
   final TextEditingController _remarksController = TextEditingController();
 
   @override
@@ -87,7 +94,7 @@ class _AddTripScreenState extends State<AddTripScreen> {
     _supplierQuantityController.dispose();
     _lrNumberController.dispose();
     _materialController.dispose();
-    _weightController.dispose();
+    _startKmController.dispose();
     _remarksController.dispose();
     super.dispose();
   }
@@ -117,9 +124,9 @@ class _AddTripScreenState extends State<AddTripScreen> {
 
   String _getRateLabel(String billingType) {
     switch (billingType) {
-      case 'Per Tonne':
+      case 'Per Ton':
         return 'Rate per Ton';
-      case 'Per KG':
+      case 'Per Kg':
         return 'Rate per Kg';
       case 'Per KM':
         return 'Rate per KM';
@@ -138,9 +145,9 @@ class _AddTripScreenState extends State<AddTripScreen> {
 
   String _getQuantityLabel(String billingType) {
     switch (billingType) {
-      case 'Per Tonne':
+      case 'Per Ton':
         return 'Total Tons';
-      case 'Per KG':
+      case 'Per Kg':
         return 'Total Kg';
       case 'Per KM':
         return 'Total KM';
@@ -278,6 +285,8 @@ class _AddTripScreenState extends State<AddTripScreen> {
         partyId: _selectedPartyId,
         driverId: _selectedDriverId,
         supplierId: _selectedSupplierId,
+        originId: _selectedOriginId,
+        destinationId: _selectedDestinationId,
       );
 
       setState(() {
@@ -311,85 +320,21 @@ class _AddTripScreenState extends State<AddTripScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: AppColors.appBarColor,
-        foregroundColor: AppColors.appBarTextColor,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          'Add Trip',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ),
+      appBar:CustomAppBar(title: "Add Trip", onBack: () {
+        Navigator.pop(context);
+      },),
+      // Replace your build method's body section with this updated layout:
+
       body: Form(
         key: _formKey,
         child: Column(
           children: [
-            // Green header strip with help button
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: const Color(0xFF4CAF50),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.shade300,
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Fill in trip details',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.help_outline, color: Colors.white, size: 20),
-                    onPressed: () {
-                      // Show help dialog
-                      showDialog(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          title: const Text('Help'),
-                          content: const Text(
-                            'Fill in the required fields:\n\n'
-                            '• Party/Customer Name (Required)\n'
-                            '• Truck Number (Required)\n'
-                            '• Party Freight Amount (Required)\n'
-                            '• Trip Start Date (Required)\n\n'
-                            'All other fields are optional.',
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context),
-                              child: const Text('Got it'),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
-                ],
-              ),
+            Container(height: 10,
+              decoration: BoxDecoration(color: Colors.grey.shade300),
             ),
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -400,30 +345,86 @@ class _AddTripScreenState extends State<AddTripScreen> {
                       onTap: _showPartyPicker,
                       isRequired: true,
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 16),
 
-                    // Truck No.
-                    _buildDropdownField(
-                      label: 'Truck No.',
-                      controller: _truckNumberController,
-                      onTap: _showTruckPicker,
-                      isRequired: true,
+                    // Truck No. and Driver/Supplier - Same Row
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildDropdownField(
+                            label: 'Truck No.',
+                            controller: _truckNumberController,
+                            onTap: _showTruckPicker,
+                            isRequired: true,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _selectedTruckId != 0 && _truckNumberController.text.isNotEmpty
+                              ? _buildDropdownField(
+                            label: _selectedTruckType == 'Own' ? 'Driver Name' : 'Supplier Name',
+                            controller: _selectedTruckType == 'Own'
+                                ? _driverNameController
+                                : _supplierNameController,
+                            onTap: _selectedTruckType == 'Own'
+                                ? _showDriverPicker
+                                : _showSupplierPicker,
+                          )
+                              : Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 18),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade50,
+                              border: Border.all(color: Colors.grey.shade300, width: 1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Driver/Supplier',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.grey.shade500,
+                                    fontWeight: FontWeight.w400,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Select truck first',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.grey.shade400,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 10),
 
-                    // Driver/Supplier field - Only show after truck selection
-                    if (_selectedTruckId != 0 && _truckNumberController.text.isNotEmpty) ...[
-                      _buildDropdownField(
-                        label: _selectedTruckType == 'Own' ? 'Driver Name' : 'Supplier/Truck Owner',
-                        controller: _selectedTruckType == 'Own'
-                            ? _driverNameController
-                            : _supplierNameController,
-                        onTap: _selectedTruckType == 'Own'
-                            ? _showDriverPicker
-                            : _showSupplierPicker,
+                    // Show "Optional" label under Driver/Supplier field
+                    if (_selectedTruckId != 0 && _truckNumberController.text.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 12, top: 4),
+                        child: Row(
+                          children: [
+                            Expanded(child: Container()),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                'Optional',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.grey.shade500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      const SizedBox(height: 10),
-                    ],
+
+                    const SizedBox(height: 16),
 
                     // Origin and Destination - Same Row
                     Row(
@@ -435,7 +436,7 @@ class _AddTripScreenState extends State<AddTripScreen> {
                             onTap: () => _showCityPicker(true),
                           ),
                         ),
-                        const SizedBox(width: 10),
+                        const SizedBox(width: 12),
                         Expanded(
                           child: _buildDropdownField(
                             label: 'Destination',
@@ -445,7 +446,7 @@ class _AddTripScreenState extends State<AddTripScreen> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 16),
 
                     // Party Billing Type with info icon
                     Row(
@@ -453,76 +454,76 @@ class _AddTripScreenState extends State<AddTripScreen> {
                         const Text(
                           'Party Billing Type',
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: 13,
                             fontWeight: FontWeight.w500,
-                            color: Colors.grey,
+                            color: Colors.black87,
                           ),
                         ),
                         const SizedBox(width: 4),
-                        Icon(Icons.info_outline, size: 14, color: Colors.grey.shade600),
+                        Icon(Icons.info_outline, size: 16, color: Colors.grey.shade600),
                       ],
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 12),
                     Row(
                       children: [
                         Expanded(
                           child: _buildBillingTypeButton('Fixed', true),
                         ),
-                        const SizedBox(width: 6),
+                        const SizedBox(width: 8),
                         Expanded(
-                          child: _buildBillingTypeButton('Per Tonne', true),
+                          child: _buildBillingTypeButton('Per Ton', true),
                         ),
-                        const SizedBox(width: 6),
+                        const SizedBox(width: 8),
                         Expanded(
-                          child: _buildBillingTypeButton('Per KG', true),
+                          child: _buildBillingTypeButton('Per Kg', true),
                         ),
-                        const SizedBox(width: 6),
+                        const SizedBox(width: 8),
                         Expanded(
                           child: _buildMoreButton(true),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 16),
 
                     // Rate and Quantity fields - Show for all types except Fixed
                     if (_selectedBillingType != 'Fixed') ...[
                       Row(
                         children: [
                           Expanded(
-                            child: _buildTextField(
+                            child: CustomTextField(
                               label: _getRateLabel(_selectedBillingType),
                               controller: _rateController,
-                              hintText: 'Enter rate',
-                              prefixText: '₹ ',
-                              keyboardType: TextInputType.number,
+                              hint: '₹ Enter rate',
+                              keyboard: TextInputType.number,
+                              inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}'))],
                               onChanged: (value) => _calculateFreightAmount(),
                             ),
                           ),
-                          const SizedBox(width: 10),
+                          const SizedBox(width: 12),
                           Expanded(
-                            child: _buildTextField(
+                            child: CustomTextField(
                               label: _getQuantityLabel(_selectedBillingType),
                               controller: _quantityController,
-                              hintText: 'Enter quantity',
-                              keyboardType: TextInputType.number,
+                              hint: 'Enter quantity',
+                              keyboard: TextInputType.number,
+                              inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}'))],
                               onChanged: (value) => _calculateFreightAmount(),
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 16),
                     ],
 
                     // Party Freight Amount
-                    _buildTextField(
+                    CustomTextField(
                       label: 'Party Freight Amount',
                       controller: _freightAmountController,
-                      hintText: 'Enter amount',
-                      prefixText: '₹ ',
-                      keyboardType: TextInputType.number,
-                      isRequired: true,
+                      hint: '₹ Enter amount',
+                      keyboard: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}'))],
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 16),
 
                     // Supplier Billing Type - Market only
                     if (_selectedTruckType == 'Market') ...[
@@ -531,162 +532,165 @@ class _AddTripScreenState extends State<AddTripScreen> {
                           const Text(
                             'Supplier Billing Type',
                             style: TextStyle(
-                              fontSize: 12,
+                              fontSize: 13,
                               fontWeight: FontWeight.w500,
-                              color: Colors.grey,
+                              color: Colors.black87,
                             ),
                           ),
                           const SizedBox(width: 4),
-                          Icon(Icons.info_outline, size: 14, color: Colors.grey.shade600),
+                          Icon(Icons.info_outline, size: 16, color: Colors.grey.shade600),
                         ],
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 12),
                       Row(
                         children: [
                           Expanded(
                             child: _buildBillingTypeButton('Fixed', false),
                           ),
-                          const SizedBox(width: 6),
+                          const SizedBox(width: 8),
                           Expanded(
-                            child: _buildBillingTypeButton('Per Tonne', false),
+                            child: _buildBillingTypeButton('Per Ton', false),
                           ),
-                          const SizedBox(width: 6),
+                          const SizedBox(width: 8),
                           Expanded(
-                            child: _buildBillingTypeButton('Per KG', false),
+                            child: _buildBillingTypeButton('Per Kg', false),
                           ),
-                          const SizedBox(width: 6),
+                          const SizedBox(width: 8),
                           Expanded(
                             child: _buildMoreButton(false),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 16),
 
                       // Supplier Rate and Quantity - Show for all types except Fixed
                       if (_selectedSupplierBillingType != 'Fixed') ...[
                         Row(
                           children: [
                             Expanded(
-                              child: _buildTextField(
+                              child: CustomTextField(
                                 label: _getRateLabel(_selectedSupplierBillingType),
                                 controller: _supplierRateController,
-                                hintText: 'Enter rate',
-                                prefixText: '₹ ',
-                                keyboardType: TextInputType.number,
+                                hint: '₹ Enter rate',
+                                keyboard: TextInputType.number,
+                                inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}'))],
                                 onChanged: (value) => _calculateTruckHireCost(),
                               ),
                             ),
-                            const SizedBox(width: 10),
+                            const SizedBox(width: 12),
                             Expanded(
-                              child: _buildTextField(
+                              child: CustomTextField(
                                 label: _getQuantityLabel(_selectedSupplierBillingType),
                                 controller: _supplierQuantityController,
-                                hintText: 'Enter quantity',
-                                keyboardType: TextInputType.number,
+                                hint: 'Enter quantity',
+                                keyboard: TextInputType.number,
+                                inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}'))],
                                 onChanged: (value) => _calculateTruckHireCost(),
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 16),
                       ],
 
                       // Truck Hire Cost
-                      _buildTextField(
+                      CustomTextField(
                         label: 'Truck Hire Cost',
                         controller: _truckHireCostController,
-                        hintText: 'Enter cost',
-                        prefixText: '₹ ',
-                        keyboardType: TextInputType.number,
+                        hint: '₹ Enter cost',
+                        keyboard: TextInputType.number,
+                        inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}'))],
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 16),
                     ],
 
                     // Trip Start Date
-                    _buildDateField(
-                      label: 'Trip Start Date',
-                      date: _selectedDate,
+                    GestureDetector(
                       onTap: _selectDate,
+                      child: AbsorbPointer(
+                        child: CustomTextField(
+                          label: 'Trip Start Date',
+                          controller: TextEditingController(
+                            text: DateFormat('dd MMM yyyy').format(_selectedDate),
+                          ),
+                          suffix: const Icon(Icons.calendar_today),
+                        ),
+                      ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 16),
 
                     // Add More Details Button
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
+                    Align(alignment: Alignment.topRight,
+                      child: OutlinedButton(
                         onPressed: () => _showMoreDetailsDrawer(),
                         style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          side: BorderSide(color: Colors.blue.shade600, width: 1.5),
+                          padding: const EdgeInsets.symmetric(vertical: 14,horizontal: 12),
+                          side: BorderSide(color: Colors.grey.shade400, width: 1),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8),
                           ),
                         ),
-                        icon: Icon(
-                          Icons.add_circle_outline,
-                          color: Colors.blue.shade600,
-                        ),
-                        label: Text(
+                        child: Text(
                           'Add More Details',
                           style: TextStyle(
-                            color: Colors.blue.shade600,
-                            fontSize: 14,
+                            color: AppColors.info.withOpacity(0.8),
+                            fontSize: 12,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 16),
 
                     // Show badge if additional details are filled
                     if (_lrNumberController.text.isNotEmpty ||
                         _materialController.text.isNotEmpty ||
-                        _weightController.text.isNotEmpty ||
+                        _startKmController.text.isNotEmpty ||
                         _remarksController.text.isNotEmpty) ...[
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.green.shade50,
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: Colors.green.shade200),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.check_circle, color: Colors.green.shade700, size: 18),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                'Additional details added',
-                                style: TextStyle(
-                                  color: Colors.green.shade700,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                            TextButton(
-                              onPressed: () => _showMoreDetailsDrawer(),
-                              child: Text(
-                                'Edit',
-                                style: TextStyle(
-                                  color: Colors.blue.shade600,
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 12),
+                      // Container(
+                      //   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      //   decoration: BoxDecoration(
+                      //     color: Colors.green.shade50,
+                      //     borderRadius: BorderRadius.circular(8),
+                      //     border: Border.all(color: Colors.green.shade200),
+                      //   ),
+                      //   child: Row(
+                      //     children: [
+                      //       Icon(Icons.check_circle, color: Colors.green.shade700, size: 20),
+                      //       const SizedBox(width: 10),
+                      //       Expanded(
+                      //         child: Text(
+                      //           'Additional details added',
+                      //           style: TextStyle(
+                      //             color: Colors.green.shade700,
+                      //             fontSize: 13,
+                      //             fontWeight: FontWeight.w500,
+                      //           ),
+                      //         ),
+                      //       ),
+                      //       TextButton(
+                      //         onPressed: () => _showMoreDetailsDrawer(),
+                      //         child: Text(
+                      //           'Edit',
+                      //           style: TextStyle(
+                      //             color: AppColors.info.withOpacity(0.8),
+                      //             fontSize: 13,
+                      //             fontWeight: FontWeight.w600,
+                      //           ),
+                      //         ),
+                      //       ),
+                      //     ],
+                      //   ),
+                      // ),
+                      const SizedBox(height: 16),
                     ],
-
 
                     // Send SMS Checkbox - Market only
                     if (_selectedTruckType == 'Market')
                       Row(
                         children: [
                           const Text(
-                            'Send SMS to :',
+                            'Send SMS to:',
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w500,
@@ -717,31 +721,24 @@ class _AddTripScreenState extends State<AddTripScreen> {
                         ],
                       ),
 
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 80), // Extra space for floating button
                   ],
                 ),
               ),
             ),
 
-            // Save Trip Button - Fixed at bottom
+            // Save Trip Button - Fixed at bottom with blue background
             Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
+              padding: const EdgeInsets.all(16),
+              decoration: const BoxDecoration(
                 color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.shade300,
-                    blurRadius: 8,
-                    offset: const Offset(0, -2),
-                  ),
-                ],
               ),
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _saveTrip,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryGreen,
+                  backgroundColor: AppColors.info,
                   foregroundColor: Colors.white,
-                  minimumSize: const Size(double.infinity, 48),
+                  minimumSize: const Size(double.infinity, 52),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
@@ -749,20 +746,21 @@ class _AddTripScreenState extends State<AddTripScreen> {
                 ),
                 child: _isLoading
                     ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2,
-                        ),
-                      )
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2,
+                  ),
+                )
                     : const Text(
-                        'Save Trip',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                  'Save Trip',
+                  style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                  ),
+                ),
               ),
             ),
           ],
@@ -782,172 +780,14 @@ class _AddTripScreenState extends State<AddTripScreen> {
     return InkWell(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         decoration: BoxDecoration(
           color: Colors.white,
           border: Border.all(
             color: hasError ? Colors.red : Colors.grey.shade300,
-            width: hasError ? 2 : 1,
+            width: 1,
           ),
-          borderRadius: BorderRadius.circular(6),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: hasError ? Colors.red : Colors.grey.shade500,
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
-                if (isRequired)
-                  const Text(
-                    ' *',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: Colors.red,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 2),
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    controller.text.isEmpty ? (hasError ? 'Required' : '') : controller.text,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: controller.text.isEmpty && hasError ? Colors.red.shade300 : Colors.black87,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-                Icon(
-                  Icons.arrow_drop_down,
-                  size: 20,
-                  color: hasError ? Colors.red : Colors.grey.shade500,
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTextField({
-    required String label,
-    required TextEditingController controller,
-    required String hintText,
-    String? prefixText,
-    TextInputType? keyboardType,
-    Function(String)? onChanged,
-    bool isRequired = false,
-  }) {
-    final hasError = _showValidationErrors && isRequired && controller.text.isEmpty;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(
-          color: hasError ? Colors.red : Colors.grey.shade300,
-          width: hasError ? 2 : 1,
-        ),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(left: 12, top: 6, right: 12),
-            child: Row(
-              children: [
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: hasError ? Colors.red : Colors.grey.shade500,
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
-                if (isRequired)
-                  const Text(
-                    ' *',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: Colors.red,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          TextFormField(
-            controller: controller,
-            keyboardType: keyboardType,
-            inputFormatters: keyboardType == TextInputType.number
-                ? [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}'))]
-                : null,
-            style: const TextStyle(
-              fontSize: 14,
-              color: Colors.black87,
-              fontWeight: FontWeight.w500,
-            ),
-            decoration: InputDecoration(
-              hintText: hintText,
-              hintStyle: TextStyle(
-                color: hasError ? Colors.red.shade300 : Colors.grey.shade400,
-                fontSize: 14,
-              ),
-              prefixText: prefixText,
-              prefixStyle: const TextStyle(
-                fontSize: 14,
-                color: Colors.black87,
-                fontWeight: FontWeight.w500,
-              ),
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.only(left: 12, right: 12, bottom: 6),
-              isDense: true,
-            ),
-            onChanged: (value) {
-              if (_showValidationErrors && value.isNotEmpty) {
-                setState(() {
-                  // Re-validate when user starts typing
-                });
-              }
-              if (onChanged != null) onChanged(value);
-            },
-            validator: (value) {
-              if (isRequired && (value == null || value.isEmpty)) {
-                return 'Required';
-              }
-              return null;
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDateField({
-    required String label,
-    required DateTime date,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border.all(color: Colors.grey.shade300, width: 1),
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(8),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -955,25 +795,32 @@ class _AddTripScreenState extends State<AddTripScreen> {
             Text(
               label,
               style: TextStyle(
-                fontSize: 10,
-                color: Colors.grey.shade500,
+                fontSize: 11,
+                color: Colors.grey.shade600,
                 fontWeight: FontWeight.w400,
               ),
             ),
-            const SizedBox(height: 2),
             Row(
               children: [
                 Expanded(
                   child: Text(
-                    DateFormat('dd MMM yyyy').format(date),
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Colors.black87,
+                    controller.text.isEmpty
+                        ? ''
+                        : controller.text,
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: controller.text.isEmpty
+                          ? Colors.grey.shade400
+                          : Colors.black87,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
                 ),
-                Icon(Icons.calendar_today, size: 16, color: Colors.grey.shade500),
+                Icon(
+                  Icons.arrow_drop_down,
+                  size: 24,
+                  color: Colors.grey.shade600,
+                ),
               ],
             ),
           ],
@@ -982,12 +829,13 @@ class _AddTripScreenState extends State<AddTripScreen> {
     );
   }
 
+
   Widget _buildBillingTypeButton(String type, bool isPartyBilling) {
     final isSelected = isPartyBilling
         ? _selectedBillingType == type
         : _selectedSupplierBillingType == type;
 
-    Color selectedColor = isPartyBilling ? const Color(0xFF2196F3) : const Color(0xFFFF9066);
+    Color selectedColor = isPartyBilling ? AppColors.info.withOpacity(0.2) : const Color(0xFFFF9066);
 
     return InkWell(
       onTap: () {
@@ -1008,11 +856,11 @@ class _AddTripScreenState extends State<AddTripScreen> {
         });
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+        padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 8),
         decoration: BoxDecoration(
           color: isSelected ? selectedColor : Colors.grey.shade300,
           border: Border.all(
-            color: isSelected ? selectedColor : Colors.grey.shade400,
+            color: isSelected ? AppColors.info : Colors.grey.shade400,
             width: 1,
           ),
           borderRadius: BorderRadius.circular(20),
@@ -1021,7 +869,7 @@ class _AddTripScreenState extends State<AddTripScreen> {
           type,
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: isSelected ? Colors.white : Colors.grey.shade700,
+            color: isSelected ? AppColors.info : Colors.grey.shade700,
             fontWeight: FontWeight.w500,
             fontSize: 12,
           ),
@@ -1421,7 +1269,7 @@ class _AddTripScreenState extends State<AddTripScreen> {
 
   void _showCityPicker(bool isOrigin) {
     final searchController = TextEditingController();
-    List<String> filteredCities = List.from(_cities);
+    List<Map<String, dynamic>> filteredCities = List.from(_cities);
 
     showModalBottomSheet(
       context: context,
@@ -1452,9 +1300,21 @@ class _AddTripScreenState extends State<AddTripScreen> {
               const SizedBox(height: 12),
               TextField(
                 controller: searchController,
+                autofocus: true,
                 decoration: InputDecoration(
-                  hintText: 'Search city...',
+                  hintText: 'Search or type city name...',
                   prefixIcon: const Icon(Icons.search),
+                  suffixIcon: searchController.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear),
+                          onPressed: () {
+                            searchController.clear();
+                            setModalState(() {
+                              filteredCities = List.from(_cities);
+                            });
+                          },
+                        )
+                      : null,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
@@ -1466,37 +1326,131 @@ class _AddTripScreenState extends State<AddTripScreen> {
                       filteredCities = List.from(_cities);
                     } else {
                       filteredCities = _cities
-                          .where((city) => city.toLowerCase().contains(value.toLowerCase()))
+                          .where((city) => city['name'].toLowerCase().contains(value.toLowerCase()))
                           .toList();
                     }
                   });
                 },
               ),
               const SizedBox(height: 12),
+              // Add New City button - always visible at top
+              ListTile(
+                leading: Icon(Icons.add_circle, color: AppColors.primaryGreen),
+                title: const Text('Add New City'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showAddCityDialog(isOrigin);
+                },
+              ),
+              const Divider(),
               Expanded(
-                child: ListView.builder(
-                  itemCount: filteredCities.length,
-                  itemBuilder: (context, index) {
-                    final city = filteredCities[index];
-                    return ListTile(
-                      title: Text(city),
-                      onTap: () {
-                        setState(() {
-                          if (isOrigin) {
-                            _originController.text = city;
-                          } else {
-                            _destinationController.text = city;
-                          }
-                        });
-                        Navigator.pop(context);
-                      },
-                    );
-                  },
-                ),
+                child: filteredCities.isEmpty
+                    ? Center(
+                        child: Text(
+                          'No cities found',
+                          style: TextStyle(color: Colors.grey.shade600),
+                        ),
+                      )
+                    : ListView.builder(
+                        itemCount: filteredCities.length,
+                        itemBuilder: (context, index) {
+                          final city = filteredCities[index];
+                          return ListTile(
+                            title: Text(city['name']),
+                            onTap: () {
+                              setState(() {
+                                if (isOrigin) {
+                                  _originController.text = city['name'];
+                                  _selectedOriginId = city['id'];
+                                } else {
+                                  _destinationController.text = city['name'];
+                                  _selectedDestinationId = city['id'];
+                                }
+                              });
+                              Navigator.pop(context);
+                            },
+                          );
+                        },
+                      ),
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  // Show dialog to add new city
+  void _showAddCityDialog(bool isOrigin) {
+    final cityController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add New City'),
+        content: TextField(
+          controller: cityController,
+          decoration: const InputDecoration(
+            hintText: 'Enter city name',
+            border: OutlineInputBorder(),
+          ),
+          textCapitalization: TextCapitalization.words,
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (cityController.text.trim().isEmpty) return;
+
+              Navigator.pop(context); // Close dialog
+              AppLoader.show(context);
+
+              // Call API to add city to database
+              final result = await ApiService.addCity(cityController.text.trim());
+
+              if (mounted) {
+                AppLoader.hide(context);
+              }
+
+              if (result != null && result['success'] == true) {
+                final cityData = result['city'];
+                setState(() {
+                  // Add to local list if not already present
+                  if (!_cities.any((c) => c['id'] == cityData['id'])) {
+                    _cities.add(cityData);
+                    _cities.sort((a, b) => a['name'].compareTo(b['name']));
+                  }
+
+                  if (isOrigin) {
+                    _originController.text = cityData['name'];
+                    _selectedOriginId = cityData['id'];
+                  } else {
+                    _destinationController.text = cityData['name'];
+                    _selectedDestinationId = cityData['id'];
+                  }
+                });
+
+                if (mounted) {
+                  ToastHelper.showSnackBarToast(context,
+                    SnackBar(content: Text(result['message'] ?? 'City added successfully')),
+                  );
+                }
+              } else {
+                if (mounted) {
+                  ToastHelper.showSnackBarToast(context,
+                    const SnackBar(content: Text('Failed to add city')),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryGreen),
+            child: const Text('Add', style: TextStyle(color: Colors.white)),
+          ),
+        ],
       ),
     );
   }
@@ -1515,25 +1469,23 @@ class _AddTripScreenState extends State<AddTripScreen> {
         builder: (context, setModalState) => Container(
           decoration: const BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(20),
-              topRight: Radius.circular(20),
-            ),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
           ),
           padding: EdgeInsets.only(
             bottom: MediaQuery.of(context).viewInsets.bottom,
-            left: 16,
-            right: 16,
-            top: 16,
+            top: 20,
+            left: 20,
+            right: 20,
           ),
           child: SingleChildScrollView(
             child: Form(
               key: formKey,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Header with close button
+
+                  // ---------------- HEADER ----------------
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -1550,146 +1502,93 @@ class _AddTripScreenState extends State<AddTripScreen> {
                       ),
                     ],
                   ),
-                  const Divider(height: 1),
+
                   const SizedBox(height: 16),
 
-                  // Party Name field
-                  TextFormField(
+                  // ---------------- PARTY NAME ----------------
+                  CustomTextField(
+                    label: "Party Name",
+                    hint: "Enter party name",
                     controller: nameController,
-                    textCapitalization: TextCapitalization.words,
-                    decoration: InputDecoration(
-                      labelText: 'Party Name',
-                      hintText: 'Enter party name',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      filled: true,
-                      fillColor: Colors.grey[50],
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 16,
-                      ),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter party name';
-                      }
-                      return null;
+                    onChanged: (_) {
+                      // needed only for validation triggers
                     },
                   ),
+
                   const SizedBox(height: 16),
 
-                  // Phone Number field
-                  TextFormField(
+                  // ---------------- PHONE NUMBER ----------------
+                  CustomTextField(
+                    label: "Phone Number",
+                    hint: "Enter phone number",
                     controller: phoneController,
-                    keyboardType: TextInputType.phone,
-                    decoration: InputDecoration(
-                      labelText: 'Phone Number',
-                      hintText: 'Enter phone number',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      filled: true,
-                      fillColor: Colors.grey[50],
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 16,
-                      ),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter phone number';
-                      }
-                      return null;
-                    },
+                    keyboard: TextInputType.phone,
                   ),
+
                   const SizedBox(height: 24),
 
-                  // Confirm button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton(
-                      onPressed: isLoading
-                          ? null
-                          : () async {
-                              if (!formKey.currentState!.validate()) {
-                                return;
-                              }
+                  // ---------------- CONFIRM BUTTON ----------------
+                  CustomButton(
+                    text: "Confirm",
+                    color: AppColors.info,
+                    onPressed: () async {
+                        if (!formKey.currentState!.validate()) {
+                          return;
+                        }
 
-                              setModalState(() {
-                                isLoading = true;
-                              });
+                        setModalState(() {
+                          isLoading = true;
+                        });
 
-                              try {
-                                final result = await ApiService.addParty(
-                                  name: nameController.text,
-                                  phone: phoneController.text,
-                                );
+                        try {
+                          final result = await ApiService.addParty(
+                            name: nameController.text,
+                            phone: phoneController.text,
+                          );
 
-                                if (result != null && mounted) {
-                                  setState(() {
-                                    _partyNameController.text = nameController.text;
-                                    _selectedPartyId = result['id'];
-                                    _parties.add(result);
-                                  });
-                                  Navigator.pop(context);
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Party added successfully'),
-                                      backgroundColor: Colors.green,
-                                    ),
-                                  );
-                                } else {
-                                  setModalState(() {
-                                    isLoading = false;
-                                  });
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Failed to add party'),
-                                      backgroundColor: Colors.red,
-                                    ),
-                                  );
-                                }
-                              } catch (e) {
-                                setModalState(() {
-                                  isLoading = false;
-                                });
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Error: $e'),
-                                    backgroundColor: Colors.red,
-                                  ),
-                                );
-                              }
-                            },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF2196F3),
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        disabledBackgroundColor: Colors.grey[400],
-                      ),
-                      child: isLoading
-                          ? const SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
+                          if (result != null && mounted) {
+                            setState(() {
+                              _partyNameController.text = nameController.text;
+                              _selectedPartyId = result['id'];
+                              _parties.add(result);
+                            });
+
+                            Navigator.pop(context);
+
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Party added successfully'),
+                                backgroundColor: Colors.green,
                               ),
-                            )
-                          : const Text(
-                              'Confirm',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
+                            );
+                          } else {
+                            setModalState(() {
+                              isLoading = false;
+                            });
+
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Failed to add party'),
+                                backgroundColor: Colors.red,
                               ),
+                            );
+                          }
+                        } catch (e) {
+                          setModalState(() {
+                            isLoading = false;
+                          });
+
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Error: $e'),
+                              backgroundColor: Colors.red,
                             ),
-                    ),
+                          );
+                        }
+                      },
                   ),
-                  const SizedBox(height: 16),
+
+                  const SizedBox(height: 8),
                 ],
               ),
             ),
@@ -1811,56 +1710,56 @@ class _AddTripScreenState extends State<AddTripScreen> {
                       onPressed: isLoading
                           ? null
                           : () async {
-                              if (!formKey.currentState!.validate()) {
-                                return;
-                              }
+                        if (!formKey.currentState!.validate()) {
+                          return;
+                        }
 
-                              setModalState(() {
-                                isLoading = true;
-                              });
+                        setModalState(() {
+                          isLoading = true;
+                        });
 
-                              try {
-                                final result = await ApiService.addDriver(
-                                  name: nameController.text,
-                                  phone: phoneController.text,
-                                );
+                        try {
+                          final result = await ApiService.addDriver(
+                            name: nameController.text,
+                            phone: phoneController.text,
+                          );
 
-                                if (result != null && mounted) {
-                                  setState(() {
-                                    _driverNameController.text = nameController.text;
-                                    _selectedDriverId = result['id'];
-                                    _drivers.add(result);
-                                  });
-                                  Navigator.pop(context);
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Driver added successfully'),
-                                      backgroundColor: Colors.green,
-                                    ),
-                                  );
-                                } else {
-                                  setModalState(() {
-                                    isLoading = false;
-                                  });
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Failed to add driver'),
-                                      backgroundColor: Colors.red,
-                                    ),
-                                  );
-                                }
-                              } catch (e) {
-                                setModalState(() {
-                                  isLoading = false;
-                                });
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Error: $e'),
-                                    backgroundColor: Colors.red,
-                                  ),
-                                );
-                              }
-                            },
+                          if (result != null && mounted) {
+                            setState(() {
+                              _driverNameController.text = nameController.text;
+                              _selectedDriverId = result['id'];
+                              _drivers.add(result);
+                            });
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Driver added successfully'),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                          } else {
+                            setModalState(() {
+                              isLoading = false;
+                            });
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Failed to add driver'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                          setModalState(() {
+                            isLoading = false;
+                          });
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Error: $e'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF2196F3),
                         foregroundColor: Colors.white,
@@ -1871,20 +1770,20 @@ class _AddTripScreenState extends State<AddTripScreen> {
                       ),
                       child: isLoading
                           ? const SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
-                              ),
-                            )
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
                           : const Text(
-                              'Confirm',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
+                        'Confirm',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -2009,55 +1908,55 @@ class _AddTripScreenState extends State<AddTripScreen> {
                       onPressed: isLoading
                           ? null
                           : () async {
-                              if (!formKey.currentState!.validate()) {
-                                return;
-                              }
+                        if (!formKey.currentState!.validate()) {
+                          return;
+                        }
 
-                              setModalState(() {
-                                isLoading = true;
-                              });
+                        setModalState(() {
+                          isLoading = true;
+                        });
 
-                              try {
-                                final result = await ApiService.addSupplier(
-                                  name: nameController.text,
-                                  phone: phoneController.text,
-                                );
+                        try {
+                          final result = await ApiService.addSupplier(
+                            name: nameController.text,
+                            phone: phoneController.text,
+                          );
 
-                                if (result != null && mounted) {
-                                  setState(() {
-                                    _supplierNameController.text = nameController.text;
-                                    _selectedSupplierId = result['id'];
-                                  });
-                                  Navigator.pop(context);
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Supplier added successfully'),
-                                      backgroundColor: Colors.green,
-                                    ),
-                                  );
-                                } else {
-                                  setModalState(() {
-                                    isLoading = false;
-                                  });
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Failed to add supplier'),
-                                      backgroundColor: Colors.red,
-                                    ),
-                                  );
-                                }
-                              } catch (e) {
-                                setModalState(() {
-                                  isLoading = false;
-                                });
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Error: $e'),
-                                    backgroundColor: Colors.red,
-                                  ),
-                                );
-                              }
-                            },
+                          if (result != null && mounted) {
+                            setState(() {
+                              _supplierNameController.text = nameController.text;
+                              _selectedSupplierId = result['id'];
+                            });
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Supplier added successfully'),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                          } else {
+                            setModalState(() {
+                              isLoading = false;
+                            });
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Failed to add supplier'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                          setModalState(() {
+                            isLoading = false;
+                          });
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Error: $e'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF2196F3),
                         foregroundColor: Colors.white,
@@ -2068,20 +1967,20 @@ class _AddTripScreenState extends State<AddTripScreen> {
                       ),
                       child: isLoading
                           ? const SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
-                              ),
-                            )
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
                           : const Text(
-                              'Confirm',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
+                        'Confirm',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -2134,29 +2033,30 @@ class _AddTripScreenState extends State<AddTripScreen> {
               const SizedBox(height: 20),
 
               // LR Number
-              _buildTextField(
+              CustomTextField(
                 label: 'LR Number',
                 controller: _lrNumberController,
-                hintText: 'Auto-generated (editable)',
-                keyboardType: TextInputType.text,
+                hint: 'Auto-generated (editable)',
+                keyboard: TextInputType.text,
               ),
               const SizedBox(height: 16),
 
               // Material
-              _buildTextField(
+              CustomTextField(
                 label: 'Material',
                 controller: _materialController,
-                hintText: 'e.g., Steel, Cement, etc.',
-                keyboardType: TextInputType.text,
+                hint: 'e.g., Steel, Cement, etc.',
+                keyboard: TextInputType.text,
               ),
               const SizedBox(height: 16),
 
-              // Weight
-              _buildTextField(
-                label: 'Weight (in Tons)',
-                controller: _weightController,
-                hintText: 'Enter weight',
-                keyboardType: TextInputType.number,
+              // Start KM
+              CustomTextField(
+                label: 'Start KM',
+                controller: _startKmController,
+                hint: 'Enter starting odometer reading',
+                keyboard: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               ),
               const SizedBox(height: 16),
 
@@ -2329,12 +2229,12 @@ class _TruckPickerScreenState extends State<_TruckPickerScreen> with SingleTicke
                     prefixIcon: const Icon(Icons.search, color: Colors.grey),
                     suffixIcon: _searchController.text.isNotEmpty
                         ? IconButton(
-                            icon: const Icon(Icons.clear, color: Colors.grey),
-                            onPressed: () {
-                              _searchController.clear();
-                              _filterTrucks('');
-                            },
-                          )
+                      icon: const Icon(Icons.clear, color: Colors.grey),
+                      onPressed: () {
+                        _searchController.clear();
+                        _filterTrucks('');
+                      },
+                    )
                         : null,
                     filled: true,
                     fillColor: Colors.grey.shade100,
@@ -2351,9 +2251,9 @@ class _TruckPickerScreenState extends State<_TruckPickerScreen> with SingleTicke
                 color: Colors.white,
                 child: TabBar(
                   controller: _tabController,
-                  labelColor: Colors.blue.shade700,
+                  labelColor: AppColors.info,
                   unselectedLabelColor: Colors.grey.shade600,
-                  indicatorColor: Colors.blue.shade700,
+                  indicatorColor: AppColors.info,
                   indicatorWeight: 3,
                   indicatorSize: TabBarIndicatorSize.tab,
                   tabs: [
@@ -2398,6 +2298,7 @@ class _TruckPickerScreenState extends State<_TruckPickerScreen> with SingleTicke
             isScrollControlled: true,
             backgroundColor: Colors.transparent,
             builder: (context) => AddTruckBottomSheet(
+              preselectedType: _tabController.index == 0 ? 'Own' : 'Market',
               onTruckAdded: () async {
                 // Reload trucks after adding
                 final trucks = await ApiService.getTrucks();
@@ -2464,7 +2365,7 @@ class _TruckPickerScreenState extends State<_TruckPickerScreen> with SingleTicke
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
             side: isSelected
-                ? BorderSide(color: Colors.blue.shade700, width: 2)
+                ? BorderSide(color: AppColors.info, width: 2)
                 : BorderSide.none,
           ),
           child: ListTile(
@@ -2472,12 +2373,12 @@ class _TruckPickerScreenState extends State<_TruckPickerScreen> with SingleTicke
             leading: Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: isSelected ? Colors.blue.shade50 : Colors.grey.shade100,
+                color: isSelected ? AppColors.info.withOpacity(0.1) : Colors.grey.shade100,
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(
                 type == 'Own' ? Icons.directions_car : Icons.local_shipping,
-                color: isSelected ? Colors.blue.shade700 : Colors.grey.shade600,
+                color: isSelected ? AppColors.info : Colors.grey.shade600,
                 size: 28,
               ),
             ),
@@ -2486,7 +2387,7 @@ class _TruckPickerScreenState extends State<_TruckPickerScreen> with SingleTicke
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: isSelected ? Colors.blue.shade700 : Colors.black87,
+                color: isSelected ? AppColors.info : Colors.black87,
               ),
             ),
             subtitle: Column(
@@ -2510,11 +2411,15 @@ class _TruckPickerScreenState extends State<_TruckPickerScreen> with SingleTicke
                         ),
                       ),
                     ),
-                    if (truck['supplier'] != null) ...[
+                    // Show supplier name for Market trucks
+                    if (type == 'Market' && (truck['supplierName'] != null || truck['supplier'] != null)) ...[
                       const SizedBox(width: 8),
-                      Text(
-                        truck['supplier'],
-                        style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                      Flexible(
+                        child: Text(
+                          truck['supplierName'] ?? truck['supplier'],
+                          style: TextStyle(fontSize: 12, color: Colors.orange.shade700, fontWeight: FontWeight.w500),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ],
                   ],
@@ -2522,7 +2427,7 @@ class _TruckPickerScreenState extends State<_TruckPickerScreen> with SingleTicke
               ],
             ),
             trailing: isSelected
-                ? Icon(Icons.check_circle, color: Colors.blue.shade700, size: 28)
+                ? Icon(Icons.check_circle, color: AppColors.info, size: 28)
                 : const Icon(Icons.chevron_right, color: Colors.grey),
             onTap: () {
               Navigator.pop(context, truck);

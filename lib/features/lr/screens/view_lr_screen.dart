@@ -1,10 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
 import 'package:http/http.dart' as http;
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../../services/api_service.dart';
 import '../../../services/auth_storage.dart';
 import '../../../utils/app_colors.dart';
+import 'package:transport_book_app/utils/toast_helper.dart';
+import 'package:transport_book_app/utils/app_loader.dart';
 
 class ViewLRScreen extends StatefulWidget {
   final int lrId;
@@ -20,12 +28,255 @@ class ViewLRScreen extends StatefulWidget {
 
 class _ViewLRScreenState extends State<ViewLRScreen> {
   bool _isLoading = true;
+  bool _isGeneratingPdf = false;
   Map<String, dynamic>? _lrData;
 
   @override
   void initState() {
     super.initState();
     _loadLRDetails();
+  }
+
+  // Generate PDF for LR
+  Future<Uint8List> _generateLRPdf() async {
+    final pdf = pw.Document();
+
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(32),
+        build: (pw.Context context) {
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              // Header
+              pw.Center(
+                child: pw.Text(
+                  'LORRY RECEIPT',
+                  style: pw.TextStyle(
+                    fontSize: 24,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+              ),
+              pw.SizedBox(height: 20),
+
+              // LR Details Row
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Text('LR Number: ${_lrData?['lrNumber'] ?? 'N/A'}',
+                          style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                      pw.Text('LR Date: ${_lrData?['lrDate'] ?? 'N/A'}'),
+                    ],
+                  ),
+                  pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.end,
+                    children: [
+                      pw.Text('Status: ${_lrData?['status'] ?? 'N/A'}'),
+                    ],
+                  ),
+                ],
+              ),
+              pw.SizedBox(height: 10),
+              pw.Divider(),
+              pw.SizedBox(height: 10),
+
+              // Company Details
+              pw.Text('COMPANY DETAILS',
+                  style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 14)),
+              pw.SizedBox(height: 8),
+              pw.Text(_lrData?['companyName'] ?? 'N/A'),
+              pw.Text('GST: ${_lrData?['companyGst'] ?? 'N/A'}'),
+              pw.Text('${_lrData?['companyAddressLine1'] ?? ''} ${_lrData?['companyAddressLine2'] ?? ''}'),
+              pw.Text('${_lrData?['companyState'] ?? ''} - ${_lrData?['companyPincode'] ?? ''}'),
+              pw.Text('Mobile: ${_lrData?['companyMobile'] ?? 'N/A'}'),
+              pw.SizedBox(height: 15),
+
+              // Consignor and Consignee
+              pw.Row(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Expanded(
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text('CONSIGNOR (FROM)',
+                            style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12)),
+                        pw.SizedBox(height: 5),
+                        pw.Text(_lrData?['consignorName'] ?? 'N/A'),
+                        pw.Text('GST: ${_lrData?['consignorGst'] ?? 'N/A'}'),
+                        pw.Text('${_lrData?['consignorAddressLine1'] ?? ''}'),
+                        pw.Text('${_lrData?['consignorState'] ?? ''} - ${_lrData?['consignorPincode'] ?? ''}'),
+                        pw.Text('Mobile: ${_lrData?['consignorMobile'] ?? 'N/A'}'),
+                      ],
+                    ),
+                  ),
+                  pw.SizedBox(width: 20),
+                  pw.Expanded(
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text('CONSIGNEE (TO)',
+                            style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12)),
+                        pw.SizedBox(height: 5),
+                        pw.Text(_lrData?['consigneeName'] ?? 'N/A'),
+                        pw.Text('GST: ${_lrData?['consigneeGst'] ?? 'N/A'}'),
+                        pw.Text('${_lrData?['consigneeAddressLine1'] ?? ''}'),
+                        pw.Text('${_lrData?['consigneeState'] ?? ''} - ${_lrData?['consigneePincode'] ?? ''}'),
+                        pw.Text('Mobile: ${_lrData?['consigneeMobile'] ?? 'N/A'}'),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              pw.SizedBox(height: 15),
+              pw.Divider(),
+              pw.SizedBox(height: 10),
+
+              // Goods Details
+              pw.Text('GOODS DETAILS',
+                  style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 14)),
+              pw.SizedBox(height: 8),
+              pw.Row(
+                children: [
+                  pw.Expanded(child: pw.Text('Material: ${_lrData?['materialDescription'] ?? 'N/A'}')),
+                  pw.Expanded(child: pw.Text('Packages: ${_lrData?['totalPackages'] ?? 'N/A'}')),
+                ],
+              ),
+              pw.Row(
+                children: [
+                  pw.Expanded(child: pw.Text('Actual Weight: ${_lrData?['actualWeight'] ?? 'N/A'} kg')),
+                  pw.Expanded(child: pw.Text('Charged Weight: ${_lrData?['chargedWeight'] ?? 'N/A'} kg')),
+                ],
+              ),
+              pw.Text('Declared Value: ₹${_lrData?['declaredValue'] ?? '0'}'),
+              pw.SizedBox(height: 15),
+              pw.Divider(),
+              pw.SizedBox(height: 10),
+
+              // Charges
+              pw.Text('CHARGES',
+                  style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 14)),
+              pw.SizedBox(height: 8),
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text('Freight Amount:'),
+                  pw.Text('₹${_lrData?['freightAmount'] ?? '0'}'),
+                ],
+              ),
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text('GST Amount:'),
+                  pw.Text('₹${_lrData?['gstAmount'] ?? '0'}'),
+                ],
+              ),
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text('Other Charges:'),
+                  pw.Text('₹${_lrData?['otherCharges'] ?? '0'}'),
+                ],
+              ),
+              pw.Divider(),
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text('TOTAL AMOUNT:',
+                      style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                  pw.Text('₹${_lrData?['totalAmount'] ?? '0'}',
+                      style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 16)),
+                ],
+              ),
+              pw.SizedBox(height: 15),
+
+              // Payment Terms
+              pw.Row(
+                children: [
+                  pw.Text('Payment Terms: ${_lrData?['paymentTerms'] ?? 'N/A'}'),
+                  pw.SizedBox(width: 30),
+                  pw.Text('Paid By: ${_lrData?['paidBy'] ?? 'N/A'}'),
+                ],
+              ),
+              pw.SizedBox(height: 30),
+
+              // Footer
+              pw.Center(
+                child: pw.Text(
+                  'This is a computer generated document.',
+                  style: pw.TextStyle(fontSize: 10, color: PdfColors.grey),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    return pdf.save();
+  }
+
+  // Download PDF
+  Future<void> _downloadPdf() async {
+    if (_lrData == null) return;
+
+    setState(() => _isGeneratingPdf = true);
+
+    try {
+      final pdfBytes = await _generateLRPdf();
+      final directory = await getApplicationDocumentsDirectory();
+      final file = File('${directory.path}/LR_${_lrData!['lrNumber'] ?? widget.lrId}.pdf');
+      await file.writeAsBytes(pdfBytes);
+
+      if (mounted) {
+        ToastHelper.showSnackBarToast(context,
+          SnackBar(
+            content: Text('PDF saved to ${file.path}'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ToastHelper.showSnackBarToast(context,
+          SnackBar(content: Text('Error generating PDF: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isGeneratingPdf = false);
+    }
+  }
+
+  // Share PDF
+  Future<void> _sharePdf() async {
+    if (_lrData == null) return;
+
+    setState(() => _isGeneratingPdf = true);
+
+    try {
+      final pdfBytes = await _generateLRPdf();
+      final directory = await getTemporaryDirectory();
+      final file = File('${directory.path}/LR_${_lrData!['lrNumber'] ?? widget.lrId}.pdf');
+      await file.writeAsBytes(pdfBytes);
+
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        text: 'Lorry Receipt - ${_lrData!['lrNumber'] ?? ''}',
+      );
+    } catch (e) {
+      if (mounted) {
+        ToastHelper.showSnackBarToast(context,
+          SnackBar(content: Text('Error sharing PDF: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isGeneratingPdf = false);
+    }
   }
 
   Future<void> _loadLRDetails() async {
@@ -42,7 +293,7 @@ class _ViewLRScreenState extends State<ViewLRScreen> {
         });
       } else {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
+          ToastHelper.showSnackBarToast(context, 
             SnackBar(content: Text('Failed to load LR details: ${response.statusCode}')),
           );
           Navigator.pop(context);
@@ -51,7 +302,7 @@ class _ViewLRScreenState extends State<ViewLRScreen> {
     } catch (e) {
       print('Error loading LR details: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ToastHelper.showSnackBarToast(context, 
           SnackBar(content: Text('Error loading LR details: $e')),
         );
         Navigator.pop(context);
@@ -68,7 +319,7 @@ class _ViewLRScreenState extends State<ViewLRScreen> {
         foregroundColor: Colors.white,
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: AppLoader())
           : _lrData == null
               ? const Center(child: Text('No data available'))
               : SingleChildScrollView(
@@ -137,28 +388,71 @@ class _ViewLRScreenState extends State<ViewLRScreen> {
                         _buildInfoRow('Remarks', _lrData!['remarks'] ?? 'N/A'),
                       ]),
                       const SizedBox(height: 24),
-                      if (_lrData!['pdfUrl'] != null)
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton.icon(
-                            onPressed: () {
-                              // TODO: Open PDF
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('PDF viewing not implemented yet')),
-                              );
-                            },
-                            icon: const Icon(Icons.picture_as_pdf),
-                            label: const Text('View PDF'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primaryGreen,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                            ),
-                          ),
-                        ),
                     ],
                   ),
                 ),
+      bottomNavigationBar: _lrData != null
+          ? Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, -4),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: _isGeneratingPdf ? null : _downloadPdf,
+                      icon: _isGeneratingPdf
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            )
+                          : const Icon(Icons.download),
+                      label: const Text('Download'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.info,
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size(double.infinity, 50),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: _isGeneratingPdf ? null : _sharePdf,
+                      icon: _isGeneratingPdf
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            )
+                          : const Icon(Icons.share),
+                      label: const Text('Share'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primaryGreen,
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size(double.infinity, 50),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : null,
     );
   }
 
@@ -213,3 +507,5 @@ class _ViewLRScreenState extends State<ViewLRScreen> {
     );
   }
 }
+
+

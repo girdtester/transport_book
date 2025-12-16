@@ -1,7 +1,9 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../../utils/app_colors.dart';
 import '../../../services/api_service.dart';
 import '../../trips/screens/trip_details_screen.dart';
+import 'package:transport_book_app/utils/toast_helper.dart';
+import 'package:transport_book_app/utils/app_loader.dart';
 
 class PartyTripsScreen extends StatefulWidget {
   final int partyId;
@@ -51,7 +53,7 @@ class _PartyTripsScreenState extends State<PartyTripsScreen> {
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ToastHelper.showSnackBarToast(context, 
           SnackBar(content: Text('Error loading trips: $e')),
         );
       }
@@ -106,7 +108,7 @@ class _PartyTripsScreenState extends State<PartyTripsScreen> {
       case 'Load in Progress':
         return Colors.orange;
       case 'POD Pending':
-        return Colors.blue;
+        return AppColors.info;
       case 'POD Received':
         return Colors.green;
       case 'Settled':
@@ -127,6 +129,11 @@ class _PartyTripsScreenState extends State<PartyTripsScreen> {
         foregroundColor: AppColors.appBarTextColor,
         title: Text(widget.partyName),
         elevation: 0,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            bottom: Radius.circular(20),
+          ),
+        ),
       ),
       body: Column(
         children: [
@@ -146,7 +153,7 @@ class _PartyTripsScreenState extends State<PartyTripsScreen> {
                         _buildSummaryItem(
                           'Total Trips',
                           '${_filteredTrips.length}',
-                          Colors.blue,
+                          AppColors.info,
                         ),
                         _buildSummaryItem(
                           'Total Amount',
@@ -191,7 +198,7 @@ class _PartyTripsScreenState extends State<PartyTripsScreen> {
           // Trip List
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? const Center(child: AppLoader())
                 : _filteredTrips.isEmpty
                     ? Center(
                         child: Column(
@@ -301,7 +308,7 @@ class _PartyTripsScreenState extends State<PartyTripsScreen> {
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      color: Colors.blue,
+                      color: AppColors.info,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -312,7 +319,7 @@ class _PartyTripsScreenState extends State<PartyTripsScreen> {
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
-                          '$origin → $destination',
+                          '$origin â†’ $destination',
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.grey.shade600,
@@ -370,3 +377,5 @@ class _PartyTripsScreenState extends State<PartyTripsScreen> {
     );
   }
 }
+
+

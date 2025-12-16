@@ -1,12 +1,14 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:transport_book_app/utils/appbar.dart';
 import 'dart:io';
 import '../../../utils/app_colors.dart';
 import '../../../utils/app_constants.dart';
+import 'package:transport_book_app/utils/toast_helper.dart';
 
 class TripBookReportScreen extends StatefulWidget {
   final String truckNumber;
@@ -51,22 +53,9 @@ class _TripBookReportScreenState extends State<TripBookReportScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
-      appBar: AppBar(
-        backgroundColor: AppColors.appBarColor,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.appBarTextColor),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          'Trip Book Report - ${widget.truckNumber}',
-          style: const TextStyle(
-            color: AppColors.appBarTextColor,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
+      appBar: CustomAppBar(title: 'Trip Book Report - ${widget.truckNumber}',onBack: () {
+        Navigator.pop(context);
+      },),
       body: Column(
         children: [
           // Report Content (Scrollable)
@@ -93,7 +82,7 @@ class _TripBookReportScreenState extends State<TripBookReportScreen> {
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              'TMS Prime',
+                              'TMS Book',
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
@@ -182,10 +171,10 @@ class _TripBookReportScreenState extends State<TripBookReportScreen> {
                               const SizedBox(height: 4),
                               Text(
                                 '₹${widget.totalRevenue.toStringAsFixed(0)}',
-                                style: const TextStyle(
+                                style:  TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.blue,
+                                  color: AppColors.info,
                                 ),
                               ),
                             ],
@@ -334,7 +323,7 @@ class _TripBookReportScreenState extends State<TripBookReportScreen> {
                                     Expanded(
                                       flex: 3,
                                       child: Text(
-                                        '$origin → $destination',
+                                        '$origin â†’ $destination',
                                         style: const TextStyle(
                                           fontSize: 12,
                                           color: Colors.black87,
@@ -361,14 +350,14 @@ class _TripBookReportScreenState extends State<TripBookReportScreen> {
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                       decoration: BoxDecoration(
-                                        color: status == 'Settled' ? Colors.green.shade50 : Colors.orange.shade50,
+                                        color: status == 'Settled' ? AppColors.primaryGreen.withOpacity(0.1) : Colors.orange.shade50,
                                         borderRadius: BorderRadius.circular(4),
                                       ),
                                       child: Text(
                                         status,
                                         style: TextStyle(
                                           fontSize: 10,
-                                          color: status == 'Settled' ? Colors.green.shade700 : Colors.orange.shade700,
+                                          color: status == 'Settled' ? AppColors.primaryGreen.withOpacity(0.8) : Colors.orange.shade700,
                                           fontWeight: FontWeight.w600,
                                         ),
                                       ),
@@ -432,7 +421,7 @@ class _TripBookReportScreenState extends State<TripBookReportScreen> {
                               children: [
                                 const TextSpan(text: 'This is an automatically generated summary. Powered by '),
                                 TextSpan(
-                                  text: 'TMS Prime',
+                                  text: 'TMS Book',
                                   style: TextStyle(
                                     color: AppColors.primaryGreen,
                                     fontWeight: FontWeight.w600,
@@ -535,7 +524,7 @@ class _TripBookReportScreenState extends State<TripBookReportScreen> {
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
                 pw.Text(
-                  'TMS Prime',
+                  'TMS Book',
                   style: pw.TextStyle(
                     fontSize: 18,
                     fontWeight: pw.FontWeight.bold,
@@ -612,7 +601,7 @@ class _TripBookReportScreenState extends State<TripBookReportScreen> {
                         style: pw.TextStyle(
                           fontSize: 18,
                           fontWeight: pw.FontWeight.bold,
-                          color: PdfColors.blue700,
+                          color: PdfColor.fromInt(0xFF0D5AE5),
                         ),
                       ),
                     ],
@@ -740,7 +729,7 @@ class _TripBookReportScreenState extends State<TripBookReportScreen> {
                     pw.Expanded(
                       flex: 3,
                       child: pw.Text(
-                        '$origin → $destination',
+                        '$origin â†’ $destination',
                         style: const pw.TextStyle(fontSize: 9),
                       ),
                     ),
@@ -772,7 +761,7 @@ class _TripBookReportScreenState extends State<TripBookReportScreen> {
             // Footer
             pw.Center(
               child: pw.Text(
-                'This is an automatically generated summary. Powered by TMS Prime',
+                'This is an automatically generated summary. Powered by TMS Book',
                 style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700),
               ),
             ),
@@ -787,7 +776,7 @@ class _TripBookReportScreenState extends State<TripBookReportScreen> {
   Future<void> _downloadReport() async {
     try {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         const SnackBar(
           content: Text('Generating PDF...'),
           duration: Duration(seconds: 1),
@@ -820,7 +809,7 @@ class _TripBookReportScreenState extends State<TripBookReportScreen> {
       await file.writeAsBytes(bytes);
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         SnackBar(
           content: Text('Report downloaded to ${file.path}'),
           duration: const Duration(seconds: 3),
@@ -829,7 +818,7 @@ class _TripBookReportScreenState extends State<TripBookReportScreen> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         SnackBar(
           content: Text('Error downloading report: $e'),
           duration: const Duration(seconds: 3),
@@ -842,7 +831,7 @@ class _TripBookReportScreenState extends State<TripBookReportScreen> {
   Future<void> _shareReport() async {
     try {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         const SnackBar(
           content: Text('Preparing to share...'),
           duration: Duration(seconds: 1),
@@ -866,7 +855,7 @@ class _TripBookReportScreenState extends State<TripBookReportScreen> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         SnackBar(
           content: Text('Error sharing report: $e'),
           duration: const Duration(seconds: 3),
@@ -876,3 +865,4 @@ class _TripBookReportScreenState extends State<TripBookReportScreen> {
     }
   }
 }
+

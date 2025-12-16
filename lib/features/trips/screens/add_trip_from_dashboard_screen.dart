@@ -6,6 +6,10 @@ import '../../../utils/validators.dart';
 import '../../../utils/truck_number_formatter.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
+import 'package:transport_book_app/utils/toast_helper.dart';
+import 'package:transport_book_app/utils/app_loader.dart';
+import '../../../utils/appbar.dart';
+import '../../../utils/custom_textfield.dart';
 
 class AddTripFromDashboardScreen extends StatefulWidget {
   const AddTripFromDashboardScreen({super.key});
@@ -36,10 +40,11 @@ class _AddTripFromDashboardScreenState extends State<AddTripFromDashboardScreen>
   bool _isLoading = false;
   bool _showMoreDetails = false;
   bool _showValidationErrors = false;
-  List<String> _cities = [];
+  List<Map<String, dynamic>> _cities = [];
   List<dynamic> _parties = [];
   List<dynamic> _drivers = [];
   List<dynamic> _allTrucks = [];
+  List<dynamic> _suppliers = [];
   int _selectedTruckId = 0;
   String _selectedTruckType = '';
 
@@ -47,11 +52,21 @@ class _AddTripFromDashboardScreenState extends State<AddTripFromDashboardScreen>
   int? _selectedPartyId;
   int? _selectedDriverId;
   int? _selectedSupplierId;
+  int? _selectedOriginId;
+  int? _selectedDestinationId;
+
+  // Dropdown selected values
+  String? _selectedPartyName;
+  String? _selectedTruckNumber;
+  String? _selectedDriverName;
+  String? _selectedSupplierName;
+  String? _selectedOrigin;
+  String? _selectedDestination;
 
   // Additional detail controllers
   final TextEditingController _lrNumberController = TextEditingController();
   final TextEditingController _materialController = TextEditingController();
-  final TextEditingController _weightController = TextEditingController();
+  final TextEditingController _startKmController = TextEditingController();
   final TextEditingController _remarksController = TextEditingController();
 
   @override
@@ -77,7 +92,7 @@ class _AddTripFromDashboardScreenState extends State<AddTripFromDashboardScreen>
     _supplierQuantityController.dispose();
     _lrNumberController.dispose();
     _materialController.dispose();
-    _weightController.dispose();
+    _startKmController.dispose();
     _remarksController.dispose();
     super.dispose();
   }
@@ -109,9 +124,9 @@ class _AddTripFromDashboardScreenState extends State<AddTripFromDashboardScreen>
 
   String _getRateLabel(String billingType) {
     switch (billingType) {
-      case 'Per Tonne':
+      case 'Per Ton':
         return 'Rate per Ton';
-      case 'Per KG':
+      case 'Per Kg':
         return 'Rate per Kg';
       case 'Per KM':
         return 'Rate per KM';
@@ -130,9 +145,9 @@ class _AddTripFromDashboardScreenState extends State<AddTripFromDashboardScreen>
 
   String _getQuantityLabel(String billingType) {
     switch (billingType) {
-      case 'Per Tonne':
+      case 'Per Ton':
         return 'Total Tons';
-      case 'Per KG':
+      case 'Per Kg':
         return 'Total Kg';
       case 'Per KM':
         return 'Total KM';
@@ -170,12 +185,14 @@ class _AddTripFromDashboardScreenState extends State<AddTripFromDashboardScreen>
     final parties = await ApiService.getParties();
     final drivers = await ApiService.getDrivers();
     final trucks = await ApiService.getTrucks();
+    final suppliers = await ApiService.getSuppliers();
 
     setState(() {
       _cities = cities;
       _parties = parties;
       _drivers = drivers;
       _allTrucks = trucks;
+      _suppliers = suppliers;
     });
   }
 
@@ -211,7 +228,7 @@ class _AddTripFromDashboardScreenState extends State<AddTripFromDashboardScreen>
     }
 
     if (hasErrors) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context,
         const SnackBar(
           content: Text('Please fill all required fields (Party, Truck, Amount, Date)'),
           backgroundColor: Colors.red,
@@ -247,6 +264,8 @@ class _AddTripFromDashboardScreenState extends State<AddTripFromDashboardScreen>
         partyId: _selectedPartyId,
         driverId: _selectedDriverId,
         supplierId: _selectedSupplierId,
+        originId: _selectedOriginId,
+        destinationId: _selectedDestinationId,
       );
 
       setState(() {
@@ -255,7 +274,7 @@ class _AddTripFromDashboardScreenState extends State<AddTripFromDashboardScreen>
 
       if (result != null) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
+          ToastHelper.showSnackBarToast(context,
             const SnackBar(
               content: Text('Trip added successfully'),
               backgroundColor: Colors.green,
@@ -265,7 +284,7 @@ class _AddTripFromDashboardScreenState extends State<AddTripFromDashboardScreen>
         }
       } else {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
+          ToastHelper.showSnackBarToast(context,
             const SnackBar(
               content: Text('Failed to add trip'),
               backgroundColor: Colors.red,
@@ -280,141 +299,133 @@ class _AddTripFromDashboardScreenState extends State<AddTripFromDashboardScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: AppColors.appBarColor,
-        foregroundColor: AppColors.appBarTextColor,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          'Add Trip',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ),
+      appBar:CustomAppBar(title: "Add Trip", onBack: () {
+        Navigator.pop(context);
+      },),
+      // Replace your build method's body section with this updated layout:
+
       body: Form(
         key: _formKey,
         child: Column(
           children: [
-            // Green header strip with help button
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: const Color(0xFF4CAF50),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.shade300,
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Fill in trip details',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.help_outline, color: Colors.white, size: 20),
-                    onPressed: () {
-                      // Show help dialog
-                      showDialog(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          title: const Text('Help'),
-                          content: const Text(
-                            'Fill in the required fields:\n\n'
-                            '• Party/Customer Name (Required)\n'
-                            '• Truck Number (Required)\n'
-                            '• Party Freight Amount (Required)\n'
-                            '• Trip Start Date (Required)\n\n'
-                            'All other fields are optional.',
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context),
-                              child: const Text('Got it'),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
-                ],
-              ),
+            Container(height: 10,
+              decoration: BoxDecoration(color: Colors.grey.shade300),
             ),
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Party/Customer Name - Full Width
+                    // Party/Customer Name - Full Width with search and add
                     _buildDropdownField(
                       label: 'Party/Customer Name',
                       controller: _partyNameController,
-                      onTap: _showPartyPicker,
+                      onTap: _showPartyPickerWithSearch,
                       isRequired: true,
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 16),
 
-                    // Truck No.
-                    _buildDropdownField(
-                      label: 'Truck No.',
-                      controller: _truckNumberController,
-                      onTap: _showTruckPicker,
-                      isRequired: true,
+                    // Truck No. and Driver/Supplier - Same Row with search and add
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildDropdownField(
+                            label: 'Truck No.',
+                            controller: _truckNumberController,
+                            onTap: _showTruckPicker,
+                            isRequired: true,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _selectedTruckId != 0 && _truckNumberController.text.isNotEmpty
+                              ? _buildDropdownField(
+                            label: _selectedTruckType == 'Own' ? 'Driver Name' : 'Supplier Name',
+                            controller: _selectedTruckType == 'Own'
+                                ? _driverNameController
+                                : _supplierNameController,
+                            onTap: _selectedTruckType == 'Own'
+                                ? _showDriverPickerWithSearch
+                                : _showSupplierPickerWithSearch,
+                          )
+                              : Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 18),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade50,
+                              border: Border.all(color: Colors.grey.shade300, width: 1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Driver/Supplier',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.grey.shade500,
+                                    fontWeight: FontWeight.w400,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Select truck first',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.grey.shade400,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 10),
 
-                    // Driver/Supplier field - Only show after truck selection
-                    if (_selectedTruckId != 0 && _truckNumberController.text.isNotEmpty) ...[
-                      _buildDropdownField(
-                        label: _selectedTruckType == 'Own' ? 'Driver Name' : 'Supplier/Truck Owner',
-                        controller: _selectedTruckType == 'Own'
-                            ? _driverNameController
-                            : _supplierNameController,
-                        onTap: _selectedTruckType == 'Own'
-                            ? _showDriverPicker
-                            : _showSupplierPicker,
+                    // Show "Optional" label under Driver/Supplier field
+                    if (_selectedTruckId != 0 && _truckNumberController.text.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 12, top: 4),
+                        child: Row(
+                          children: [
+                            Expanded(child: Container()),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                'Optional',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.grey.shade500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      const SizedBox(height: 10),
-                    ],
 
-                    // Origin and Destination - Same Row
+                    const SizedBox(height: 16),
+
+                    // Origin and Destination - Same Row with search
                     Row(
                       children: [
                         Expanded(
                           child: _buildDropdownField(
                             label: 'Origin',
                             controller: _originController,
-                            onTap: () => _showCityPicker(true),
+                            onTap: () => _showCityPickerWithSearch(true),
                           ),
                         ),
-                        const SizedBox(width: 10),
+                        const SizedBox(width: 12),
                         Expanded(
                           child: _buildDropdownField(
                             label: 'Destination',
                             controller: _destinationController,
-                            onTap: () => _showCityPicker(false),
+                            onTap: () => _showCityPickerWithSearch(false),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 16),
 
                     // Party Billing Type with info icon
                     Row(
@@ -422,76 +433,76 @@ class _AddTripFromDashboardScreenState extends State<AddTripFromDashboardScreen>
                         const Text(
                           'Party Billing Type',
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: 13,
                             fontWeight: FontWeight.w500,
-                            color: Colors.grey,
+                            color: Colors.black87,
                           ),
                         ),
                         const SizedBox(width: 4),
-                        Icon(Icons.info_outline, size: 14, color: Colors.grey.shade600),
+                        Icon(Icons.info_outline, size: 16, color: Colors.grey.shade600),
                       ],
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 12),
                     Row(
                       children: [
                         Expanded(
                           child: _buildBillingTypeButton('Fixed', true),
                         ),
-                        const SizedBox(width: 6),
+                        const SizedBox(width: 8),
                         Expanded(
-                          child: _buildBillingTypeButton('Per Tonne', true),
+                          child: _buildBillingTypeButton('Per Ton', true),
                         ),
-                        const SizedBox(width: 6),
+                        const SizedBox(width: 8),
                         Expanded(
-                          child: _buildBillingTypeButton('Per KG', true),
+                          child: _buildBillingTypeButton('Per Kg', true),
                         ),
-                        const SizedBox(width: 6),
+                        const SizedBox(width: 8),
                         Expanded(
                           child: _buildMoreButton(true),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 16),
 
                     // Rate and Quantity fields - Show for all types except Fixed
                     if (_selectedBillingType != 'Fixed') ...[
                       Row(
                         children: [
                           Expanded(
-                            child: _buildTextField(
+                            child: CustomTextField(
                               label: _getRateLabel(_selectedBillingType),
                               controller: _rateController,
-                              hintText: 'Enter rate',
-                              prefixText: '₹ ',
-                              keyboardType: TextInputType.number,
+                              hint: '₹ Enter rate',
+                              keyboard: TextInputType.number,
+                              inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}'))],
                               onChanged: (value) => _calculateFreightAmount(),
                             ),
                           ),
-                          const SizedBox(width: 10),
+                          const SizedBox(width: 12),
                           Expanded(
-                            child: _buildTextField(
+                            child: CustomTextField(
                               label: _getQuantityLabel(_selectedBillingType),
                               controller: _quantityController,
-                              hintText: 'Enter quantity',
-                              keyboardType: TextInputType.number,
+                              hint: 'Enter quantity',
+                              keyboard: TextInputType.number,
+                              inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}'))],
                               onChanged: (value) => _calculateFreightAmount(),
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 16),
                     ],
 
                     // Party Freight Amount
-                    _buildTextField(
+                    CustomTextField(
                       label: 'Party Freight Amount',
                       controller: _freightAmountController,
-                      hintText: 'Enter amount',
-                      prefixText: '₹ ',
-                      keyboardType: TextInputType.number,
-                      isRequired: true,
+                      hint: '₹ Enter amount',
+                      keyboard: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}'))],
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 16),
 
                     // Supplier Billing Type - Market only
                     if (_selectedTruckType == 'Market') ...[
@@ -500,179 +511,122 @@ class _AddTripFromDashboardScreenState extends State<AddTripFromDashboardScreen>
                           const Text(
                             'Supplier Billing Type',
                             style: TextStyle(
-                              fontSize: 12,
+                              fontSize: 13,
                               fontWeight: FontWeight.w500,
-                              color: Colors.grey,
+                              color: Colors.black87,
                             ),
                           ),
                           const SizedBox(width: 4),
-                          Icon(Icons.info_outline, size: 14, color: Colors.grey.shade600),
+                          Icon(Icons.info_outline, size: 16, color: Colors.grey.shade600),
                         ],
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 12),
                       Row(
                         children: [
                           Expanded(
                             child: _buildBillingTypeButton('Fixed', false),
                           ),
-                          const SizedBox(width: 6),
+                          const SizedBox(width: 8),
                           Expanded(
-                            child: _buildBillingTypeButton('Per Tonne', false),
+                            child: _buildBillingTypeButton('Per Ton', false),
                           ),
-                          const SizedBox(width: 6),
+                          const SizedBox(width: 8),
                           Expanded(
-                            child: _buildBillingTypeButton('Per KG', false),
+                            child: _buildBillingTypeButton('Per Kg', false),
                           ),
-                          const SizedBox(width: 6),
+                          const SizedBox(width: 8),
                           Expanded(
                             child: _buildMoreButton(false),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 16),
 
                       // Supplier Rate and Quantity - Show for all types except Fixed
                       if (_selectedSupplierBillingType != 'Fixed') ...[
                         Row(
                           children: [
                             Expanded(
-                              child: _buildTextField(
+                              child: CustomTextField(
                                 label: _getRateLabel(_selectedSupplierBillingType),
                                 controller: _supplierRateController,
-                                hintText: 'Enter rate',
-                                prefixText: '₹ ',
-                                keyboardType: TextInputType.number,
+                                hint: '₹ Enter rate',
+                                keyboard: TextInputType.number,
+                                inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}'))],
                                 onChanged: (value) => _calculateTruckHireCost(),
                               ),
                             ),
-                            const SizedBox(width: 10),
+                            const SizedBox(width: 12),
                             Expanded(
-                              child: _buildTextField(
+                              child: CustomTextField(
                                 label: _getQuantityLabel(_selectedSupplierBillingType),
                                 controller: _supplierQuantityController,
-                                hintText: 'Enter quantity',
-                                keyboardType: TextInputType.number,
+                                hint: 'Enter quantity',
+                                keyboard: TextInputType.number,
+                                inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}'))],
                                 onChanged: (value) => _calculateTruckHireCost(),
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 16),
                       ],
 
                       // Truck Hire Cost
-                      _buildTextField(
+                      CustomTextField(
                         label: 'Truck Hire Cost',
                         controller: _truckHireCostController,
-                        hintText: 'Enter cost',
-                        prefixText: '₹ ',
-                        keyboardType: TextInputType.number,
+                        hint: '₹ Enter cost',
+                        keyboard: TextInputType.number,
+                        inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}'))],
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 16),
                     ],
 
                     // Trip Start Date
-                    _buildDateField(
-                      label: 'Trip Start Date',
-                      date: _selectedDate,
+                    GestureDetector(
                       onTap: _selectDate,
+                      child: AbsorbPointer(
+                        child: CustomTextField(
+                          label: 'Trip Start Date',
+                          controller: TextEditingController(
+                            text: DateFormat('dd MMM yyyy').format(_selectedDate),
+                          ),
+                          suffix: const Icon(Icons.calendar_today),
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 16),
 
                     // Add More Details Button
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        onPressed: () {
-                          setState(() {
-                            _showMoreDetails = !_showMoreDetails;
-                          });
-                        },
+                    Align(alignment: Alignment.topRight,
+                      child: OutlinedButton(
+                        onPressed: () => _showMoreDetailsDrawer(),
                         style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          side: BorderSide(color: Colors.blue.shade600, width: 1.5),
+                          padding: const EdgeInsets.symmetric(vertical: 14,horizontal: 12),
+                          side: BorderSide(color: Colors.grey.shade400, width: 1),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8),
                           ),
                         ),
-                        icon: Icon(
-                          _showMoreDetails ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                          color: Colors.blue.shade600,
-                        ),
-                        label: Text(
-                          _showMoreDetails ? 'Hide More Details' : 'Add More Details',
+                        child: Text(
+                          'Add More Details',
                           style: TextStyle(
-                            color: Colors.blue.shade600,
-                            fontSize: 14,
+                            color: AppColors.info.withOpacity(0.8),
+                            fontSize: 12,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 16),
 
-                    // Expandable Additional Details
-                    if (_showMoreDetails) ...[
-                      _buildTextField(
-                        label: 'LR Number',
-                        controller: _lrNumberController,
-                        hintText: 'Auto-generated (editable)',
-                        keyboardType: TextInputType.text,
-                      ),
-                      const SizedBox(height: 10),
-                      _buildTextField(
-                        label: 'Material',
-                        controller: _materialController,
-                        hintText: 'e.g., Steel, Cement, etc.',
-                        keyboardType: TextInputType.text,
-                      ),
-                      const SizedBox(height: 10),
-                      _buildTextField(
-                        label: 'Weight (in Tons)',
-                        controller: _weightController,
-                        hintText: 'Enter weight',
-                        keyboardType: TextInputType.number,
-                      ),
-                      const SizedBox(height: 10),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          border: Border.all(color: Colors.grey.shade300, width: 1),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.only(left: 12, top: 6, right: 12),
-                              child: Text(
-                                'Remarks',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  color: Colors.grey.shade500,
-                                  fontWeight: FontWeight.w400,
-                                ),
-                              ),
-                            ),
-                            TextFormField(
-                              controller: _remarksController,
-                              maxLines: 3,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                color: Colors.black87,
-                                fontWeight: FontWeight.w500,
-                              ),
-                              decoration: const InputDecoration(
-                                hintText: 'Enter any additional notes...',
-                                border: InputBorder.none,
-                                contentPadding: EdgeInsets.only(left: 12, right: 12, bottom: 6),
-                                isDense: true,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 12),
+                    // Show badge if additional details are filled
+                    if (_lrNumberController.text.isNotEmpty ||
+                        _materialController.text.isNotEmpty ||
+                        _startKmController.text.isNotEmpty ||
+                        _remarksController.text.isNotEmpty) ...[
+                      const SizedBox(height: 16),
                     ],
 
                     // Send SMS Checkbox - Market only
@@ -680,7 +634,7 @@ class _AddTripFromDashboardScreenState extends State<AddTripFromDashboardScreen>
                       Row(
                         children: [
                           const Text(
-                            'Send SMS to :',
+                            'Send SMS to:',
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w500,
@@ -711,31 +665,24 @@ class _AddTripFromDashboardScreenState extends State<AddTripFromDashboardScreen>
                         ],
                       ),
 
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 80), // Extra space for floating button
                   ],
                 ),
               ),
             ),
 
-            // Save Trip Button - Fixed at bottom
+            // Save Trip Button - Fixed at bottom with blue background
             Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
+              padding: const EdgeInsets.all(16),
+              decoration: const BoxDecoration(
                 color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.shade300,
-                    blurRadius: 8,
-                    offset: const Offset(0, -2),
-                  ),
-                ],
               ),
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _saveTrip,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryGreen,
+                  backgroundColor: AppColors.info,
                   foregroundColor: Colors.white,
-                  minimumSize: const Size(double.infinity, 48),
+                  minimumSize: const Size(double.infinity, 52),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
@@ -743,20 +690,21 @@ class _AddTripFromDashboardScreenState extends State<AddTripFromDashboardScreen>
                 ),
                 child: _isLoading
                     ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2,
-                        ),
-                      )
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2,
+                  ),
+                )
                     : const Text(
-                        'Save Trip',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                  'Save Trip',
+                  style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                  ),
+                ),
               ),
             ),
           ],
@@ -764,6 +712,8 @@ class _AddTripFromDashboardScreenState extends State<AddTripFromDashboardScreen>
       ),
     );
   }
+
+
 
   Widget _buildDropdownField({
     required String label,
@@ -776,172 +726,14 @@ class _AddTripFromDashboardScreenState extends State<AddTripFromDashboardScreen>
     return InkWell(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         decoration: BoxDecoration(
           color: Colors.white,
           border: Border.all(
             color: hasError ? Colors.red : Colors.grey.shade300,
-            width: hasError ? 2 : 1,
+            width: 1,
           ),
-          borderRadius: BorderRadius.circular(6),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: hasError ? Colors.red : Colors.grey.shade500,
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
-                if (isRequired)
-                  const Text(
-                    ' *',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: Colors.red,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 2),
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    controller.text.isEmpty ? (hasError ? 'Required' : '') : controller.text,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: controller.text.isEmpty && hasError ? Colors.red.shade300 : Colors.black87,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-                Icon(
-                  Icons.arrow_drop_down,
-                  size: 20,
-                  color: hasError ? Colors.red : Colors.grey.shade500,
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTextField({
-    required String label,
-    required TextEditingController controller,
-    required String hintText,
-    String? prefixText,
-    TextInputType? keyboardType,
-    Function(String)? onChanged,
-    bool isRequired = false,
-  }) {
-    final hasError = _showValidationErrors && isRequired && controller.text.isEmpty;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(
-          color: hasError ? Colors.red : Colors.grey.shade300,
-          width: hasError ? 2 : 1,
-        ),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(left: 12, top: 6, right: 12),
-            child: Row(
-              children: [
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: hasError ? Colors.red : Colors.grey.shade500,
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
-                if (isRequired)
-                  const Text(
-                    ' *',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: Colors.red,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          TextFormField(
-            controller: controller,
-            keyboardType: keyboardType,
-            inputFormatters: keyboardType == TextInputType.number
-                ? [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}'))]
-                : null,
-            style: const TextStyle(
-              fontSize: 14,
-              color: Colors.black87,
-              fontWeight: FontWeight.w500,
-            ),
-            decoration: InputDecoration(
-              hintText: hintText,
-              hintStyle: TextStyle(
-                color: hasError ? Colors.red.shade300 : Colors.grey.shade400,
-                fontSize: 14,
-              ),
-              prefixText: prefixText,
-              prefixStyle: const TextStyle(
-                fontSize: 14,
-                color: Colors.black87,
-                fontWeight: FontWeight.w500,
-              ),
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.only(left: 12, right: 12, bottom: 6),
-              isDense: true,
-            ),
-            onChanged: (value) {
-              if (_showValidationErrors && value.isNotEmpty) {
-                setState(() {
-                  // Re-validate when user starts typing
-                });
-              }
-              if (onChanged != null) onChanged(value);
-            },
-            validator: (value) {
-              if (isRequired && (value == null || value.isEmpty)) {
-                return 'Required';
-              }
-              return null;
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDateField({
-    required String label,
-    required DateTime date,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border.all(color: Colors.grey.shade300, width: 1),
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(8),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -949,25 +741,32 @@ class _AddTripFromDashboardScreenState extends State<AddTripFromDashboardScreen>
             Text(
               label,
               style: TextStyle(
-                fontSize: 10,
-                color: Colors.grey.shade500,
+                fontSize: 11,
+                color: Colors.grey.shade600,
                 fontWeight: FontWeight.w400,
               ),
             ),
-            const SizedBox(height: 2),
             Row(
               children: [
                 Expanded(
                   child: Text(
-                    DateFormat('dd MMM yyyy').format(date),
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Colors.black87,
+                    controller.text.isEmpty
+                        ? ''
+                        : controller.text,
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: controller.text.isEmpty
+                          ? Colors.grey.shade400
+                          : Colors.black87,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
                 ),
-                Icon(Icons.calendar_today, size: 16, color: Colors.grey.shade500),
+                Icon(
+                  Icons.arrow_drop_down,
+                  size: 24,
+                  color: Colors.grey.shade600,
+                ),
               ],
             ),
           ],
@@ -981,9 +780,11 @@ class _AddTripFromDashboardScreenState extends State<AddTripFromDashboardScreen>
         ? _selectedBillingType == type
         : _selectedSupplierBillingType == type;
 
-    Color selectedColor = isPartyBilling ? const Color(0xFF2196F3) : const Color(0xFFFF9066);
+    Color selectedColor = isPartyBilling ? AppColors.info.withOpacity(0.2) : AppColors.info.withOpacity(0.2);
 
     return InkWell(
+      borderRadius: BorderRadius.circular(20),
+
       onTap: () {
         setState(() {
           if (isPartyBilling) {
@@ -1002,11 +803,11 @@ class _AddTripFromDashboardScreenState extends State<AddTripFromDashboardScreen>
         });
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+        padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 8),
         decoration: BoxDecoration(
           color: isSelected ? selectedColor : Colors.grey.shade300,
           border: Border.all(
-            color: isSelected ? selectedColor : Colors.grey.shade400,
+            color: isSelected ? AppColors.info : Colors.grey.shade400,
             width: 1,
           ),
           borderRadius: BorderRadius.circular(20),
@@ -1015,7 +816,7 @@ class _AddTripFromDashboardScreenState extends State<AddTripFromDashboardScreen>
           type,
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: isSelected ? Colors.white : Colors.grey.shade700,
+            color: isSelected ? AppColors.info : Colors.grey.shade700,
             fontWeight: FontWeight.w500,
             fontSize: 12,
           ),
@@ -1186,7 +987,7 @@ class _AddTripFromDashboardScreenState extends State<AddTripFromDashboardScreen>
               },
             ),
             ListTile(
-              leading: const Icon(Icons.contacts, color: Colors.blue),
+              leading: const Icon(Icons.contacts, color: AppColors.info),
               title: const Text('Select from Contacts'),
               onTap: () {
                 Navigator.pop(context);
@@ -1276,7 +1077,7 @@ class _AddTripFromDashboardScreenState extends State<AddTripFromDashboardScreen>
               },
             ),
             ListTile(
-              leading: const Icon(Icons.contacts, color: Colors.blue),
+              leading: const Icon(Icons.contacts, color: AppColors.info),
               title: const Text('Select from Contacts'),
               onTap: () {
                 Navigator.pop(context);
@@ -1483,9 +1284,10 @@ class _AddTripFromDashboardScreenState extends State<AddTripFromDashboardScreen>
     }
   }
 
-  void _showCityPicker(bool isOrigin) {
+  // Searchable city picker method
+  void _showCityPickerWithSearch(bool isOrigin) {
     final searchController = TextEditingController();
-    List<String> filteredCities = List.from(_cities);
+    List<Map<String, dynamic>> filteredCities = List.from(_cities);
 
     showModalBottomSheet(
       context: context,
@@ -1516,9 +1318,21 @@ class _AddTripFromDashboardScreenState extends State<AddTripFromDashboardScreen>
               const SizedBox(height: 12),
               TextField(
                 controller: searchController,
+                autofocus: true,
                 decoration: InputDecoration(
-                  hintText: 'Search city...',
+                  hintText: 'Search or type city name...',
                   prefixIcon: const Icon(Icons.search),
+                  suffixIcon: searchController.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear),
+                          onPressed: () {
+                            searchController.clear();
+                            setModalState(() {
+                              filteredCities = List.from(_cities);
+                            });
+                          },
+                        )
+                      : null,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
@@ -1530,33 +1344,502 @@ class _AddTripFromDashboardScreenState extends State<AddTripFromDashboardScreen>
                       filteredCities = List.from(_cities);
                     } else {
                       filteredCities = _cities
-                          .where((city) => city.toLowerCase().contains(value.toLowerCase()))
+                          .where((city) => city['name'].toLowerCase().contains(value.toLowerCase()))
                           .toList();
                     }
                   });
                 },
               ),
               const SizedBox(height: 12),
+              // Add New City button - always visible at top
+              ListTile(
+                leading: Icon(Icons.add_circle, color: AppColors.primaryGreen),
+                title: const Text('Add New City'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showAddCityDialog(isOrigin);
+                },
+              ),
+              const Divider(),
               Expanded(
-                child: ListView.builder(
-                  itemCount: filteredCities.length,
-                  itemBuilder: (context, index) {
-                    final city = filteredCities[index];
-                    return ListTile(
-                      title: Text(city),
-                      onTap: () {
-                        setState(() {
-                          if (isOrigin) {
-                            _originController.text = city;
-                          } else {
-                            _destinationController.text = city;
-                          }
-                        });
-                        Navigator.pop(context);
-                      },
-                    );
-                  },
+                child: filteredCities.isEmpty
+                    ? Center(
+                        child: Text(
+                          'No cities found',
+                          style: TextStyle(color: Colors.grey.shade600),
+                        ),
+                      )
+                    : ListView.builder(
+                        itemCount: filteredCities.length,
+                        itemBuilder: (context, index) {
+                          final city = filteredCities[index];
+                          return ListTile(
+                            title: Text(city['name']),
+                            onTap: () {
+                              setState(() {
+                                if (isOrigin) {
+                                  _originController.text = city['name'];
+                                  _selectedOrigin = city['name'];
+                                  _selectedOriginId = city['id'];
+                                } else {
+                                  _destinationController.text = city['name'];
+                                  _selectedDestination = city['name'];
+                                  _selectedDestinationId = city['id'];
+                                }
+                              });
+                              Navigator.pop(context);
+                            },
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Show dialog to add new city
+  void _showAddCityDialog(bool isOrigin) {
+    final cityController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add New City'),
+        content: TextField(
+          controller: cityController,
+          decoration: const InputDecoration(
+            hintText: 'Enter city name',
+            border: OutlineInputBorder(),
+          ),
+          textCapitalization: TextCapitalization.words,
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (cityController.text.trim().isEmpty) return;
+
+              Navigator.pop(context); // Close dialog
+              AppLoader.show(context);
+
+              // Call API to add city to database
+              final result = await ApiService.addCity(cityController.text.trim());
+
+              if (mounted) {
+                AppLoader.hide(context);
+              }
+
+              if (result != null && result['success'] == true) {
+                final cityData = result['city'];
+                setState(() {
+                  // Add to local list if not already present
+                  if (!_cities.any((c) => c['id'] == cityData['id'])) {
+                    _cities.add(cityData);
+                    _cities.sort((a, b) => a['name'].compareTo(b['name']));
+                  }
+
+                  if (isOrigin) {
+                    _originController.text = cityData['name'];
+                    _selectedOrigin = cityData['name'];
+                    _selectedOriginId = cityData['id'];
+                  } else {
+                    _destinationController.text = cityData['name'];
+                    _selectedDestination = cityData['name'];
+                    _selectedDestinationId = cityData['id'];
+                  }
+                });
+
+                if (mounted) {
+                  ToastHelper.showSnackBarToast(context,
+                    SnackBar(content: Text(result['message'] ?? 'City added successfully')),
+                  );
+                }
+              } else {
+                if (mounted) {
+                  ToastHelper.showSnackBarToast(context,
+                    const SnackBar(content: Text('Failed to add city')),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryGreen),
+            child: const Text('Add', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // New searchable party picker method
+  void _showPartyPickerWithSearch() async {
+    if (_parties.isEmpty) {
+      await _loadData();
+    }
+
+    if (!mounted) return;
+
+    final searchController = TextEditingController();
+    List<dynamic> filteredParties = List.from(_parties);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => Container(
+          height: MediaQuery.of(context).size.height * 0.7,
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Select Party',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: searchController,
+                autofocus: true,
+                decoration: InputDecoration(
+                  hintText: 'Search party...',
+                  prefixIcon: const Icon(Icons.search),
+                  suffixIcon: searchController.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear),
+                          onPressed: () {
+                            searchController.clear();
+                            setModalState(() {
+                              filteredParties = List.from(_parties);
+                            });
+                          },
+                        )
+                      : null,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                 ),
+                onChanged: (value) {
+                  setModalState(() {
+                    if (value.isEmpty) {
+                      filteredParties = List.from(_parties);
+                    } else {
+                      filteredParties = _parties
+                          .where((party) => (party['name'] ?? '')
+                              .toString()
+                              .toLowerCase()
+                              .contains(value.toLowerCase()))
+                          .toList();
+                    }
+                  });
+                },
+              ),
+              const SizedBox(height: 12),
+              ListTile(
+                leading: Icon(Icons.add_circle, color: AppColors.primaryGreen),
+                title: const Text('Add New Party'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showAddPartyDialog();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.contacts, color: AppColors.info),
+                title: const Text('Select from Contacts'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickContactForParty();
+                },
+              ),
+              const Divider(),
+              Expanded(
+                child: filteredParties.isEmpty
+                    ? Center(
+                        child: Text(
+                          'No parties found',
+                          style: TextStyle(color: Colors.grey.shade600),
+                        ),
+                      )
+                    : ListView.builder(
+                        itemCount: filteredParties.length,
+                        itemBuilder: (context, index) {
+                          final party = filteredParties[index];
+                          return ListTile(
+                            title: Text(party['name'] ?? ''),
+                            subtitle: party['phone'] != null ? Text(party['phone']) : null,
+                            onTap: () {
+                              setState(() {
+                                _partyNameController.text = party['name'];
+                                _selectedPartyId = party['id'];
+                                _selectedPartyName = party['name'];
+                              });
+                              Navigator.pop(context);
+                            },
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // New searchable driver picker method
+  void _showDriverPickerWithSearch() async {
+    if (_drivers.isEmpty) {
+      await _loadData();
+    }
+
+    if (!mounted) return;
+
+    final searchController = TextEditingController();
+    List<dynamic> filteredDrivers = List.from(_drivers);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => Container(
+          height: MediaQuery.of(context).size.height * 0.7,
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Select Driver',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: searchController,
+                autofocus: true,
+                decoration: InputDecoration(
+                  hintText: 'Search driver...',
+                  prefixIcon: const Icon(Icons.search),
+                  suffixIcon: searchController.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear),
+                          onPressed: () {
+                            searchController.clear();
+                            setModalState(() {
+                              filteredDrivers = List.from(_drivers);
+                            });
+                          },
+                        )
+                      : null,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                ),
+                onChanged: (value) {
+                  setModalState(() {
+                    if (value.isEmpty) {
+                      filteredDrivers = List.from(_drivers);
+                    } else {
+                      filteredDrivers = _drivers
+                          .where((driver) => (driver['name'] ?? '')
+                              .toString()
+                              .toLowerCase()
+                              .contains(value.toLowerCase()))
+                          .toList();
+                    }
+                  });
+                },
+              ),
+              const SizedBox(height: 12),
+              ListTile(
+                leading: Icon(Icons.add_circle, color: AppColors.primaryGreen),
+                title: const Text('Add New Driver'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showAddDriverDialog();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.contacts, color: AppColors.info),
+                title: const Text('Select from Contacts'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickContactForDriver();
+                },
+              ),
+              const Divider(),
+              Expanded(
+                child: filteredDrivers.isEmpty
+                    ? Center(
+                        child: Text(
+                          'No drivers found',
+                          style: TextStyle(color: Colors.grey.shade600),
+                        ),
+                      )
+                    : ListView.builder(
+                        itemCount: filteredDrivers.length,
+                        itemBuilder: (context, index) {
+                          final driver = filteredDrivers[index];
+                          return ListTile(
+                            title: Text(driver['name'] ?? ''),
+                            subtitle: driver['phone'] != null ? Text(driver['phone']) : null,
+                            onTap: () {
+                              setState(() {
+                                _driverNameController.text = driver['name'];
+                                _selectedDriverId = driver['id'];
+                                _selectedDriverName = driver['name'];
+                              });
+                              Navigator.pop(context);
+                            },
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // New searchable supplier picker method
+  void _showSupplierPickerWithSearch() async {
+    final suppliers = await ApiService.getSuppliers();
+
+    if (!mounted) return;
+
+    final searchController = TextEditingController();
+    List<dynamic> filteredSuppliers = List.from(suppliers);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => Container(
+          height: MediaQuery.of(context).size.height * 0.7,
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Select Supplier',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: searchController,
+                autofocus: true,
+                decoration: InputDecoration(
+                  hintText: 'Search supplier...',
+                  prefixIcon: const Icon(Icons.search),
+                  suffixIcon: searchController.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear),
+                          onPressed: () {
+                            searchController.clear();
+                            setModalState(() {
+                              filteredSuppliers = List.from(suppliers);
+                            });
+                          },
+                        )
+                      : null,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                ),
+                onChanged: (value) {
+                  setModalState(() {
+                    if (value.isEmpty) {
+                      filteredSuppliers = List.from(suppliers);
+                    } else {
+                      filteredSuppliers = suppliers
+                          .where((supplier) => (supplier['name'] ?? '')
+                              .toString()
+                              .toLowerCase()
+                              .contains(value.toLowerCase()))
+                          .toList();
+                    }
+                  });
+                },
+              ),
+              const SizedBox(height: 12),
+              ListTile(
+                leading: Icon(Icons.add_circle, color: AppColors.primaryGreen),
+                title: const Text('Add New Supplier'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showAddSupplierDialog();
+                },
+              ),
+              const Divider(),
+              Expanded(
+                child: filteredSuppliers.isEmpty
+                    ? Center(
+                        child: Text(
+                          'No suppliers found',
+                          style: TextStyle(color: Colors.grey.shade600),
+                        ),
+                      )
+                    : ListView.builder(
+                        itemCount: filteredSuppliers.length,
+                        itemBuilder: (context, index) {
+                          final supplier = filteredSuppliers[index];
+                          return ListTile(
+                            title: Text(supplier['name'] ?? ''),
+                            subtitle: supplier['phone'] != null ? Text(supplier['phone']) : null,
+                            onTap: () {
+                              setState(() {
+                                _supplierNameController.text = supplier['name'];
+                                _selectedSupplierId = supplier['id'];
+                                _selectedSupplierName = supplier['name'];
+                              });
+                              Navigator.pop(context);
+                            },
+                          );
+                        },
+                      ),
               ),
             ],
           ),
@@ -1698,7 +1981,7 @@ class _AddTripFromDashboardScreenState extends State<AddTripFromDashboardScreen>
                                     _parties.add(result);
                                   });
                                   Navigator.pop(context);
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  ToastHelper.showSnackBarToast(context,
                                     const SnackBar(
                                       content: Text('Party added successfully'),
                                       backgroundColor: Colors.green,
@@ -1708,7 +1991,7 @@ class _AddTripFromDashboardScreenState extends State<AddTripFromDashboardScreen>
                                   setModalState(() {
                                     isLoading = false;
                                   });
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  ToastHelper.showSnackBarToast(context,
                                     const SnackBar(
                                       content: Text('Failed to add party'),
                                       backgroundColor: Colors.red,
@@ -1719,7 +2002,7 @@ class _AddTripFromDashboardScreenState extends State<AddTripFromDashboardScreen>
                                 setModalState(() {
                                   isLoading = false;
                                 });
-                                ScaffoldMessenger.of(context).showSnackBar(
+                                ToastHelper.showSnackBarToast(context,
                                   SnackBar(
                                     content: Text('Error: $e'),
                                     backgroundColor: Colors.red,
@@ -1739,7 +2022,7 @@ class _AddTripFromDashboardScreenState extends State<AddTripFromDashboardScreen>
                           ? const SizedBox(
                               width: 24,
                               height: 24,
-                              child: CircularProgressIndicator(
+                              child: AppLoader(
                                 color: Colors.white,
                                 strokeWidth: 2,
                               ),
@@ -1896,7 +2179,7 @@ class _AddTripFromDashboardScreenState extends State<AddTripFromDashboardScreen>
                                     _drivers.add(result);
                                   });
                                   Navigator.pop(context);
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  ToastHelper.showSnackBarToast(context,
                                     const SnackBar(
                                       content: Text('Driver added successfully'),
                                       backgroundColor: Colors.green,
@@ -1906,7 +2189,7 @@ class _AddTripFromDashboardScreenState extends State<AddTripFromDashboardScreen>
                                   setModalState(() {
                                     isLoading = false;
                                   });
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  ToastHelper.showSnackBarToast(context,
                                     const SnackBar(
                                       content: Text('Failed to add driver'),
                                       backgroundColor: Colors.red,
@@ -1917,7 +2200,7 @@ class _AddTripFromDashboardScreenState extends State<AddTripFromDashboardScreen>
                                 setModalState(() {
                                   isLoading = false;
                                 });
-                                ScaffoldMessenger.of(context).showSnackBar(
+                                ToastHelper.showSnackBarToast(context,
                                   SnackBar(
                                     content: Text('Error: $e'),
                                     backgroundColor: Colors.red,
@@ -1937,7 +2220,7 @@ class _AddTripFromDashboardScreenState extends State<AddTripFromDashboardScreen>
                           ? const SizedBox(
                               width: 24,
                               height: 24,
-                              child: CircularProgressIndicator(
+                              child: AppLoader(
                                 color: Colors.white,
                                 strokeWidth: 2,
                               ),
@@ -2093,7 +2376,7 @@ class _AddTripFromDashboardScreenState extends State<AddTripFromDashboardScreen>
                                     _selectedSupplierId = result['id'];
                                   });
                                   Navigator.pop(context);
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  ToastHelper.showSnackBarToast(context,
                                     const SnackBar(
                                       content: Text('Supplier added successfully'),
                                       backgroundColor: Colors.green,
@@ -2103,7 +2386,7 @@ class _AddTripFromDashboardScreenState extends State<AddTripFromDashboardScreen>
                                   setModalState(() {
                                     isLoading = false;
                                   });
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  ToastHelper.showSnackBarToast(context,
                                     const SnackBar(
                                       content: Text('Failed to add supplier'),
                                       backgroundColor: Colors.red,
@@ -2114,7 +2397,7 @@ class _AddTripFromDashboardScreenState extends State<AddTripFromDashboardScreen>
                                 setModalState(() {
                                   isLoading = false;
                                 });
-                                ScaffoldMessenger.of(context).showSnackBar(
+                                ToastHelper.showSnackBarToast(context,
                                   SnackBar(
                                     content: Text('Error: $e'),
                                     backgroundColor: Colors.red,
@@ -2134,7 +2417,7 @@ class _AddTripFromDashboardScreenState extends State<AddTripFromDashboardScreen>
                           ? const SizedBox(
                               width: 24,
                               height: 24,
-                              child: CircularProgressIndicator(
+                              child: AppLoader(
                                 color: Colors.white,
                                 strokeWidth: 2,
                               ),
@@ -2152,6 +2435,155 @@ class _AddTripFromDashboardScreenState extends State<AddTripFromDashboardScreen>
                 ],
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Show More Details Drawer
+  void _showMoreDetailsDrawer() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Additional Details',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+
+              // LR Number
+              CustomTextField(
+                label: 'LR Number',
+                controller: _lrNumberController,
+                hint: 'Auto-generated (editable)',
+                keyboard: TextInputType.text,
+              ),
+              const SizedBox(height: 16),
+
+              // Material
+              CustomTextField(
+                label: 'Material',
+                controller: _materialController,
+                hint: 'e.g., Steel, Cement, etc.',
+                keyboard: TextInputType.text,
+              ),
+              const SizedBox(height: 16),
+
+              // Start KM
+              CustomTextField(
+                label: 'Start KM',
+                controller: _startKmController,
+                hint: 'Enter starting odometer reading',
+                keyboard: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              ),
+              const SizedBox(height: 16),
+
+              // Remarks
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border.all(color: Colors.grey.shade300, width: 1),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(left: 12, top: 6, right: 12),
+                      child: Text(
+                        'Remarks',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: Colors.grey.shade500,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                    ),
+                    TextFormField(
+                      controller: _remarksController,
+                      maxLines: 3,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.black87,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      decoration: const InputDecoration(
+                        hintText: 'Enter any additional notes...',
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.only(left: 12, right: 12, bottom: 6),
+                        isDense: true,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Save Button
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: () {
+                    setState(() {
+                      // Update state to show badge
+                    });
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Additional details saved'),
+                        backgroundColor: Colors.green,
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryGreen,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    'Save Details',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -2183,13 +2615,15 @@ class _TruckSelectorScreenState extends State<_TruckSelectorScreen> with SingleT
   List<dynamic> _filteredTrucks = [];
   List<dynamic> _ownTrucks = [];
   List<dynamic> _marketTrucks = [];
+  List<dynamic> _allTrucks = []; // Local copy of all trucks
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _allTrucks = List.from(widget.allTrucks); // Initialize with widget data
     _separateTrucks();
-    _filteredTrucks = widget.allTrucks;
+    _filteredTrucks = _allTrucks;
     _searchController.addListener(_filterTrucks);
   }
 
@@ -2200,24 +2634,40 @@ class _TruckSelectorScreenState extends State<_TruckSelectorScreen> with SingleT
     super.dispose();
   }
 
+  // Reload trucks from API
+  Future<void> _reloadTrucks() async {
+    try {
+      final trucks = await ApiService.getTrucks();
+      if (mounted) {
+        setState(() {
+          _allTrucks = trucks;
+          _separateTrucks();
+          _filterTrucks();
+        });
+      }
+    } catch (e) {
+      print('Error reloading trucks: $e');
+    }
+  }
+
   void _separateTrucks() {
-    _ownTrucks = widget.allTrucks.where((truck) => truck['type'] == 'Own').toList();
-    _marketTrucks = widget.allTrucks.where((truck) => truck['type'] == 'Market').toList();
+    _ownTrucks = _allTrucks.where((truck) => truck['type'] == 'Own').toList();
+    _marketTrucks = _allTrucks.where((truck) => truck['type'] == 'Market').toList();
   }
 
   void _filterTrucks() {
     final query = _searchController.text.toLowerCase();
     setState(() {
       if (query.isEmpty) {
-        _ownTrucks = widget.allTrucks.where((truck) => truck['type'] == 'Own').toList();
-        _marketTrucks = widget.allTrucks.where((truck) => truck['type'] == 'Market').toList();
+        _ownTrucks = _allTrucks.where((truck) => truck['type'] == 'Own').toList();
+        _marketTrucks = _allTrucks.where((truck) => truck['type'] == 'Market').toList();
       } else {
-        _ownTrucks = widget.allTrucks
+        _ownTrucks = _allTrucks
             .where((truck) =>
                 truck['type'] == 'Own' &&
                 truck['number'].toString().toLowerCase().contains(query))
             .toList();
-        _marketTrucks = widget.allTrucks
+        _marketTrucks = _allTrucks
             .where((truck) =>
                 truck['type'] == 'Market' &&
                 truck['number'].toString().toLowerCase().contains(query))
@@ -2226,10 +2676,30 @@ class _TruckSelectorScreenState extends State<_TruckSelectorScreen> with SingleT
     });
   }
 
-  void _showAddTruckDialog() {
+  void _showAddTruckDialog({String? preselectedType}) {
     final registrationController = TextEditingController();
     final formKey = GlobalKey<FormState>();
     String? validationError;
+    // Pre-select based on current tab: 'Own' or 'Market'
+    String selectedTruckType = preselectedType ?? 'Own';
+    String? selectedSupplier;
+    int? selectedSupplierId;
+    List<dynamic> suppliersList = [];
+    bool isLoadingSuppliers = false;
+
+    // Function to load suppliers
+    Future<void> loadSuppliers(StateSetter setModalState) async {
+      setModalState(() => isLoadingSuppliers = true);
+      try {
+        final suppliers = await ApiService.getSuppliers();
+        setModalState(() {
+          suppliersList = suppliers;
+          isLoadingSuppliers = false;
+        });
+      } catch (e) {
+        setModalState(() => isLoadingSuppliers = false);
+      }
+    }
 
     showModalBottomSheet(
       context: context,
@@ -2301,11 +2771,11 @@ class _TruckSelectorScreenState extends State<_TruckSelectorScreen> with SingleT
                       errorText: validationError,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(color: Colors.blue, width: 2),
+                        borderSide: const BorderSide(color: AppColors.info, width: 2),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(color: Colors.blue, width: 2),
+                        borderSide: const BorderSide(color: AppColors.info, width: 2),
                       ),
                       errorBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
@@ -2332,12 +2802,224 @@ class _TruckSelectorScreenState extends State<_TruckSelectorScreen> with SingleT
                     ),
                   ),
                   const SizedBox(height: 24),
-                  // Truck Type Selection - removed for simplicity, only "Own" trucks
+                  // Truck Type Selection
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Radio<String>(
+                            value: 'Own',
+                            groupValue: selectedTruckType,
+                            onChanged: (value) {
+                              setModalState(() {
+                                selectedTruckType = value!;
+                              });
+                            },
+                            activeColor: AppColors.primaryGreen,
+                          ),
+                          const Text('My Truck'),
+                        ],
+                      ),
+                      const SizedBox(width: 20),
+                      Row(
+                        children: [
+                          Radio<String>(
+                            value: 'Market',
+                            groupValue: selectedTruckType,
+                            onChanged: (value) {
+                              setModalState(() {
+                                selectedTruckType = value!;
+                              });
+                              // Load suppliers when Market is selected
+                              if (suppliersList.isEmpty) {
+                                loadSuppliers(setModalState);
+                              }
+                            },
+                            activeColor: Colors.orange,
+                          ),
+                          const Text('Market Truck'),
+                        ],
+                      ),
+                    ],
+                  ),
+                  // Supplier Selection (shown when Market Truck is selected)
+                  if (selectedTruckType == 'Market') ...[
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Supplier/Truck Owner *',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    GestureDetector(
+                      onTap: () {
+                        // Load suppliers if not loaded
+                        if (suppliersList.isEmpty && !isLoadingSuppliers) {
+                          loadSuppliers(setModalState);
+                        }
+                        // Show supplier picker
+                        showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: Colors.transparent,
+                          builder: (ctx) => StatefulBuilder(
+                            builder: (ctx, setSupplierState) {
+                              List<dynamic> filteredSuppliers = List.from(suppliersList);
+                              final searchController = TextEditingController();
+
+                              return Container(
+                                height: MediaQuery.of(context).size.height * 0.6,
+                                decoration: const BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                                ),
+                                child: Column(
+                                  children: [
+                                    // Header
+                                    Padding(
+                                      padding: const EdgeInsets.all(16),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          const Text(
+                                            'Select Supplier',
+                                            style: TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          Row(
+                                            children: [
+                                              TextButton.icon(
+                                                onPressed: () {
+                                                  Navigator.pop(ctx);
+                                                  _showAddSupplierForTruckDialog(setModalState, (name, id) {
+                                                    setModalState(() {
+                                                      selectedSupplier = name;
+                                                      selectedSupplierId = id;
+                                                    });
+                                                  });
+                                                },
+                                                icon: const Icon(Icons.add, color: AppColors.primaryGreen),
+                                                label: const Text('Add New', style: TextStyle(color: AppColors.primaryGreen)),
+                                              ),
+                                              IconButton(
+                                                icon: const Icon(Icons.close),
+                                                onPressed: () => Navigator.pop(ctx),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    // Search
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                                      child: TextField(
+                                        controller: searchController,
+                                        decoration: InputDecoration(
+                                          hintText: 'Search supplier...',
+                                          prefixIcon: const Icon(Icons.search),
+                                          border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                        ),
+                                        onChanged: (value) {
+                                          setSupplierState(() {
+                                            if (value.isEmpty) {
+                                              filteredSuppliers = List.from(suppliersList);
+                                            } else {
+                                              filteredSuppliers = suppliersList
+                                                  .where((s) => (s['name'] ?? '')
+                                                      .toLowerCase()
+                                                      .contains(value.toLowerCase()))
+                                                  .toList();
+                                            }
+                                          });
+                                        },
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    // List
+                                    Expanded(
+                                      child: isLoadingSuppliers
+                                          ? const Center(child: CircularProgressIndicator())
+                                          : filteredSuppliers.isEmpty
+                                              ? const Center(child: Text('No suppliers found'))
+                                              : ListView.builder(
+                                                  itemCount: filteredSuppliers.length,
+                                                  itemBuilder: (ctx, index) {
+                                                    final supplier = filteredSuppliers[index];
+                                                    return ListTile(
+                                                      title: Text(supplier['name'] ?? ''),
+                                                      subtitle: supplier['phone'] != null
+                                                          ? Text(supplier['phone'])
+                                                          : null,
+                                                      onTap: () {
+                                                        setModalState(() {
+                                                          selectedSupplier = supplier['name'];
+                                                          selectedSupplierId = supplier['id'];
+                                                        });
+                                                        Navigator.pop(ctx);
+                                                      },
+                                                    );
+                                                  },
+                                                ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey.shade400),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              selectedSupplier ?? 'Select Supplier',
+                              style: TextStyle(
+                                color: selectedSupplier == null
+                                    ? Colors.grey
+                                    : Colors.black87,
+                                fontSize: 16,
+                              ),
+                            ),
+                            Icon(
+                              Icons.arrow_drop_down,
+                              color: Colors.grey.shade600,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 24),
                   // Confirm Button
                   ElevatedButton(
                     onPressed: () async {
                       // Validate form
                       if (!formKey.currentState!.validate()) {
+                        return;
+                      }
+
+                      // Validate supplier for Market truck
+                      if (selectedTruckType == 'Market' && selectedSupplier == null) {
+                        ToastHelper.showSnackBarToast(context,
+                          const SnackBar(
+                            content: Text('Please select a supplier'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
                         return;
                       }
 
@@ -2348,20 +3030,27 @@ class _TruckSelectorScreenState extends State<_TruckSelectorScreen> with SingleT
 
                       final result = await ApiService.addTruck(
                         number: formattedNumber,
-                        type: 'Own', // Default to Own
+                        type: selectedTruckType,
+                        supplier: selectedSupplier,
                       );
 
                       if (result != null && mounted) {
                         Navigator.pop(context);
+
+                        // Reload trucks in this selector screen
+                        await _reloadTrucks();
+
+                        // Also reload in parent screen
                         widget.onAddNewTruck();
-                        ScaffoldMessenger.of(context).showSnackBar(
+
+                        ToastHelper.showSnackBarToast(context,
                           const SnackBar(
                             content: Text('Truck added successfully'),
                             backgroundColor: Colors.green,
                           ),
                         );
                       } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        ToastHelper.showSnackBarToast(context,
                           const SnackBar(
                             content: Text('Failed to add truck'),
                             backgroundColor: Colors.red,
@@ -2397,6 +3086,112 @@ class _TruckSelectorScreenState extends State<_TruckSelectorScreen> with SingleT
     );
   }
 
+  // Add supplier dialog for truck creation
+  void _showAddSupplierForTruckDialog(StateSetter parentSetState, Function(String name, int id) onSupplierAdded) {
+    final nameController = TextEditingController();
+    final phoneController = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(ctx).viewInsets.bottom,
+          left: 16,
+          right: 16,
+          top: 16,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Add New Supplier',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(ctx),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: nameController,
+              decoration: InputDecoration(
+                labelText: 'Supplier Name *',
+                hintText: 'Enter supplier name',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: phoneController,
+              keyboardType: TextInputType.phone,
+              maxLength: 10,
+              decoration: InputDecoration(
+                labelText: 'Phone Number',
+                hintText: 'Enter phone number',
+                counterText: '',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () async {
+                if (nameController.text.isEmpty) {
+                  ToastHelper.showSnackBarToast(ctx,
+                    const SnackBar(content: Text('Please enter supplier name')),
+                  );
+                  return;
+                }
+
+                final result = await ApiService.addSupplier(
+                  name: nameController.text,
+                  phone: phoneController.text,
+                );
+
+                if (result != null) {
+                  Navigator.pop(ctx);
+                  onSupplierAdded(result['name'], result['id']);
+                  ToastHelper.showSnackBarToast(context,
+                    const SnackBar(
+                      content: Text('Supplier added successfully'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                } else {
+                  ToastHelper.showSnackBarToast(ctx,
+                    const SnackBar(
+                      content: Text('Failed to add supplier'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryGreen,
+                foregroundColor: Colors.white,
+                minimumSize: const Size(double.infinity, 50),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              child: const Text('Add Supplier'),
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -2405,6 +3200,11 @@ class _TruckSelectorScreenState extends State<_TruckSelectorScreen> with SingleT
         backgroundColor: AppColors.appBarColor,
         foregroundColor: AppColors.appBarTextColor,
         elevation: 0,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            bottom: Radius.circular(20),
+          ),
+        ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
@@ -2419,7 +3219,9 @@ class _TruckSelectorScreenState extends State<_TruckSelectorScreen> with SingleT
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
-            onPressed: _showAddTruckDialog,
+            onPressed: () => _showAddTruckDialog(
+              preselectedType: _tabController.index == 0 ? 'Own' : 'Market',
+            ),
             tooltip: 'Add New Truck',
           ),
         ],
@@ -2475,14 +3277,14 @@ class _TruckSelectorScreenState extends State<_TruckSelectorScreen> with SingleT
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
-                            color: Colors.green.shade100,
+                            color: AppColors.primaryGreen.withOpacity(0.15),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text(
                             '${_ownTrucks.length}',
                             style: TextStyle(
                               fontSize: 12,
-                              color: Colors.green.shade800,
+                              color: AppColors.primaryGreen.withOpacity(0.9),
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -2533,29 +3335,49 @@ class _TruckSelectorScreenState extends State<_TruckSelectorScreen> with SingleT
   Widget _buildTruckList(List<dynamic> trucks, String type) {
     if (trucks.isEmpty) {
       return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.local_shipping_outlined,
-              size: 64,
-              color: Colors.grey.shade400,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No ${type.toLowerCase()} trucks found',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey.shade600,
+        child: GestureDetector(
+          onTap: () => _showAddTruckDialog(preselectedType: type),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.local_shipping_outlined,
+                size: 64,
+                color: Colors.grey.shade400,
               ),
-            ),
-            const SizedBox(height: 8),
-            TextButton.icon(
-              onPressed: _showAddTruckDialog,
-              icon: const Icon(Icons.add),
-              label: const Text('Add New Truck'),
-            ),
-          ],
+              const SizedBox(height: 16),
+              Text(
+                'No ${type.toLowerCase()} trucks found',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryGreen,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: const [
+                    Icon(Icons.add, color: Colors.white, size: 20),
+                    SizedBox(width: 8),
+                    Text(
+                      'Add Truck',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -2590,14 +3412,14 @@ class _TruckSelectorScreenState extends State<_TruckSelectorScreen> with SingleT
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: type == 'Own'
-                        ? Colors.green.shade100
+                        ? AppColors.primaryGreen.withOpacity(0.15)
                         : Colors.orange.shade100,
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
                     Icons.local_shipping,
                     color: type == 'Own'
-                        ? Colors.green.shade700
+                        ? AppColors.primaryGreen.withOpacity(0.8)
                         : Colors.orange.shade700,
                     size: 28,
                   ),
@@ -2616,12 +3438,27 @@ class _TruckSelectorScreenState extends State<_TruckSelectorScreen> with SingleT
                         ),
                       ),
                       const SizedBox(height: 4),
-                      Text(
-                        '${truck['type']} • ${truck['status'] ?? 'Available'}',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.grey.shade600,
-                        ),
+                      Row(
+                        children: [
+                          Text(
+                            '${truck['type']} • ${truck['status'] ?? 'Available'}',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                          // Show supplier name for Market trucks
+                          if (type == 'Market' && (truck['supplierName'] != null || truck['supplier'] != null)) ...[
+                            Text(
+                              ' • ${truck['supplierName'] ?? truck['supplier']}',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.orange.shade700,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ],
                   ),
@@ -2640,3 +3477,5 @@ class _TruckSelectorScreenState extends State<_TruckSelectorScreen> with SingleT
     );
   }
 }
+
+

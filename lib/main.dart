@@ -1,8 +1,9 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'features/auth/screens/login_screen.dart';
 import 'features/dashboard/screens/dashboard_screen.dart';
+import 'package:transport_book_app/utils/app_loader.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,12 +19,14 @@ class TMSPrimeApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'TMS Prime',
+      title: 'TMS Book',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primaryColor: const Color(0xFF2E8B57),
         scaffoldBackgroundColor: const Color(0xFF2E8B57),
-        fontFamily: 'Roboto',
+        fontFamily: 'Poppins', // Set Poppins as default font
+
+        // fontFamily: 'Roboto',
       ),
       home: const SplashScreen(),
     );
@@ -95,7 +98,7 @@ class _SplashScreenState extends State<SplashScreen> {
             ),
             const SizedBox(height: 24),
             const Text(
-              'TMS Prime',
+              'TMS Book',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 32,
@@ -103,7 +106,7 @@ class _SplashScreenState extends State<SplashScreen> {
               ),
             ),
             const SizedBox(height: 40),
-            const CircularProgressIndicator(
+            const AppLoader(
               color: Colors.white,
             ),
           ],
@@ -112,3 +115,4 @@ class _SplashScreenState extends State<SplashScreen> {
     );
   }
 }
+

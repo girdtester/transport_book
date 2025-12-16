@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../services/api_service.dart';
@@ -6,6 +6,8 @@ import '../../../utils/app_colors.dart';
 import '../../trips/screens/add_trip_from_dashboard_screen.dart';
 import '../../trips/screens/trip_details_screen.dart';
 import 'supplier_balance_report_screen.dart';
+import 'package:transport_book_app/utils/toast_helper.dart';
+import 'package:transport_book_app/utils/app_loader.dart';
 
 class SupplierDetailScreen extends StatefulWidget {
   final int supplierId;
@@ -112,7 +114,7 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> with Single
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ToastHelper.showSnackBarToast(context, 
           SnackBar(content: Text('Error loading data: $e')),
         );
       }
@@ -261,7 +263,7 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> with Single
                                 });
                               },
                               title: Text(
-                                '${trip['origin']} → ${trip['destination']}',
+                                '${trip['origin']} â†’ ${trip['destination']}',
                                 style: const TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w600,
@@ -285,7 +287,7 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> with Single
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: Colors.blue.shade50,
+                            color: AppColors.info.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Row(
@@ -303,7 +305,7 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> with Single
                                 style: const TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.blue,
+                                  color: AppColors.info,
                                 ),
                               ),
                             ],
@@ -389,7 +391,7 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> with Single
                     ElevatedButton(
                       onPressed: () async {
                         if (amountController.text.isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          ToastHelper.showSnackBarToast(context, 
                             const SnackBar(content: Text('Please enter amount')),
                           );
                           return;
@@ -397,7 +399,7 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> with Single
 
                         final amount = double.tryParse(amountController.text) ?? 0;
                         if (amount <= 0) {
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          ToastHelper.showSnackBarToast(context, 
                             const SnackBar(content: Text('Please enter valid amount')),
                           );
                           return;
@@ -436,7 +438,7 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> with Single
                                 settledCount++;
                               } else {
                                 allSettled = false;
-                                final tripInfo = '${trip['origin']} → ${trip['destination']}';
+                                final tripInfo = '${trip['origin']} â†’ ${trip['destination']}';
                                 errorMessages.add('$tripInfo: ${result['message']}');
                               }
                             }
@@ -446,14 +448,14 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> with Single
                         Navigator.pop(context);
                         if (mounted) {
                           if (selectedTrips.isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
+                            ToastHelper.showSnackBarToast(context, 
                               SnackBar(
                                 content: Text('Payment of ₹${amount.toStringAsFixed(0)} recorded'),
                                 backgroundColor: Colors.green,
                               ),
                             );
                           } else if (settledCount > 0 && errorMessages.isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
+                            ToastHelper.showSnackBarToast(context, 
                               SnackBar(
                                 content: Text('$settledCount trip(s) settled successfully'),
                                 backgroundColor: Colors.green,
@@ -461,7 +463,7 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> with Single
                             );
                           } else if (settledCount > 0 && errorMessages.isNotEmpty) {
                             // Show partial success with first error
-                            ScaffoldMessenger.of(context).showSnackBar(
+                            ToastHelper.showSnackBarToast(context, 
                               SnackBar(
                                 content: Text(
                                   '$settledCount trip(s) settled. ${errorMessages.length} failed:\n${errorMessages.first}',
@@ -472,7 +474,7 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> with Single
                             );
                           } else if (errorMessages.isNotEmpty) {
                             // Show first error message
-                            ScaffoldMessenger.of(context).showSnackBar(
+                            ToastHelper.showSnackBarToast(context, 
                               SnackBar(
                                 content: Text(errorMessages.first),
                                 backgroundColor: Colors.red,
@@ -480,7 +482,7 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> with Single
                               ),
                             );
                           } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
+                            ToastHelper.showSnackBarToast(context, 
                               const SnackBar(
                                 content: Text('Failed to settle trips. Please try again.'),
                                 backgroundColor: Colors.red,
@@ -518,8 +520,14 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> with Single
           backgroundColor: AppColors.appBarColor,
           foregroundColor: AppColors.appBarTextColor,
           title: Text(widget.supplierName),
+          elevation: 0,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(
+              bottom: Radius.circular(20),
+            ),
+          ),
         ),
-        body: const Center(child: CircularProgressIndicator()),
+        body: const Center(child: AppLoader()),
       );
     }
 
@@ -532,6 +540,11 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> with Single
         foregroundColor: AppColors.appBarTextColor,
         title: Text(widget.supplierName),
         elevation: 0,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            bottom: Radius.circular(20),
+          ),
+        ),
         actions: [
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert),
@@ -659,10 +672,10 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> with Single
               delegate: _SliverAppBarDelegate(
                 TabBar(
                   controller: _tabController,
-                  indicatorColor: Colors.blue,
+                  indicatorColor: AppColors.info,
                   indicatorWeight: 3,
                   indicatorSize: TabBarIndicatorSize.tab,
-                  labelColor: Colors.blue,
+                  labelColor: AppColors.info,
                   unselectedLabelColor: Colors.grey,
                   labelStyle: const TextStyle(
                     fontSize: 16,
@@ -793,7 +806,7 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> with Single
               Expanded(
                 child: FloatingActionButton.extended(
                   onPressed: _showAddPaymentDialog,
-                  backgroundColor: Colors.blue,
+                  backgroundColor: AppColors.info,
                   heroTag: 'addPaymentFromSupplier',
                   icon: const Icon(Icons.payment, color: Colors.white),
                   label: const Text(
@@ -902,7 +915,7 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> with Single
               Expanded(
                 child: FloatingActionButton.extended(
                   onPressed: _showAddPaymentDialog,
-                  backgroundColor: Colors.blue,
+                  backgroundColor: AppColors.info,
                   heroTag: 'addPaymentFromPassbook2',
                   icon: const Icon(Icons.payment, color: Colors.white),
                   label: const Text(
@@ -1007,7 +1020,7 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> with Single
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: Colors.blue,
+                      color: AppColors.info,
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -1114,8 +1127,8 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> with Single
                   _showAddPaymentDialog(prefilledTrip: trip);
                 },
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.blue,
-                  side: const BorderSide(color: Colors.blue),
+                  foregroundColor: AppColors.info,
+                  side: const BorderSide(color: AppColors.info),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
@@ -1267,10 +1280,10 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> with Single
                     child: Container(
                       padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
-                        color: Colors.blue.withOpacity(0.1),
+                        color: AppColors.info.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(4),
                       ),
-                      child: const Icon(Icons.edit, size: 16, color: Colors.blue),
+                      child: const Icon(Icons.edit, size: 16, color: AppColors.info),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -1300,7 +1313,7 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> with Single
     final tripId = transaction['tripId'];
 
     if (tripId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         const SnackBar(content: Text('Cannot edit: Trip ID not found')),
       );
       return;
@@ -1311,7 +1324,7 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> with Single
     try {
       numericId = int.parse(id.split('_').last);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         const SnackBar(content: Text('Invalid transaction ID')),
       );
       return;
@@ -1450,7 +1463,7 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> with Single
                   ElevatedButton(
                     onPressed: () async {
                       if (amountController.text.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        ToastHelper.showSnackBarToast(context, 
                           const SnackBar(content: Text('Please enter amount')),
                         );
                         return;
@@ -1494,13 +1507,13 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> with Single
                         if (!mounted) return;
 
                         if (success) {
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          ToastHelper.showSnackBarToast(context, 
                             SnackBar(
                               content: Text('$dialogTitle updated successfully'),
                             ),
                           );
                         } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          ToastHelper.showSnackBarToast(context, 
                             SnackBar(
                               content: Text('Failed to update $type'),
                             ),
@@ -1508,13 +1521,13 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> with Single
                         }
                       } catch (e) {
                         if (!mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        ToastHelper.showSnackBarToast(context, 
                           SnackBar(content: Text('Error: $e')),
                         );
                       }
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
+                      backgroundColor: AppColors.info,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
@@ -1544,7 +1557,7 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> with Single
     final tripId = transaction['tripId'];
 
     if (tripId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         const SnackBar(content: Text('Cannot delete: Trip ID not found')),
       );
       return;
@@ -1555,7 +1568,7 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> with Single
     try {
       numericId = int.parse(id.split('_').last);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         const SnackBar(content: Text('Invalid transaction ID')),
       );
       return;
@@ -1608,17 +1621,17 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> with Single
                 if (!mounted) return;
 
                 if (success) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  ToastHelper.showSnackBarToast(context, 
                     SnackBar(content: Text('$itemName deleted successfully')),
                   );
                 } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  ToastHelper.showSnackBarToast(context, 
                     SnackBar(content: Text('Failed to delete $itemName')),
                   );
                 }
               } catch (e) {
                 if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
+                ToastHelper.showSnackBarToast(context, 
                   SnackBar(content: Text('Error: $e')),
                 );
               }
@@ -1634,7 +1647,7 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> with Single
   Future<void> _callSupplier() async {
     final phoneNumber = _supplierData?['phone']?.toString() ?? '';
     if (phoneNumber.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         const SnackBar(content: Text('Phone number not available')),
       );
       return;
@@ -1646,14 +1659,14 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> with Single
         await launchUrl(phoneUri);
       } else {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
+          ToastHelper.showSnackBarToast(context, 
             const SnackBar(content: Text('Cannot make phone call')),
           );
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ToastHelper.showSnackBarToast(context, 
           const SnackBar(content: Text('Error making phone call')),
         );
       }
@@ -1735,7 +1748,7 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> with Single
                       onPressed: () async {
                         final name = nameController.text.trim();
                         if (name.isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          ToastHelper.showSnackBarToast(context, 
                             const SnackBar(content: Text('Supplier name is required')),
                           );
                           return;
@@ -1754,18 +1767,18 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> with Single
                             // Reload data immediately after update
                             await _loadData();
                             if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
+                              ToastHelper.showSnackBarToast(context, 
                                 const SnackBar(content: Text('Supplier updated successfully')),
                               );
                             }
                           } else if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
+                            ToastHelper.showSnackBarToast(context, 
                               const SnackBar(content: Text('Failed to update supplier')),
                             );
                           }
                         } catch (e) {
                           if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
+                            ToastHelper.showSnackBarToast(context, 
                               SnackBar(content: Text('Error: $e')),
                             );
                           }
@@ -1773,7 +1786,7 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> with Single
                       },
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
-                        backgroundColor: Colors.blue,
+                        backgroundColor: AppColors.info,
                         foregroundColor: Colors.white,
                       ),
                       child: const Text('Save'),
@@ -1806,18 +1819,18 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> with Single
               try {
                 final success = await ApiService.deleteSupplier(supplierId: widget.supplierId);
                 if (success && mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  ToastHelper.showSnackBarToast(context, 
                     const SnackBar(content: Text('Supplier deleted successfully')),
                   );
                   Navigator.pop(context); // Go back to supplier list
                 } else if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  ToastHelper.showSnackBarToast(context, 
                     const SnackBar(content: Text('Failed to delete supplier')),
                   );
                 }
               } catch (e) {
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  ToastHelper.showSnackBarToast(context, 
                     SnackBar(content: Text('Error: $e')),
                   );
                 }
@@ -1853,3 +1866,5 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
   @override
   bool shouldRebuild(_SliverAppBarDelegate oldDelegate) => false;
 }
+
+

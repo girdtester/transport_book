@@ -1,13 +1,15 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:transport_book_app/utils/appbar.dart';
 import 'dart:io';
 import '../../../utils/app_colors.dart';
 import '../../../utils/app_constants.dart';
+import 'package:transport_book_app/utils/toast_helper.dart';
 
 class TripBillScreen extends StatefulWidget {
   final Map<String, dynamic> tripDetails;
@@ -45,22 +47,7 @@ class _TripBillScreenState extends State<TripBillScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
-      appBar: AppBar(
-        backgroundColor: AppColors.appBarColor,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.appBarTextColor),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          'Trip PDF',
-          style: TextStyle(
-            color: AppColors.appBarTextColor,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
+      appBar: CustomAppBar(title: 'Trip PDF',onBack: Navigator.of(context).pop,),
       body: Column(
         children: [
           // Bill Content (Scrollable)
@@ -89,7 +76,7 @@ class _TripBillScreenState extends State<TripBillScreen> {
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                'TMS Prime',
+                                'TMS Book',
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
@@ -502,7 +489,7 @@ class _TripBillScreenState extends State<TripBillScreen> {
                                 children: [
                                   const TextSpan(text: 'This is an automatically generated summary. Powered by '),
                                   TextSpan(
-                                    text: 'TMS Prime',
+                                    text: 'TMS Book',
                                     style: TextStyle(
                                       color: AppColors.primaryGreen,
                                       fontWeight: FontWeight.w600,
@@ -630,7 +617,7 @@ class _TripBillScreenState extends State<TripBillScreen> {
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
                   pw.Text(
-                    'TMS Prime',
+                    'TMS Book',
                     style: pw.TextStyle(
                       fontSize: 18,
                       fontWeight: pw.FontWeight.bold,
@@ -763,7 +750,7 @@ class _TripBillScreenState extends State<TripBillScreen> {
                                 ),
                               ],
                             ),
-                            pw.Text('→', style: const pw.TextStyle(fontSize: 16)),
+                            pw.Text('â†’', style: const pw.TextStyle(fontSize: 16)),
                             pw.Column(
                               crossAxisAlignment: pw.CrossAxisAlignment.end,
                               children: [
@@ -912,7 +899,7 @@ class _TripBillScreenState extends State<TripBillScreen> {
               // Footer
               pw.Center(
                 child: pw.Text(
-                  'This is an automatically generated summary. Powered by TMS Prime',
+                  'This is an automatically generated summary. Powered by TMS Book',
                   style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700),
                 ),
               ),
@@ -942,7 +929,7 @@ class _TripBillScreenState extends State<TripBillScreen> {
     try {
       // Show loading indicator
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         const SnackBar(
           content: Text('Generating PDF...'),
           duration: Duration(seconds: 1),
@@ -979,7 +966,7 @@ class _TripBillScreenState extends State<TripBillScreen> {
       await file.writeAsBytes(bytes);
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         SnackBar(
           content: Text('Bill downloaded to ${file.path}'),
           duration: const Duration(seconds: 3),
@@ -988,7 +975,7 @@ class _TripBillScreenState extends State<TripBillScreen> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         SnackBar(
           content: Text('Error downloading bill: $e'),
           duration: const Duration(seconds: 3),
@@ -1002,7 +989,7 @@ class _TripBillScreenState extends State<TripBillScreen> {
     try {
       // Show loading indicator
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         const SnackBar(
           content: Text('Preparing to share...'),
           duration: Duration(seconds: 1),
@@ -1030,7 +1017,7 @@ class _TripBillScreenState extends State<TripBillScreen> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         SnackBar(
           content: Text('Error sharing bill: $e'),
           duration: const Duration(seconds: 3),
@@ -1040,3 +1027,4 @@ class _TripBillScreenState extends State<TripBillScreen> {
     }
   }
 }
+

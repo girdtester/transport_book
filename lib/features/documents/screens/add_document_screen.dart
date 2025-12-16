@@ -1,9 +1,12 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:image_picker/image_picker.dart';
-import 'dart:io';
+import 'dart:typed_data';
 import '../../../services/api_service.dart';
 import '../../../utils/app_colors.dart';
 import 'package:intl/intl.dart';
+import 'package:transport_book_app/utils/toast_helper.dart';
+import 'package:transport_book_app/utils/app_loader.dart';
 
 class AddDocumentScreen extends StatefulWidget {
   final int truckId;
@@ -25,7 +28,8 @@ class _AddDocumentScreenState extends State<AddDocumentScreen> {
   final _documentNumberController = TextEditingController();
   DateTime _issueDate = DateTime.now();
   DateTime _expiryDate = DateTime.now().add(const Duration(days: 365));
-  File? _selectedImage;
+  XFile? _selectedImage;
+  Uint8List? _selectedImageBytes;
   final ImagePicker _picker = ImagePicker();
   bool _isSaving = false;
 
@@ -38,8 +42,10 @@ class _AddDocumentScreenState extends State<AddDocumentScreen> {
     );
 
     if (image != null) {
+      final bytes = await image.readAsBytes();
       setState(() {
-        _selectedImage = File(image.path);
+        _selectedImage = image;
+        _selectedImageBytes = bytes;
       });
     }
   }
@@ -49,8 +55,8 @@ class _AddDocumentScreenState extends State<AddDocumentScreen> {
       return;
     }
 
-    if (_selectedImage == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
+    if (_selectedImage == null || _selectedImageBytes == null) {
+      ToastHelper.showSnackBarToast(context,
         const SnackBar(content: Text('Please upload a document image')),
       );
       return;
@@ -66,7 +72,8 @@ class _AddDocumentScreenState extends State<AddDocumentScreen> {
       documentNumber: _documentNumberController.text,
       issueDate: DateFormat('dd MMM yyyy').format(_issueDate),
       expiryDate: DateFormat('dd MMM yyyy').format(_expiryDate),
-      imagePath: _selectedImage!.path,
+      imageBytes: _selectedImageBytes,
+      fileName: _selectedImage!.name,
       status: 'Active',
     );
 
@@ -76,7 +83,7 @@ class _AddDocumentScreenState extends State<AddDocumentScreen> {
 
     if (result != null && mounted) {
       Navigator.pop(context, true);
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context,
         const SnackBar(content: Text('Document added successfully')),
       );
     }
@@ -87,29 +94,34 @@ class _AddDocumentScreenState extends State<AddDocumentScreen> {
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
-        backgroundColor: AppColors.appBarColor,
-        foregroundColor: AppColors.appBarTextColor,
+        backgroundColor: AppColors.info,
+        foregroundColor: Colors.white,
         elevation: 0,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            bottom: Radius.circular(20),
+          ),
+        ),
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: AppColors.appBarTextColor),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
+            const Text(
               'Add Document',
               style: TextStyle(
-                color: AppColors.appBarTextColor,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
               ),
             ),
             Text(
               widget.truckNumber,
-              style: TextStyle(
-                color: AppColors.appBarTextColor.withOpacity(0.7),
-                fontSize: 12,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 14,
               ),
             ),
           ],
@@ -142,7 +154,7 @@ class _AddDocumentScreenState extends State<AddDocumentScreen> {
                               style: BorderStyle.solid,
                             ),
                           ),
-                          child: _selectedImage == null
+                          child: _selectedImageBytes == null
                               ? Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
@@ -172,8 +184,8 @@ class _AddDocumentScreenState extends State<AddDocumentScreen> {
                                 )
                               : ClipRRect(
                                   borderRadius: BorderRadius.circular(12),
-                                  child: Image.file(
-                                    _selectedImage!,
+                                  child: Image.memory(
+                                    _selectedImageBytes!,
                                     fit: BoxFit.cover,
                                     width: double.infinity,
                                     height: double.infinity,
@@ -377,7 +389,7 @@ class _AddDocumentScreenState extends State<AddDocumentScreen> {
                       ? const SizedBox(
                           height: 20,
                           width: 20,
-                          child: CircularProgressIndicator(
+                          child: AppLoader(
                             color: Colors.white,
                             strokeWidth: 2,
                           ),
@@ -406,3 +418,5 @@ class _AddDocumentScreenState extends State<AddDocumentScreen> {
     super.dispose();
   }
 }
+
+

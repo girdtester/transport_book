@@ -1,9 +1,12 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../services/api_service.dart';
 import '../../../utils/app_colors.dart';
 import 'package:intl/intl.dart';
 import '../../trucks/screens/my_trucks_screen.dart';
+import 'package:transport_book_app/utils/toast_helper.dart';
+import 'package:transport_book_app/utils/app_loader.dart';
+import '../../../utils/custom_textfield.dart';
 
 class AddLoadScreen extends StatefulWidget {
   final int parentTripId;
@@ -49,7 +52,7 @@ class _AddLoadScreenState extends State<AddLoadScreen> {
   bool _isLoading = false;
   bool _showMoreDetails = false;
   bool _showValidationErrors = false;
-  List<String> _cities = [];
+  List<Map<String, dynamic>> _cities = [];
   List<dynamic> _parties = [];
   List<dynamic> _drivers = [];
   List<dynamic> _allTrucks = [];
@@ -125,9 +128,9 @@ class _AddLoadScreenState extends State<AddLoadScreen> {
 
   String _getRateLabel(String billingType) {
     switch (billingType) {
-      case 'Per Tonne':
+      case 'Per Ton':
         return 'Rate per Ton';
-      case 'Per KG':
+      case 'Per Kg':
         return 'Rate per Kg';
       case 'Per KM':
         return 'Rate per KM';
@@ -146,9 +149,9 @@ class _AddLoadScreenState extends State<AddLoadScreen> {
 
   String _getQuantityLabel(String billingType) {
     switch (billingType) {
-      case 'Per Tonne':
+      case 'Per Ton':
         return 'Total Tons';
-      case 'Per KG':
+      case 'Per Kg':
         return 'Total Kg';
       case 'Per KM':
         return 'Total KM';
@@ -232,7 +235,7 @@ class _AddLoadScreenState extends State<AddLoadScreen> {
     }
 
     if (missingFields.isNotEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         SnackBar(
           content: Text(
             'Please fill required fields:\n${missingFields.join(', ')}',
@@ -247,7 +250,7 @@ class _AddLoadScreenState extends State<AddLoadScreen> {
     // Validate amount is greater than 0
     final amount = double.tryParse(_freightAmountController.text) ?? 0;
     if (amount <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         const SnackBar(
           content: Text('Freight amount must be greater than 0'),
           backgroundColor: Colors.red,
@@ -282,17 +285,17 @@ class _AddLoadScreenState extends State<AddLoadScreen> {
 
       if (result != null) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
+          ToastHelper.showSnackBarToast(context, 
             const SnackBar(
               content: Text('Load added successfully'),
-              backgroundColor: Colors.green,
+              backgroundColor: AppColors.primaryGreen,
             ),
           );
           Navigator.pop(context, true);
         }
       } else {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
+          ToastHelper.showSnackBarToast(context, 
             const SnackBar(
               content: Text('Failed to add load'),
               backgroundColor: Colors.red,
@@ -311,6 +314,11 @@ class _AddLoadScreenState extends State<AddLoadScreen> {
         backgroundColor: AppColors.appBarColor,
         foregroundColor: AppColors.appBarTextColor,
         elevation: 0,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            bottom: Radius.circular(20),
+          ),
+        ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
@@ -332,7 +340,7 @@ class _AddLoadScreenState extends State<AddLoadScreen> {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: const Color(0xFF4CAF50),
+                color: AppColors.primaryGreen,
                 boxShadow: [
                   BoxShadow(
                     color: Colors.grey.shade300,
@@ -464,11 +472,11 @@ class _AddLoadScreenState extends State<AddLoadScreen> {
                         ),
                         const SizedBox(width: 6),
                         Expanded(
-                          child: _buildBillingTypeButton('Per Tonne', true),
+                          child: _buildBillingTypeButton('Per Ton', true),
                         ),
                         const SizedBox(width: 6),
                         Expanded(
-                          child: _buildBillingTypeButton('Per KG', true),
+                          child: _buildBillingTypeButton('Per Kg', true),
                         ),
                         const SizedBox(width: 6),
                         Expanded(
@@ -483,22 +491,23 @@ class _AddLoadScreenState extends State<AddLoadScreen> {
                       Row(
                         children: [
                           Expanded(
-                            child: _buildTextField(
+                            child: CustomTextField(
                               label: _getRateLabel(_selectedBillingType),
                               controller: _rateController,
-                              hintText: 'Enter rate',
-                              prefixText: '₹ ',
-                              keyboardType: TextInputType.number,
+                              hint: '₹ Enter rate',
+                              keyboard: TextInputType.number,
+                              inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}'))],
                               onChanged: (value) => _calculateFreightAmount(),
                             ),
                           ),
                           const SizedBox(width: 10),
                           Expanded(
-                            child: _buildTextField(
+                            child: CustomTextField(
                               label: _getQuantityLabel(_selectedBillingType),
                               controller: _quantityController,
-                              hintText: 'Enter quantity',
-                              keyboardType: TextInputType.number,
+                              hint: 'Enter quantity',
+                              keyboard: TextInputType.number,
+                              inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}'))],
                               onChanged: (value) => _calculateFreightAmount(),
                             ),
                           ),
@@ -508,13 +517,12 @@ class _AddLoadScreenState extends State<AddLoadScreen> {
                     ],
 
                     // Party Freight Amount
-                    _buildTextField(
+                    CustomTextField(
                       label: 'Party Freight Amount',
                       controller: _freightAmountController,
-                      hintText: 'Enter amount',
-                      prefixText: '₹ ',
-                      keyboardType: TextInputType.number,
-                      isRequired: true,
+                      hint: '₹ Enter amount',
+                      keyboard: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}'))],
                     ),
                     const SizedBox(height: 10),
 
@@ -542,11 +550,11 @@ class _AddLoadScreenState extends State<AddLoadScreen> {
                           ),
                           const SizedBox(width: 6),
                           Expanded(
-                            child: _buildBillingTypeButton('Per Tonne', false),
+                            child: _buildBillingTypeButton('Per Ton', false),
                           ),
                           const SizedBox(width: 6),
                           Expanded(
-                            child: _buildBillingTypeButton('Per KG', false),
+                            child: _buildBillingTypeButton('Per Kg', false),
                           ),
                           const SizedBox(width: 6),
                           Expanded(
@@ -561,22 +569,23 @@ class _AddLoadScreenState extends State<AddLoadScreen> {
                         Row(
                           children: [
                             Expanded(
-                              child: _buildTextField(
+                              child: CustomTextField(
                                 label: _getRateLabel(_selectedSupplierBillingType),
                                 controller: _supplierRateController,
-                                hintText: 'Enter rate',
-                                prefixText: '₹ ',
-                                keyboardType: TextInputType.number,
+                                hint: '₹ Enter rate',
+                                keyboard: TextInputType.number,
+                                inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}'))],
                                 onChanged: (value) => _calculateTruckHireCost(),
                               ),
                             ),
                             const SizedBox(width: 10),
                             Expanded(
-                              child: _buildTextField(
+                              child: CustomTextField(
                                 label: _getQuantityLabel(_selectedSupplierBillingType),
                                 controller: _supplierQuantityController,
-                                hintText: 'Enter quantity',
-                                keyboardType: TextInputType.number,
+                                hint: 'Enter quantity',
+                                keyboard: TextInputType.number,
+                                inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}'))],
                                 onChanged: (value) => _calculateTruckHireCost(),
                               ),
                             ),
@@ -586,21 +595,28 @@ class _AddLoadScreenState extends State<AddLoadScreen> {
                       ],
 
                       // Truck Hire Cost
-                      _buildTextField(
+                      CustomTextField(
                         label: 'Truck Hire Cost',
                         controller: _truckHireCostController,
-                        hintText: 'Enter cost',
-                        prefixText: '₹ ',
-                        keyboardType: TextInputType.number,
+                        hint: '₹ Enter cost',
+                        keyboard: TextInputType.number,
+                        inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}'))],
                       ),
                       const SizedBox(height: 10),
                     ],
 
                     // Trip Start Date
-                    _buildDateField(
-                      label: 'Trip Start Date',
-                      date: _selectedDate,
+                    GestureDetector(
                       onTap: _selectDate,
+                      child: AbsorbPointer(
+                        child: CustomTextField(
+                          label: 'Trip Start Date',
+                          controller: TextEditingController(
+                            text: DateFormat('dd MMM yyyy').format(_selectedDate),
+                          ),
+                          suffix: const Icon(Icons.calendar_today),
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 12),
 
@@ -615,19 +631,19 @@ class _AddLoadScreenState extends State<AddLoadScreen> {
                         },
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 12),
-                          side: BorderSide(color: Colors.blue.shade600, width: 1.5),
+                          side: BorderSide(color: AppColors.info.withOpacity(0.8), width: 1.5),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8),
                           ),
                         ),
                         icon: Icon(
                           _showMoreDetails ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                          color: Colors.blue.shade600,
+                          color: AppColors.info.withOpacity(0.8),
                         ),
                         label: Text(
                           _showMoreDetails ? 'Hide More Details' : 'Add More Details',
                           style: TextStyle(
-                            color: Colors.blue.shade600,
+                            color: AppColors.info.withOpacity(0.8),
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
                           ),
@@ -638,25 +654,26 @@ class _AddLoadScreenState extends State<AddLoadScreen> {
 
                     // Expandable Additional Details
                     if (_showMoreDetails) ...[
-                      _buildTextField(
+                      CustomTextField(
                         label: 'LR Number',
                         controller: _lrNumberController,
-                        hintText: 'Auto-generated (editable)',
-                        keyboardType: TextInputType.text,
+                        hint: 'Auto-generated (editable)',
+                        keyboard: TextInputType.text,
                       ),
                       const SizedBox(height: 10),
-                      _buildTextField(
+                      CustomTextField(
                         label: 'Material',
                         controller: _materialController,
-                        hintText: 'e.g., Steel, Cement, etc.',
-                        keyboardType: TextInputType.text,
+                        hint: 'e.g., Steel, Cement, etc.',
+                        keyboard: TextInputType.text,
                       ),
                       const SizedBox(height: 10),
-                      _buildTextField(
+                      CustomTextField(
                         label: 'Weight (in Tons)',
                         controller: _weightController,
-                        hintText: 'Enter weight',
-                        keyboardType: TextInputType.number,
+                        hint: 'Enter weight',
+                        keyboard: TextInputType.number,
+                        inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}'))],
                       ),
                       const SizedBox(height: 10),
                       Container(
@@ -770,7 +787,7 @@ class _AddLoadScreenState extends State<AddLoadScreen> {
                     ? const SizedBox(
                         height: 20,
                         width: 20,
-                        child: CircularProgressIndicator(
+                        child: AppLoader(
                           color: Colors.white,
                           strokeWidth: 2,
                         ),
@@ -860,146 +877,7 @@ class _AddLoadScreenState extends State<AddLoadScreen> {
     );
   }
 
-  Widget _buildTextField({
-    required String label,
-    required TextEditingController controller,
-    required String hintText,
-    String? prefixText,
-    TextInputType? keyboardType,
-    Function(String)? onChanged,
-    bool isRequired = false,
-  }) {
-    final hasError = _showValidationErrors && isRequired && controller.text.isEmpty;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(
-          color: hasError ? Colors.red : Colors.grey.shade300,
-          width: hasError ? 2 : 1,
-        ),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(left: 12, top: 6, right: 12),
-            child: Row(
-              children: [
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: hasError ? Colors.red : Colors.grey.shade500,
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
-                if (isRequired)
-                  const Text(
-                    ' *',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: Colors.red,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          TextFormField(
-            controller: controller,
-            keyboardType: keyboardType,
-            inputFormatters: keyboardType == TextInputType.number
-                ? [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}'))]
-                : null,
-            style: const TextStyle(
-              fontSize: 14,
-              color: Colors.black87,
-              fontWeight: FontWeight.w500,
-            ),
-            decoration: InputDecoration(
-              hintText: hintText,
-              hintStyle: TextStyle(
-                color: hasError ? Colors.red.shade300 : Colors.grey.shade400,
-                fontSize: 14,
-              ),
-              prefixText: prefixText,
-              prefixStyle: const TextStyle(
-                fontSize: 14,
-                color: Colors.black87,
-                fontWeight: FontWeight.w500,
-              ),
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.only(left: 12, right: 12, bottom: 6),
-              isDense: true,
-            ),
-            onChanged: (value) {
-              if (_showValidationErrors && value.isNotEmpty) {
-                setState(() {
-                  // Re-validate when user starts typing
-                });
-              }
-              if (onChanged != null) onChanged(value);
-            },
-            validator: (value) {
-              if (isRequired && (value == null || value.isEmpty)) {
-                return 'Required';
-              }
-              return null;
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDateField({
-    required String label,
-    required DateTime date,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border.all(color: Colors.grey.shade300, width: 1),
-          borderRadius: BorderRadius.circular(6),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 10,
-                color: Colors.grey.shade500,
-                fontWeight: FontWeight.w400,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    DateFormat('dd MMM yyyy').format(date),
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Colors.black87,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-                Icon(Icons.calendar_today, size: 16, color: Colors.grey.shade500),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   Widget _buildBillingTypeButton(String type, bool isPartyBilling) {
     final isSelected = isPartyBilling
@@ -1437,7 +1315,7 @@ class _AddLoadScreenState extends State<AddLoadScreen> {
 
   void _showCityPicker(bool isOrigin) {
     final searchController = TextEditingController();
-    List<String> filteredCities = List.from(_cities);
+    List<Map<String, dynamic>> filteredCities = List.from(_cities);
 
     showModalBottomSheet(
       context: context,
@@ -1482,26 +1360,37 @@ class _AddLoadScreenState extends State<AddLoadScreen> {
                       filteredCities = List.from(_cities);
                     } else {
                       filteredCities = _cities
-                          .where((city) => city.toLowerCase().contains(value.toLowerCase()))
+                          .where((city) => (city['name'] ?? '').toString().toLowerCase().contains(value.toLowerCase()))
                           .toList();
                     }
                   });
                 },
               ),
               const SizedBox(height: 12),
+              // Add New City button - always visible at top
+              ListTile(
+                leading: Icon(Icons.add_circle, color: AppColors.primaryGreen),
+                title: const Text('Add New City'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showAddCityDialog(isOrigin);
+                },
+              ),
+              const Divider(),
               Expanded(
                 child: ListView.builder(
                   itemCount: filteredCities.length,
                   itemBuilder: (context, index) {
                     final city = filteredCities[index];
+                    final cityName = city['name'] ?? '';
                     return ListTile(
-                      title: Text(city),
+                      title: Text(cityName),
                       onTap: () {
                         setState(() {
                           if (isOrigin) {
-                            _originController.text = city;
+                            _originController.text = cityName;
                           } else {
-                            _destinationController.text = city;
+                            _destinationController.text = cityName;
                           }
                         });
                         Navigator.pop(context);
@@ -1513,6 +1402,79 @@ class _AddLoadScreenState extends State<AddLoadScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  // Show dialog to add new city
+  void _showAddCityDialog(bool isOrigin) {
+    final cityController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add New City'),
+        content: TextField(
+          controller: cityController,
+          decoration: const InputDecoration(
+            hintText: 'Enter city name',
+            border: OutlineInputBorder(),
+          ),
+          textCapitalization: TextCapitalization.words,
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (cityController.text.trim().isEmpty) return;
+
+              Navigator.pop(context); // Close dialog
+              AppLoader.show(context);
+
+              // Call API to add city to database
+              final result = await ApiService.addCity(cityController.text.trim());
+
+              if (mounted) {
+                AppLoader.hide(context);
+              }
+
+              if (result != null && result['success'] == true) {
+                final cityData = result['city'];
+                setState(() {
+                  // Add to local list if not already present
+                  if (!_cities.any((c) => c['id'] == cityData['id'])) {
+                    _cities.add(cityData);
+                    _cities.sort((a, b) => a['name'].compareTo(b['name']));
+                  }
+
+                  if (isOrigin) {
+                    _originController.text = cityData['name'];
+                  } else {
+                    _destinationController.text = cityData['name'];
+                  }
+                });
+
+                if (mounted) {
+                  ToastHelper.showSnackBarToast(context,
+                    SnackBar(content: Text(result['message'] ?? 'City added successfully')),
+                  );
+                }
+              } else {
+                if (mounted) {
+                  ToastHelper.showSnackBarToast(context,
+                    const SnackBar(content: Text('Failed to add city')),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryGreen),
+            child: const Text('Add', style: TextStyle(color: Colors.white)),
+          ),
+        ],
       ),
     );
   }
@@ -1649,17 +1611,17 @@ class _AddLoadScreenState extends State<AddLoadScreen> {
                                     _parties.add(result);
                                   });
                                   Navigator.pop(context);
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  ToastHelper.showSnackBarToast(context, 
                                     const SnackBar(
                                       content: Text('Party added successfully'),
-                                      backgroundColor: Colors.green,
+                                      backgroundColor: AppColors.primaryGreen,
                                     ),
                                   );
                                 } else {
                                   setModalState(() {
                                     isLoading = false;
                                   });
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  ToastHelper.showSnackBarToast(context, 
                                     const SnackBar(
                                       content: Text('Failed to add party'),
                                       backgroundColor: Colors.red,
@@ -1670,7 +1632,7 @@ class _AddLoadScreenState extends State<AddLoadScreen> {
                                 setModalState(() {
                                   isLoading = false;
                                 });
-                                ScaffoldMessenger.of(context).showSnackBar(
+                                ToastHelper.showSnackBarToast(context, 
                                   SnackBar(
                                     content: Text('Error: $e'),
                                     backgroundColor: Colors.red,
@@ -1690,7 +1652,7 @@ class _AddLoadScreenState extends State<AddLoadScreen> {
                           ? const SizedBox(
                               width: 24,
                               height: 24,
-                              child: CircularProgressIndicator(
+                              child: AppLoader(
                                 color: Colors.white,
                                 strokeWidth: 2,
                               ),
@@ -1846,17 +1808,17 @@ class _AddLoadScreenState extends State<AddLoadScreen> {
                                     _drivers.add(result);
                                   });
                                   Navigator.pop(context);
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  ToastHelper.showSnackBarToast(context, 
                                     const SnackBar(
                                       content: Text('Driver added successfully'),
-                                      backgroundColor: Colors.green,
+                                      backgroundColor: AppColors.primaryGreen,
                                     ),
                                   );
                                 } else {
                                   setModalState(() {
                                     isLoading = false;
                                   });
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  ToastHelper.showSnackBarToast(context, 
                                     const SnackBar(
                                       content: Text('Failed to add driver'),
                                       backgroundColor: Colors.red,
@@ -1867,7 +1829,7 @@ class _AddLoadScreenState extends State<AddLoadScreen> {
                                 setModalState(() {
                                   isLoading = false;
                                 });
-                                ScaffoldMessenger.of(context).showSnackBar(
+                                ToastHelper.showSnackBarToast(context, 
                                   SnackBar(
                                     content: Text('Error: $e'),
                                     backgroundColor: Colors.red,
@@ -1887,7 +1849,7 @@ class _AddLoadScreenState extends State<AddLoadScreen> {
                           ? const SizedBox(
                               width: 24,
                               height: 24,
-                              child: CircularProgressIndicator(
+                              child: AppLoader(
                                 color: Colors.white,
                                 strokeWidth: 2,
                               ),
@@ -2042,17 +2004,17 @@ class _AddLoadScreenState extends State<AddLoadScreen> {
                                     _supplierNameController.text = nameController.text;
                                   });
                                   Navigator.pop(context);
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  ToastHelper.showSnackBarToast(context, 
                                     const SnackBar(
                                       content: Text('Supplier added successfully'),
-                                      backgroundColor: Colors.green,
+                                      backgroundColor: AppColors.primaryGreen,
                                     ),
                                   );
                                 } else {
                                   setModalState(() {
                                     isLoading = false;
                                   });
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  ToastHelper.showSnackBarToast(context, 
                                     const SnackBar(
                                       content: Text('Failed to add supplier'),
                                       backgroundColor: Colors.red,
@@ -2063,7 +2025,7 @@ class _AddLoadScreenState extends State<AddLoadScreen> {
                                 setModalState(() {
                                   isLoading = false;
                                 });
-                                ScaffoldMessenger.of(context).showSnackBar(
+                                ToastHelper.showSnackBarToast(context, 
                                   SnackBar(
                                     content: Text('Error: $e'),
                                     backgroundColor: Colors.red,
@@ -2083,7 +2045,7 @@ class _AddLoadScreenState extends State<AddLoadScreen> {
                           ? const SizedBox(
                               width: 24,
                               height: 24,
-                              child: CircularProgressIndicator(
+                              child: AppLoader(
                                 color: Colors.white,
                                 strokeWidth: 2,
                               ),
@@ -2167,6 +2129,11 @@ class _TruckPickerScreenState extends State<_TruckPickerScreen> with SingleTicke
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0.5,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            bottom: Radius.circular(20),
+          ),
+        ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black87),
           onPressed: () => Navigator.pop(context),
@@ -2216,9 +2183,9 @@ class _TruckPickerScreenState extends State<_TruckPickerScreen> with SingleTicke
                 color: Colors.white,
                 child: TabBar(
                   controller: _tabController,
-                  labelColor: Colors.blue.shade700,
+                  labelColor: AppColors.info,
                   unselectedLabelColor: Colors.grey.shade600,
-                  indicatorColor: Colors.blue.shade700,
+                  indicatorColor: AppColors.info,
                   indicatorWeight: 3,
                   indicatorSize: TabBarIndicatorSize.tab,
                   tabs: [
@@ -2277,7 +2244,7 @@ class _TruckPickerScreenState extends State<_TruckPickerScreen> with SingleTicke
             ),
           );
         },
-        backgroundColor: const Color(0xFF4CAF50),
+        backgroundColor: AppColors.primaryGreen,
         icon: const Icon(Icons.add, color: Colors.white),
         label: const Text(
           'Add Truck',
@@ -2329,7 +2296,7 @@ class _TruckPickerScreenState extends State<_TruckPickerScreen> with SingleTicke
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
             side: isSelected
-                ? BorderSide(color: Colors.blue.shade700, width: 2)
+                ? BorderSide(color: AppColors.info, width: 2)
                 : BorderSide.none,
           ),
           child: ListTile(
@@ -2337,12 +2304,12 @@ class _TruckPickerScreenState extends State<_TruckPickerScreen> with SingleTicke
             leading: Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: isSelected ? Colors.blue.shade50 : Colors.grey.shade100,
+                color: isSelected ? AppColors.info.withOpacity(0.1) : Colors.grey.shade100,
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(
                 type == 'Own' ? Icons.directions_car : Icons.local_shipping,
-                color: isSelected ? Colors.blue.shade700 : Colors.grey.shade600,
+                color: isSelected ? AppColors.info : Colors.grey.shade600,
                 size: 28,
               ),
             ),
@@ -2351,7 +2318,7 @@ class _TruckPickerScreenState extends State<_TruckPickerScreen> with SingleTicke
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: isSelected ? Colors.blue.shade700 : Colors.black87,
+                color: isSelected ? AppColors.info : Colors.black87,
               ),
             ),
             subtitle: Column(
@@ -2363,14 +2330,14 @@ class _TruckPickerScreenState extends State<_TruckPickerScreen> with SingleTicke
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
-                        color: status == 'Available' ? Colors.green.shade50 : Colors.orange.shade50,
+                        color: status == 'Available' ? AppColors.primaryGreen.withOpacity(0.1) : Colors.orange.shade50,
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
                         status,
                         style: TextStyle(
                           fontSize: 11,
-                          color: status == 'Available' ? Colors.green.shade700 : Colors.orange.shade700,
+                          color: status == 'Available' ? AppColors.primaryGreen.withOpacity(0.8) : Colors.orange.shade700,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -2387,7 +2354,7 @@ class _TruckPickerScreenState extends State<_TruckPickerScreen> with SingleTicke
               ],
             ),
             trailing: isSelected
-                ? Icon(Icons.check_circle, color: Colors.blue.shade700, size: 28)
+                ? Icon(Icons.check_circle, color: AppColors.info, size: 28)
                 : const Icon(Icons.chevron_right, color: Colors.grey),
             onTap: () {
               Navigator.pop(context, truck);
@@ -2398,3 +2365,5 @@ class _TruckPickerScreenState extends State<_TruckPickerScreen> with SingleTicke
     );
   }
 }
+
+

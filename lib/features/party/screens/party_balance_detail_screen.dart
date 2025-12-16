@@ -1,7 +1,10 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:transport_book_app/utils/appbar.dart';
 import '../../../utils/app_colors.dart';
 import '../../../services/api_service.dart';
 import 'party_balance_report_screen.dart';
+import 'package:transport_book_app/utils/toast_helper.dart';
+import 'package:transport_book_app/utils/app_loader.dart';
 
 class PartyBalanceDetailScreen extends StatefulWidget {
   final int partyId;
@@ -79,7 +82,7 @@ class _PartyBalanceDetailScreenState extends State<PartyBalanceDetailScreen> {
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ToastHelper.showSnackBarToast(context, 
           SnackBar(content: Text('Error loading trips: $e')),
         );
       }
@@ -107,14 +110,9 @@ class _PartyBalanceDetailScreenState extends State<PartyBalanceDetailScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[100],
-      appBar: AppBar(
-        backgroundColor: AppColors.appBarColor,
-        foregroundColor: AppColors.appBarTextColor,
-        title: Text(widget.partyName),
-        elevation: 0,
-      ),
+      appBar: CustomAppBar(title: widget.partyName,onBack: () => Navigator.pop(context),),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: AppLoader())
           : Column(
               children: [
                 // Balance Summary
@@ -152,8 +150,8 @@ class _PartyBalanceDetailScreenState extends State<PartyBalanceDetailScreen> {
                             icon: const Icon(Icons.picture_as_pdf),
                             label: const Text('View PDF'),
                             style: OutlinedButton.styleFrom(
-                              foregroundColor: Colors.blue,
-                              side: const BorderSide(color: Colors.blue, width: 2),
+                              foregroundColor: AppColors.info,
+                              side: const BorderSide(color: AppColors.info, width: 2),
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 20,
                                 vertical: 12,
@@ -397,7 +395,7 @@ class _PartyBalanceDetailScreenState extends State<PartyBalanceDetailScreen> {
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: Colors.blue,
+                    color: AppColors.info,
                   ),
                 ),
               ],
@@ -410,7 +408,7 @@ class _PartyBalanceDetailScreenState extends State<PartyBalanceDetailScreen> {
               onPressed: () => Navigator.pop(context),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.grey.shade200,
-                foregroundColor: Colors.blue,
+                foregroundColor: AppColors.info,
                 minimumSize: const Size(double.infinity, 50),
                 elevation: 0,
                 shape: RoundedRectangleBorder(
@@ -576,7 +574,7 @@ class _PartyBalanceDetailScreenState extends State<PartyBalanceDetailScreen> {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: balance > 0 ? Colors.blue : Colors.grey.shade600,
+                color: balance > 0 ? AppColors.info : Colors.grey.shade600,
               ),
             ),
           ],
@@ -585,3 +583,5 @@ class _PartyBalanceDetailScreenState extends State<PartyBalanceDetailScreen> {
     );
   }
 }
+
+

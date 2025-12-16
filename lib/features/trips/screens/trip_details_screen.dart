@@ -1,27 +1,36 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:intl/intl.dart';
-import 'package:image_picker/image_picker.dart';
-import 'dart:io';
-import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:url_launcher/url_launcher.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:transport_book_app/utils/custom_button.dart';
+import 'package:transport_book_app/utils/custom_dropdown.dart';
+import 'package:transport_book_app/utils/custom_textfield.dart';
+import 'package:transport_book_app/utils/date_formatter.dart';
+import 'package:url_launcher/url_launcher.dart';
+
 import '../../../services/api_service.dart';
 import '../../../services/auth_storage.dart';
 import '../../../utils/app_colors.dart';
 import '../../../utils/currency_formatter.dart';
-import 'add_trip_screen.dart';
-import 'add_load_screen.dart';
-import 'trip_bill_screen.dart';
-import '../../trucks/screens/truck_details_screen.dart';
 import '../../driver/screens/driver_detail_screen.dart';
 import '../../driver/screens/driver_report_screen.dart';
-import '../../party/screens/party_detail_screen.dart';
-import '../../supplier/screens/supplier_detail_screen.dart';
 import '../../lr/screens/create_lr_screen.dart';
 import '../../lr/screens/view_lr_screen.dart';
+import '../../party/screens/party_detail_screen.dart';
+import '../../supplier/screens/supplier_detail_screen.dart';
+import '../../trucks/screens/truck_details_screen.dart';
+import 'add_load_screen.dart';
 import 'pod_challan_screen.dart';
+import 'trip_bill_screen.dart';
+import 'trip_progress_screen.dart';
+import 'package:transport_book_app/utils/toast_helper.dart';
+import 'package:transport_book_app/utils/app_loader.dart';
 
 class TripDetailsScreen extends StatefulWidget {
   final int tripId;
@@ -43,8 +52,10 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> with SingleTicker
   bool _isLoading = true;
   int? _expandedAccordionIndex; // Track which accordion is expanded (null = none, 0 = main trip, 1+ = loads)
   List<dynamic> _parties = [];
-  List<String> _cities = [];
+  List<Map<String, dynamic>> _cities = [];
   List<dynamic> _lorryReceipts = []; // Store LRs for this trip
+  List<Map<String, dynamic>> _chargeTypes = []; // Store charge types
+  List<Map<String, dynamic>> _expenseTypes = []; // Store expense types
 
   // Store selected IDs for update
   int? _selectedPartyId;
@@ -56,6 +67,19 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> with SingleTicker
     _tabController = TabController(length: 4, vsync: this); // 4 tabs: Loads/Party, Profit, Driver, More
     _loadTripDetails();
     _loadLorryReceipts(); // Load LRs for this trip
+    _loadChargeAndExpenseTypes(); // Load charge and expense types
+  }
+
+  Future<void> _loadChargeAndExpenseTypes() async {
+    final chargeTypes = await ApiService.getChargeTypes();
+    final expenseTypes = await ApiService.getExpenseTypes();
+
+    if (mounted) {
+      setState(() {
+        _chargeTypes = chargeTypes;
+        _expenseTypes = expenseTypes;
+      });
+    }
   }
 
   @override
@@ -233,7 +257,7 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> with SingleTicker
     final driverName = _tripDetails?['driverName'];
 
     if (driverName == null || driverName == 'Not Assigned' || driverName.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         const SnackBar(content: Text('No driver assigned to this trip')),
       );
       return;
@@ -253,7 +277,7 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> with SingleTicker
         _loadTripDetails();
       });
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         const SnackBar(content: Text('Driver details not available')),
       );
     }
@@ -265,7 +289,7 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> with SingleTicker
     final supplierName = _tripDetails?['supplierName'];
 
     if (supplierName == null || supplierName.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         const SnackBar(content: Text('No supplier assigned to this trip')),
       );
       return;
@@ -285,7 +309,7 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> with SingleTicker
         _loadTripDetails();
       });
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         const SnackBar(content: Text('Supplier details not available')),
       );
     }
@@ -297,7 +321,7 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> with SingleTicker
     final driverName = _tripDetails?['driverName'];
 
     if (driverName == null || driverName == 'Not Assigned' || driverName.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         const SnackBar(content: Text('No driver assigned to this trip')),
       );
       return;
@@ -314,7 +338,7 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> with SingleTicker
         ),
       );
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         const SnackBar(content: Text('Driver report not available')),
       );
     }
@@ -326,7 +350,7 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> with SingleTicker
     final partyName = _tripDetails?['partyName'];
 
     if (partyName == null || partyName.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         const SnackBar(content: Text('Party details not available')),
       );
       return;
@@ -343,7 +367,7 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> with SingleTicker
         ),
       );
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         const SnackBar(content: Text('Party details not available')),
       );
     }
@@ -356,17 +380,21 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> with SingleTicker
     final collectFromDriver = _tripDetails?['collectFromDriver'] ?? 0;
 
     if (driverName == null || driverName == 'Not Assigned' || driverName.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         const SnackBar(content: Text('No driver assigned to this trip')),
       );
       return;
     }
 
-    // Prefill amount if balance > 0
+    // Prefill amount
     final TextEditingController amountController = TextEditingController(
       text: collectFromDriver > 0 ? collectFromDriver.toString() : '',
     );
     final TextEditingController notesController = TextEditingController();
+    final TextEditingController dateController = TextEditingController(
+      text: DateHelper.formatShort(DateTime.now().toString()),
+    );
+
     DateTime selectedDate = DateTime.now();
 
     showModalBottomSheet(
@@ -383,93 +411,91 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> with SingleTicker
               color: Colors.white,
               borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
             ),
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
             child: SingleChildScrollView(
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Header
+
+                  // ---------------- HEADER ----------------
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text(
-                        'Settle Amount',
+                        "Settle Amount",
                         style: TextStyle(
                           fontSize: 20,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.pop(context),
-                      ),
+                      IconButton( icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context), ),
                     ],
                   ),
-                  const SizedBox(height: 8),
+
+                  const SizedBox(height: 6),
                   Text(
-                    'Collect from: $driverName',
+                    "Collect from: $driverName",
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.grey.shade600,
                     ),
                   ),
-                  const SizedBox(height: 20),
-                  // Amount Field
-                  TextField(
+
+                  const SizedBox(height: 18),
+
+                  // ---------------- AMOUNT ----------------
+                  CustomTextField(
+                    label: "Amount",
+                    hint: "Enter amount",
                     controller: amountController,
-                    keyboardType: TextInputType.number,
+                    keyboard: TextInputType.number,
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    decoration: const InputDecoration(
-                      labelText: 'Amount',
-                      prefixText: '₹ ',
-                      border: OutlineInputBorder(),
-                    ),
                   ),
+
                   const SizedBox(height: 16),
-                  // Date Field
-                  TextField(
-                    decoration: const InputDecoration(
-                      labelText: 'Date',
-                      border: OutlineInputBorder(),
-                      suffixIcon: Icon(Icons.calendar_today),
-                    ),
+
+                  // ---------------- DATE ----------------
+                  CustomTextField(
+                    label: "Date",
+                    controller: dateController,
                     readOnly: true,
-                    controller: TextEditingController(
-                      text: DateFormat('yyyy-MM-dd').format(selectedDate),
-                    ),
+                    suffix: const Icon(Icons.calendar_today, size: 20, color: Colors.grey),
                     onTap: () async {
                       final date = await showDatePicker(
                         context: context,
                         initialDate: selectedDate,
                         firstDate: DateTime(2020),
-                        lastDate: DateTime(2030),
+                        lastDate: DateTime(2035),
                       );
                       if (date != null) {
                         setModalState(() {
                           selectedDate = date;
+                          dateController.text = DateHelper.formatShort(date.toString());
                         });
                       }
                     },
                   ),
+
                   const SizedBox(height: 16),
-                  // Notes Field
-                  TextField(
+
+                  // ---------------- NOTES ----------------
+                  CustomTextField(
+                    label: "Notes (Optional)",
+                    hint: "Add notes...",
                     controller: notesController,
                     maxLines: 3,
-                    decoration: const InputDecoration(
-                      labelText: 'Notes (Optional)',
-                      border: OutlineInputBorder(),
-                      hintText: 'Add any notes...',
-                    ),
                   ),
+
                   const SizedBox(height: 24),
-                  // Confirm Button
-                  ElevatedButton(
+
+                  // ---------------- SUBMIT BUTTON ----------------
+                  CustomButton(
+                    text: "Confirm Settlement",
                     onPressed: () async {
                       if (amountController.text.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Please enter amount')),
+                        ToastHelper.showSnackBarToast(context, 
+                          const SnackBar(content: Text("Please enter amount")),
                         );
                         return;
                       }
@@ -477,7 +503,6 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> with SingleTicker
                       Navigator.pop(context);
 
                       try {
-                        // Use driver-level transaction API with type 'gave' (driver gave money to company)
                         if (driverId != null) {
                           final result = await ApiService.addDriverBalanceTransaction(
                             driverId: driverId,
@@ -488,7 +513,6 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> with SingleTicker
                             note: notesController.text.isNotEmpty ? notesController.text : null,
                           );
 
-                          // Reload trip details to refresh the balance
                           if (mounted) {
                             await _loadTripDetails();
                             await _loadTripLoads();
@@ -496,52 +520,26 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> with SingleTicker
 
                           if (!mounted) return;
 
-                          if (result != null) {
-                            try {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Amount settled successfully')),
-                              );
-                            } catch (e) {
-                              // Ignore snackbar errors if widget is disposed
-                            }
-                          } else {
-                            try {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Failed to settle amount')),
-                              );
-                            } catch (e) {
-                              // Ignore snackbar errors if widget is disposed
-                            }
-                          }
+                          ToastHelper.showSnackBarToast(context, 
+                            SnackBar(
+                              content: Text(
+                                result != null
+                                    ? "Amount settled successfully"
+                                    : "Failed to settle amount",
+                              ),
+                            ),
+                          );
                         }
                       } catch (e) {
                         if (!mounted) return;
-                        try {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Error: $e')),
-                          );
-                        } catch (e) {
-                          // Ignore snackbar errors if widget is disposed
-                        }
+                        ToastHelper.showSnackBarToast(context, 
+                          SnackBar(content: Text("Error: $e")),
+                        );
                       }
                     },
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      backgroundColor: const Color(0xFF2196F3),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      elevation: 0,
-                    ),
-                    child: const Text(
-                      'Confirm Settlement',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
                   ),
+
+                  const SizedBox(height: 16),
                 ],
               ),
             ),
@@ -671,7 +669,7 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> with SingleTicker
               ListTile(
                 title: Text('Main Trip - ${_tripDetails?['truckNumber']}'),
                 subtitle: Text(
-                  '${_tripDetails?['origin']} → ${_tripDetails?['destination']}',
+                  '${_tripDetails?['origin']} â†’ ${_tripDetails?['destination']}',
                 ),
                 onTap: () {
                   Navigator.pop(context);
@@ -684,7 +682,7 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> with SingleTicker
                 return ListTile(
                   title: Text('Load ${load['id']} - ${load['truckNumber']}'),
                   subtitle: Text(
-                    '${load['origin']} → ${load['destination']}',
+                    '${load['origin']} â†’ ${load['destination']}',
                   ),
                   onTap: () {
                     Navigator.pop(context);
@@ -713,6 +711,11 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> with SingleTicker
         builder: (context) => CreateLRScreen(
           tripId: tripId,
           truckNumber: truckNumber,
+          lrNumber: _tripDetails?['lrNumber'],
+          partyName: _tripDetails?['partyName'],
+          origin: _tripDetails?['origin'],
+          destination: _tripDetails?['destination'],
+          freightAmount: double.tryParse(_tripDetails?['freightAmount']?.toString() ?? '0'),
         ),
       ),
     );
@@ -720,6 +723,7 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> with SingleTicker
     // Reload if LR was created
     if (result == true) {
       _loadTripDetails();
+      _loadLorryReceipts(); // Refresh LR list immediately
     }
   }
 
@@ -774,7 +778,7 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> with SingleTicker
       if (!mounted) return;
 
       if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ToastHelper.showSnackBarToast(context, 
           const SnackBar(
             content: Text('Trip deleted successfully'),
             backgroundColor: Colors.green,
@@ -783,7 +787,7 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> with SingleTicker
         // Navigate back to previous screen and signal reload
         Navigator.pop(context, true);
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ToastHelper.showSnackBarToast(context, 
           const SnackBar(
             content: Text('Failed to delete trip'),
             backgroundColor: Colors.red,
@@ -792,7 +796,7 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> with SingleTicker
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         SnackBar(
           content: Text('Error deleting trip: $e'),
           backgroundColor: Colors.red,
@@ -813,7 +817,7 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> with SingleTicker
           await launchUrl(uri);
         } else {
           if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
+          ToastHelper.showSnackBarToast(context, 
             const SnackBar(
               content: Text('Cannot make phone call'),
               backgroundColor: Colors.red,
@@ -822,7 +826,7 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> with SingleTicker
         }
       } catch (e) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
+        ToastHelper.showSnackBarToast(context, 
           SnackBar(
             content: Text('Error making call: $e'),
             backgroundColor: Colors.red,
@@ -830,7 +834,7 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> with SingleTicker
         );
       }
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         const SnackBar(
           content: Text('Party phone number not available'),
           backgroundColor: Colors.orange,
@@ -851,7 +855,7 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> with SingleTicker
           await launchUrl(uri);
         } else {
           if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
+          ToastHelper.showSnackBarToast(context, 
             const SnackBar(
               content: Text('Cannot make phone call'),
               backgroundColor: Colors.red,
@@ -860,7 +864,7 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> with SingleTicker
         }
       } catch (e) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
+        ToastHelper.showSnackBarToast(context, 
           SnackBar(
             content: Text('Error making call: $e'),
             backgroundColor: Colors.red,
@@ -868,7 +872,7 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> with SingleTicker
         );
       }
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         const SnackBar(
           content: Text('Driver phone number not available'),
           backgroundColor: Colors.orange,
@@ -883,31 +887,31 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> with SingleTicker
 
     try {
       final tripInfo = StringBuffer();
-      tripInfo.writeln('📦 TRIP DETAILS');
-      tripInfo.writeln('━━━━━━━━━━━━━━━━━━━━━━');
+      tripInfo.writeln('ðŸ“¦ TRIP DETAILS');
+      tripInfo.writeln('â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”');
       tripInfo.writeln('');
-      tripInfo.writeln('🚛 Truck: ${_tripDetails!['truckNumber']}');
-      tripInfo.writeln('👤 Driver: ${_tripDetails!['driverName'] ?? 'Not Assigned'}');
-      tripInfo.writeln('🏢 Party: ${_tripDetails!['partyName']}');
+      tripInfo.writeln('ðŸš› Truck: ${_tripDetails!['truckNumber']}');
+      tripInfo.writeln('ðŸ‘¤ Driver: ${_tripDetails!['driverName'] ?? 'Not Assigned'}');
+      tripInfo.writeln('ðŸ¢ Party: ${_tripDetails!['partyName']}');
       tripInfo.writeln('');
-      tripInfo.writeln('📍 Route:');
+      tripInfo.writeln('ðŸ“ Route:');
       tripInfo.writeln('   From: ${_tripDetails!['origin']}');
       tripInfo.writeln('   To: ${_tripDetails!['destination']}');
       tripInfo.writeln('');
-      tripInfo.writeln('📅 Start Date: ${_tripDetails!['startDate']}');
+      tripInfo.writeln('ðŸ“… Start Date: ${_tripDetails!['startDate']}');
       if (_tripDetails!['tripStartDate'] != null) {
-        tripInfo.writeln('🚀 Trip Started: ${_tripDetails!['tripStartDate']}');
+        tripInfo.writeln('ðŸš€ Trip Started: ${_tripDetails!['tripStartDate']}');
       }
       if (_tripDetails!['tripEndDate'] != null) {
-        tripInfo.writeln('🏁 Trip Ended: ${_tripDetails!['tripEndDate']}');
+        tripInfo.writeln('ðŸ Trip Ended: ${_tripDetails!['tripEndDate']}');
       }
       tripInfo.writeln('');
-      tripInfo.writeln('💰 Freight: ${CurrencyFormatter.formatWithSymbol(_tripDetails!['freightAmount'])}');
-      tripInfo.writeln('📊 Status: ${_tripDetails!['status']}');
+      tripInfo.writeln('ðŸ’° Freight: ${CurrencyFormatter.formatWithSymbol(_tripDetails!['freightAmount'])}');
+      tripInfo.writeln('ðŸ“Š Status: ${_tripDetails!['status']}');
 
       if (_tripDetails!['lrNumber'] != null && _tripDetails!['lrNumber'].toString().isNotEmpty) {
         tripInfo.writeln('');
-        tripInfo.writeln('📄 LR Number: ${_tripDetails!['lrNumber']}');
+        tripInfo.writeln('ðŸ“„ LR Number: ${_tripDetails!['lrNumber']}');
       }
 
       await Share.share(
@@ -916,7 +920,7 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> with SingleTicker
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         SnackBar(
           content: Text('Error sharing trip: $e'),
           backgroundColor: Colors.red,
@@ -936,7 +940,7 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> with SingleTicker
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(child: CircularProgressIndicator()),
+      builder: (context) => const Center(child: AppLoader()),
     );
 
     try {
@@ -946,7 +950,7 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> with SingleTicker
       Navigator.pop(context); // Close loading
 
       if (lrData == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ToastHelper.showSnackBarToast(context, 
           const SnackBar(
             content: Text('No LR found for this trip'),
             backgroundColor: Colors.orange,
@@ -1082,7 +1086,7 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> with SingleTicker
     } catch (e) {
       if (!mounted) return;
       Navigator.pop(context); // Close loading
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         SnackBar(
           content: Text('Error loading LR: $e'),
           backgroundColor: Colors.red,
@@ -1133,34 +1137,79 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> with SingleTicker
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Edit Freight Amount'),
-        content: TextField(
-          controller: controller,
-          keyboardType: TextInputType.number,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          decoration: const InputDecoration(
-            labelText: 'Freight Amount',
-            prefixText: '₹ ',
-            border: OutlineInputBorder(),
+      barrierDismissible: false,
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
           ),
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+          backgroundColor: Colors.white,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+
+                // ---------------- HEADER ----------------
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      "Edit Freight Amount",
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    InkWell(
+                      onTap: () => Navigator.pop(context),
+                      child: const Icon(Icons.close, size: 24, color: Colors.black54),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 20),
+
+                // ---------------- FREIGHT AMOUNT FIELD ----------------
+                CustomTextField(
+                  label: "Freight Amount",
+                  hint: "Enter amount",
+                  controller: controller,
+                  keyboard: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                ),
+
+                const SizedBox(height: 24),
+
+                // ---------------- SAVE BUTTON ----------------
+                CustomButton(
+                  text: "Save",
+                  onPressed: () async {
+                    if (controller.text.isEmpty) {
+                      ToastHelper.showSnackBarToast(context, 
+                        const SnackBar(content: Text("Please enter amount")),
+                      );
+                      return;
+                    }
+
+                    Navigator.pop(context);
+
+                    await _updateFreightAmount(
+                      controller.text,
+                      targetTripId,
+                      data,
+                    );
+                  },
+                ),
+
+                const SizedBox(height: 10),
+              ],
+            ),
           ),
-          TextButton(
-            onPressed: () async {
-              final newAmount = controller.text;
-              Navigator.pop(context);
-              await _updateFreightAmount(newAmount, targetTripId, data);
-            },
-            child: const Text('Save'),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -1180,19 +1229,19 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> with SingleTicker
       if (!mounted) return;
 
       if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ToastHelper.showSnackBarToast(context, 
           const SnackBar(content: Text('Freight amount updated successfully')),
         );
         await _loadTripDetails();
         await _loadTripLoads(); // Reload loads to show updated data in accordion
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ToastHelper.showSnackBarToast(context, 
           const SnackBar(content: Text('Failed to update freight amount')),
         );
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         SnackBar(content: Text('Error: $e')),
       );
     }
@@ -1201,10 +1250,12 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> with SingleTicker
   // Show Add Advance Dialog
   void _showAddAdvanceDialog({int? tripId}) {
     final int targetTripId = tripId ?? widget.tripId;
+
     final TextEditingController amountController = TextEditingController();
     final TextEditingController dateController = TextEditingController(
-      text: DateFormat('yyyy-MM-dd').format(DateTime.now()),
+      text: DateHelper.formatShort(DateTime.now().toString()), // readable date
     );
+
     String paymentMode = 'Cash';
 
     showModalBottomSheet(
@@ -1221,89 +1272,92 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> with SingleTicker
               color: Colors.white,
               borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
             ),
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
             child: SingleChildScrollView(
               child: Column(
-                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Header
+
+                  // ---------------- HEADER ----------------
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text(
-                        'Add Advance',
+                        "Add Advance",
                         style: TextStyle(
                           fontSize: 20,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.close),
                         onPressed: () => Navigator.pop(context),
+                        icon:  Icon(
+                          Icons.close,
+                          size: 24,
+                          color: Colors.black54,
+                        ),
                       ),
+
                     ],
                   ),
-                  const SizedBox(height: 20),
-                  // Amount Field
-                  TextField(
+                  const SizedBox(height: 18),
+
+                  // ---------------- AMOUNT ----------------
+                  CustomTextField(
+                    label: "Amount",
                     controller: amountController,
-                    keyboardType: TextInputType.number,
+                    hint: "Enter amount",
+                    keyboard: TextInputType.number,
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    decoration: const InputDecoration(
-                      labelText: 'Amount',
-                      prefixText: '₹ ',
-                      border: OutlineInputBorder(),
-                    ),
                   ),
+
                   const SizedBox(height: 16),
-                  // Date Field
-                  TextField(
+
+                  // ---------------- DATE ----------------
+                  CustomTextField(
+                    label: "Date",
                     controller: dateController,
-                    decoration: const InputDecoration(
-                      labelText: 'Date',
-                      border: OutlineInputBorder(),
-                      suffixIcon: Icon(Icons.calendar_today),
-                    ),
+                    suffix: const Icon(Icons.calendar_today, size: 20, color: Colors.grey),
                     readOnly: true,
                     onTap: () async {
                       final date = await showDatePicker(
                         context: context,
                         initialDate: DateTime.now(),
                         firstDate: DateTime(2020),
-                        lastDate: DateTime(2030),
+                        lastDate: DateTime(2035),
                       );
                       if (date != null) {
                         setModalState(() {
-                          dateController.text = DateFormat('yyyy-MM-dd').format(date);
+                          dateController.text = DateHelper.formatShort(date.toString());
                         });
                       }
                     },
                   ),
+
                   const SizedBox(height: 16),
-                  // Payment Mode Field
-                  DropdownButtonFormField<String>(
+
+                  // ---------------- PAYMENT MODE DROPDOWN ----------------
+                  CustomDropdown(
+                    label: "Payment Mode",
                     value: paymentMode,
-                    decoration: const InputDecoration(
-                      labelText: 'Payment Mode',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: ['Cash', 'Online', 'Cheque'].map((mode) {
-                      return DropdownMenuItem(value: mode, child: Text(mode));
-                    }).toList(),
-                    onChanged: (value) {
-                      if (value != null) {
-                        setModalState(() => paymentMode = value);
+                    items: ["Cash", "Online", "Cheque"],
+                    onChanged: (val) {
+                      if (val != null) {
+                        setModalState(() => paymentMode = val);
                       }
                     },
                   ),
+
                   const SizedBox(height: 24),
-                  // Submit Button
-                  ElevatedButton(
+
+                  // ---------------- SUBMIT BUTTON ----------------
+                  CustomButton(
+                    text: "Add Advance",
                     onPressed: () async {
                       if (amountController.text.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Please enter amount')),
+                        ToastHelper.showSnackBarToast(context, 
+                          const SnackBar(content: Text("Please enter amount")),
                         );
                         return;
                       }
@@ -1318,57 +1372,32 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> with SingleTicker
                           paymentMode: paymentMode,
                         );
 
-                        // Reload data first (before showing snackbar)
                         if (mounted) {
                           await _loadTripDetails();
                           await _loadTripLoads();
                         }
 
-                        // Then show feedback (only if still mounted)
                         if (!mounted) return;
 
-                        if (result != null) {
-                          try {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Advance added successfully')),
-                            );
-                          } catch (e) {
-                            // Ignore snackbar errors if widget is disposed
-                          }
-                        } else {
-                          try {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Failed to add advance')),
-                            );
-                          } catch (e) {
-                            // Ignore snackbar errors if widget is disposed
-                          }
-                        }
+                        ToastHelper.showSnackBarToast(context, 
+                          SnackBar(
+                            content: Text(
+                              result != null
+                                  ? "Advance added successfully"
+                                  : "Failed to add advance",
+                            ),
+                          ),
+                        );
                       } catch (e) {
                         if (!mounted) return;
-                        try {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Error: $e')),
-                          );
-                        } catch (_) {
-                          // Ignore snackbar errors if widget is disposed
-                        }
+                        ToastHelper.showSnackBarToast(context, 
+                          SnackBar(content: Text("Error: $e")),
+                        );
                       }
                     },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    child: const Text(
-                      'Add Advance',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
                   ),
-                  const SizedBox(height: 8),
+
+                  const SizedBox(height: 10),
                 ],
               ),
             ),
@@ -1378,13 +1407,368 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> with SingleTicker
     );
   }
 
+  // Show Charge Type Picker Dialog
+  void _showChargeTypePickerDialog(TextEditingController controller, StateSetter setModalState) {
+    final searchController = TextEditingController();
+    List<Map<String, dynamic>> filteredTypes = List.from(_chargeTypes);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setPickerState) => Container(
+          height: MediaQuery.of(context).size.height * 0.7,
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Select Charge Type',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: searchController,
+                autofocus: true,
+                decoration: InputDecoration(
+                  hintText: 'Search or type new charge type...',
+                  prefixIcon: const Icon(Icons.search),
+                  suffixIcon: searchController.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear),
+                          onPressed: () {
+                            searchController.clear();
+                            setPickerState(() {
+                              filteredTypes = List.from(_chargeTypes);
+                            });
+                          },
+                        )
+                      : null,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                ),
+                onChanged: (value) {
+                  setPickerState(() {
+                    if (value.isEmpty) {
+                      filteredTypes = List.from(_chargeTypes);
+                    } else {
+                      filteredTypes = _chargeTypes
+                          .where((type) => type['name'].toLowerCase().contains(value.toLowerCase()))
+                          .toList();
+                    }
+                  });
+                },
+              ),
+              const SizedBox(height: 12),
+              // Add New Charge Type button - always visible at top
+              ListTile(
+                leading: Icon(Icons.add_circle, color: AppColors.primaryGreen),
+                title: const Text('Add New Charge Type'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showAddChargeTypeDialog(controller, setModalState);
+                },
+              ),
+              const Divider(),
+              Expanded(
+                child: filteredTypes.isEmpty
+                    ? Center(
+                        child: Text(
+                          'No charge types found',
+                          style: TextStyle(color: Colors.grey.shade600),
+                        ),
+                      )
+                    : ListView.builder(
+                        itemCount: filteredTypes.length,
+                        itemBuilder: (context, index) {
+                          final type = filteredTypes[index];
+                          return ListTile(
+                            title: Text(type['name']),
+                            onTap: () {
+                              setModalState(() {
+                                controller.text = type['name'];
+                              });
+                              Navigator.pop(context);
+                            },
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Show Expense Type Picker Dialog
+  void _showExpenseTypePickerDialog(TextEditingController controller, StateSetter setModalState) {
+    final searchController = TextEditingController();
+    List<Map<String, dynamic>> filteredTypes = List.from(_expenseTypes);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setPickerState) => Container(
+          height: MediaQuery.of(context).size.height * 0.7,
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Select Expense Type',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: searchController,
+                autofocus: true,
+                decoration: InputDecoration(
+                  hintText: 'Search or type new expense type...',
+                  prefixIcon: const Icon(Icons.search),
+                  suffixIcon: searchController.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear),
+                          onPressed: () {
+                            searchController.clear();
+                            setPickerState(() {
+                              filteredTypes = List.from(_expenseTypes);
+                            });
+                          },
+                        )
+                      : null,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                ),
+                onChanged: (value) {
+                  setPickerState(() {
+                    if (value.isEmpty) {
+                      filteredTypes = List.from(_expenseTypes);
+                    } else {
+                      filteredTypes = _expenseTypes
+                          .where((type) => type['name'].toLowerCase().contains(value.toLowerCase()))
+                          .toList();
+                    }
+                  });
+                },
+              ),
+              const SizedBox(height: 12),
+              // Add New Expense Type button - always visible at top
+              ListTile(
+                leading: Icon(Icons.add_circle, color: AppColors.primaryGreen),
+                title: const Text('Add New Expense Type'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showAddExpenseTypeDialog(controller, setModalState);
+                },
+              ),
+              const Divider(),
+              Expanded(
+                child: filteredTypes.isEmpty
+                    ? Center(
+                        child: Text(
+                          'No expense types found',
+                          style: TextStyle(color: Colors.grey.shade600),
+                        ),
+                      )
+                    : ListView.builder(
+                        itemCount: filteredTypes.length,
+                        itemBuilder: (context, index) {
+                          final type = filteredTypes[index];
+                          return ListTile(
+                            title: Text(type['name']),
+                            onTap: () {
+                              setModalState(() {
+                                controller.text = type['name'];
+                              });
+                              Navigator.pop(context);
+                            },
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Show dialog to add new charge type
+  void _showAddChargeTypeDialog(TextEditingController controller, StateSetter setModalState) {
+    final typeController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add New Charge Type'),
+        content: TextField(
+          controller: typeController,
+          decoration: const InputDecoration(
+            hintText: 'Enter charge type name',
+            border: OutlineInputBorder(),
+          ),
+          textCapitalization: TextCapitalization.words,
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (typeController.text.trim().isEmpty) return;
+
+              Navigator.pop(context); // Close dialog
+              AppLoader.show(context);
+
+              final result = await ApiService.addChargeType(typeController.text.trim());
+
+              if (mounted) {
+                AppLoader.hide(context);
+              }
+
+              if (result != null && result['success'] == true) {
+                final typeData = result['chargeType'];
+                setState(() {
+                  if (!_chargeTypes.any((t) => t['id'] == typeData['id'])) {
+                    _chargeTypes.add(typeData);
+                    _chargeTypes.sort((a, b) => a['name'].compareTo(b['name']));
+                  }
+                });
+
+                setModalState(() {
+                  controller.text = typeData['name'];
+                });
+
+                if (mounted) {
+                  ToastHelper.showSnackBarToast(context,
+                    SnackBar(content: Text(result['message'] ?? 'Charge type added successfully')),
+                  );
+                }
+              } else {
+                if (mounted) {
+                  ToastHelper.showSnackBarToast(context,
+                    const SnackBar(content: Text('Failed to add charge type')),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryGreen),
+            child: const Text('Add', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Show dialog to add new expense type
+  void _showAddExpenseTypeDialog(TextEditingController controller, StateSetter setModalState) {
+    final typeController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add New Expense Type'),
+        content: TextField(
+          controller: typeController,
+          decoration: const InputDecoration(
+            hintText: 'Enter expense type name',
+            border: OutlineInputBorder(),
+          ),
+          textCapitalization: TextCapitalization.words,
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (typeController.text.trim().isEmpty) return;
+
+              Navigator.pop(context); // Close dialog
+              AppLoader.show(context);
+
+              final result = await ApiService.addExpenseType(typeController.text.trim());
+
+              if (mounted) {
+                AppLoader.hide(context);
+              }
+
+              if (result != null && result['success'] == true) {
+                final typeData = result['expenseType'];
+                setState(() {
+                  if (!_expenseTypes.any((t) => t['id'] == typeData['id'])) {
+                    _expenseTypes.add(typeData);
+                    _expenseTypes.sort((a, b) => a['name'].compareTo(b['name']));
+                  }
+                });
+
+                setModalState(() {
+                  controller.text = typeData['name'];
+                });
+
+                if (mounted) {
+                  ToastHelper.showSnackBarToast(context,
+                    SnackBar(content: Text(result['message'] ?? 'Expense type added successfully')),
+                  );
+                }
+              } else {
+                if (mounted) {
+                  ToastHelper.showSnackBarToast(context,
+                    const SnackBar(content: Text('Failed to add expense type')),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryGreen),
+            child: const Text('Add', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
   // Show Add Charge Dialog
   void _showAddChargeDialog({int? tripId}) {
     final int targetTripId = tripId ?? widget.tripId;
+
     final TextEditingController amountController = TextEditingController();
     final TextEditingController typeController = TextEditingController();
     final TextEditingController dateController = TextEditingController(
-      text: DateFormat('yyyy-MM-dd').format(DateTime.now()),
+      text: DateHelper.formatShort(DateTime.now().toString()),
     );
 
     showModalBottomSheet(
@@ -1401,88 +1785,98 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> with SingleTicker
               color: Colors.white,
               borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
             ),
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
             child: SingleChildScrollView(
               child: Column(
-                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Header
+
+                  // ---------------- HEADER ----------------
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Add Charge',
+                    children:  [
+                      Text(
+                        "Add Charge",
                         style: TextStyle(
                           fontSize: 20,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.close),
                         onPressed: () => Navigator.pop(context),
+                        icon:  Icon(
+                          Icons.close,
+                          size: 24,
+                          color: Colors.black54,
+                        ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 20),
-                  // Charge Type Field
-                  TextField(
-                    controller: typeController,
-                    decoration: const InputDecoration(
-                      labelText: 'Charge Type',
-                      hintText: 'e.g., Loading, Unloading',
-                      border: OutlineInputBorder(),
+
+                  // ---------------- CHARGE TYPE DROPDOWN ----------------
+                  GestureDetector(
+                    onTap: () => _showChargeTypePickerDialog(typeController, setModalState),
+                    child: AbsorbPointer(
+                      child: CustomTextField(
+                        label: "Charge Type",
+                        hint: "Select or add charge type",
+                        controller: typeController,
+                        suffix: const Icon(Icons.arrow_drop_down, color: Colors.grey),
+                      ),
                     ),
                   ),
+
                   const SizedBox(height: 16),
-                  // Amount Field
-                  TextField(
+
+                  // ---------------- AMOUNT ----------------
+                  CustomTextField(
+                    label: "Amount",
+                    hint: "Enter amount",
                     controller: amountController,
-                    keyboardType: TextInputType.number,
+                    keyboard: TextInputType.number,
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    decoration: const InputDecoration(
-                      labelText: 'Amount',
-                      prefixText: '₹ ',
-                      border: OutlineInputBorder(),
-                    ),
                   ),
+
                   const SizedBox(height: 16),
-                  // Date Field
-                  TextField(
+
+                  // ---------------- DATE ----------------
+                  CustomTextField(
+                    label: "Date",
                     controller: dateController,
-                    decoration: const InputDecoration(
-                      labelText: 'Date',
-                      border: OutlineInputBorder(),
-                      suffixIcon: Icon(Icons.calendar_today),
-                    ),
                     readOnly: true,
+                    suffix: const Icon(Icons.calendar_today, size: 20, color: Colors.grey),
                     onTap: () async {
                       final date = await showDatePicker(
                         context: context,
                         initialDate: DateTime.now(),
                         firstDate: DateTime(2020),
-                        lastDate: DateTime(2030),
+                        lastDate: DateTime(2035),
                       );
                       if (date != null) {
                         setModalState(() {
-                          dateController.text = DateFormat('yyyy-MM-dd').format(date);
+                          dateController.text = DateHelper.formatShort(date.toString());
                         });
                       }
                     },
                   ),
+
                   const SizedBox(height: 24),
-                  // Submit Button
-                  ElevatedButton(
+
+                  // ---------------- SUBMIT BUTTON ----------------
+                  CustomButton(
+                    text: "Add Charge",
                     onPressed: () async {
                       if (typeController.text.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Please enter charge type')),
+                        ToastHelper.showSnackBarToast(context, 
+                          const SnackBar(content: Text("Please enter charge type")),
                         );
                         return;
                       }
                       if (amountController.text.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Please enter amount')),
+                        ToastHelper.showSnackBarToast(context, 
+                          const SnackBar(content: Text("Please enter amount")),
                         );
                         return;
                       }
@@ -1497,57 +1891,32 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> with SingleTicker
                           date: dateController.text,
                         );
 
-                        // Reload data first (before showing snackbar)
                         if (mounted) {
                           await _loadTripDetails();
                           await _loadTripLoads();
                         }
 
-                        // Then show feedback (only if still mounted)
                         if (!mounted) return;
 
-                        if (result != null) {
-                          try {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Charge added successfully')),
-                            );
-                          } catch (e) {
-                            // Ignore snackbar errors if widget is disposed
-                          }
-                        } else {
-                          try {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Failed to add charge')),
-                            );
-                          } catch (e) {
-                            // Ignore snackbar errors if widget is disposed
-                          }
-                        }
+                        ToastHelper.showSnackBarToast(context, 
+                          SnackBar(
+                            content: Text(
+                              result != null
+                                  ? "Charge added successfully"
+                                  : "Failed to add charge",
+                            ),
+                          ),
+                        );
                       } catch (e) {
                         if (!mounted) return;
-                        try {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Error: $e')),
-                          );
-                        } catch (_) {
-                          // Ignore snackbar errors if widget is disposed
-                        }
+                        ToastHelper.showSnackBarToast(context, 
+                          SnackBar(content: Text("Error: $e")),
+                        );
                       }
                     },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    child: const Text(
-                      'Add Charge',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
                   ),
-                  const SizedBox(height: 8),
+
+                  const SizedBox(height: 12),
                 ],
               ),
             ),
@@ -1560,11 +1929,13 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> with SingleTicker
   // Show Add Payment Dialog
   void _showAddPaymentDialog({int? tripId}) {
     final int targetTripId = tripId ?? widget.tripId;
+
     final TextEditingController amountController = TextEditingController();
     final TextEditingController dateController = TextEditingController(
-      text: DateFormat('yyyy-MM-dd').format(DateTime.now()),
+      text: DateHelper.formatShort(DateTime.now().toString()),
     );
-    String paymentMode = 'Cash';
+
+    String paymentMode = "Cash";
 
     showModalBottomSheet(
       context: context,
@@ -1580,89 +1951,92 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> with SingleTicker
               color: Colors.white,
               borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
             ),
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
             child: SingleChildScrollView(
               child: Column(
-                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Header
+
+                  // ---------------- HEADER ----------------
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Add Payment',
+                    children:  [
+                      Text(
+                        "Add Payment",
                         style: TextStyle(
                           fontSize: 20,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.close),
                         onPressed: () => Navigator.pop(context),
+                        icon:  Icon(
+                          Icons.close,
+                          size: 24,
+                          color: Colors.black54,
+                        ),
                       ),
                     ],
                   ),
+
                   const SizedBox(height: 20),
-                  // Amount Field
-                  TextField(
+
+                  // ---------------- AMOUNT FIELD ----------------
+                  CustomTextField(
+                    label: "Amount",
+                    hint: "Enter amount",
                     controller: amountController,
-                    keyboardType: TextInputType.number,
+                    keyboard: TextInputType.number,
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    decoration: const InputDecoration(
-                      labelText: 'Amount',
-                      prefixText: '₹ ',
-                      border: OutlineInputBorder(),
-                    ),
                   ),
+
                   const SizedBox(height: 16),
-                  // Date Field
-                  TextField(
+
+                  // ---------------- DATE FIELD ----------------
+                  CustomTextField(
+                    label: "Date",
                     controller: dateController,
-                    decoration: const InputDecoration(
-                      labelText: 'Date',
-                      border: OutlineInputBorder(),
-                      suffixIcon: Icon(Icons.calendar_today),
-                    ),
                     readOnly: true,
+                    suffix: const Icon(Icons.calendar_today, color: Colors.grey),
                     onTap: () async {
                       final date = await showDatePicker(
                         context: context,
                         initialDate: DateTime.now(),
                         firstDate: DateTime(2020),
-                        lastDate: DateTime(2030),
+                        lastDate: DateTime(2035),
                       );
                       if (date != null) {
                         setModalState(() {
-                          dateController.text = DateFormat('yyyy-MM-dd').format(date);
+                          dateController.text = DateHelper.formatShort(date.toString());
                         });
                       }
                     },
                   ),
+
                   const SizedBox(height: 16),
-                  // Payment Mode Field
-                  DropdownButtonFormField<String>(
+
+                  // ---------------- PAYMENT MODE DROPDOWN ----------------
+                  CustomDropdown(
+                    label: "Payment Mode",
                     value: paymentMode,
-                    decoration: const InputDecoration(
-                      labelText: 'Payment Mode',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: ['Cash', 'Online', 'Cheque'].map((mode) {
-                      return DropdownMenuItem(value: mode, child: Text(mode));
-                    }).toList(),
+                    items: const ["Cash", "Online", "Cheque"],
                     onChanged: (value) {
-                      if (value != null) {
-                        setModalState(() => paymentMode = value);
-                      }
+                      setModalState(() {
+                        paymentMode = value!;
+                      });
                     },
                   ),
+
                   const SizedBox(height: 24),
-                  // Submit Button
-                  ElevatedButton(
+
+                  // ---------------- SUBMIT BUTTON ----------------
+                  CustomButton(
+                    text: "Add Payment",
                     onPressed: () async {
                       if (amountController.text.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Please enter amount')),
+                        ToastHelper.showSnackBarToast(context, 
+                          const SnackBar(content: Text("Please enter amount")),
                         );
                         return;
                       }
@@ -1677,57 +2051,32 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> with SingleTicker
                           paymentMode: paymentMode,
                         );
 
-                        // Reload data first (before showing snackbar)
                         if (mounted) {
                           await _loadTripDetails();
                           await _loadTripLoads();
                         }
 
-                        // Then show feedback (only if still mounted)
                         if (!mounted) return;
 
-                        if (result != null) {
-                          try {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Payment added successfully')),
-                            );
-                          } catch (e) {
-                            // Ignore snackbar errors if widget is disposed
-                          }
-                        } else {
-                          try {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Failed to add payment')),
-                            );
-                          } catch (e) {
-                            // Ignore snackbar errors if widget is disposed
-                          }
-                        }
+                        ToastHelper.showSnackBarToast(context, 
+                          SnackBar(
+                            content: Text(
+                              result != null
+                                  ? "Payment added successfully"
+                                  : "Failed to add payment",
+                            ),
+                          ),
+                        );
                       } catch (e) {
                         if (!mounted) return;
-                        try {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Error: $e')),
-                          );
-                        } catch (_) {
-                          // Ignore snackbar errors if widget is disposed
-                        }
+                        ToastHelper.showSnackBarToast(context, 
+                          SnackBar(content: Text("Error: $e")),
+                        );
                       }
                     },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    child: const Text(
-                      'Add Payment',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
                   ),
-                  const SizedBox(height: 8),
+
+                  const SizedBox(height: 12),
                 ],
               ),
             ),
@@ -1742,9 +2091,9 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> with SingleTicker
   void _showAddSupplierAdvanceDialog() {
     final amountController = TextEditingController();
     final dateController = TextEditingController(
-      text: DateFormat('yyyy-MM-dd').format(DateTime.now()),
+      text: DateHelper.formatShort(DateTime.now().toString()),
     );
-    String paymentMode = 'Cash';
+    String paymentMode = "Cash";
 
     showModalBottomSheet(
       context: context,
@@ -1760,80 +2109,87 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> with SingleTicker
               color: Colors.white,
               borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
             ),
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
             child: SingleChildScrollView(
               child: Column(
-                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
                 children: [
+
+                  /// ---------- HEADER ----------
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text(
-                        'Add Supplier Advance',
-                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                        "Add Supplier Advance",
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.pop(context),
+                      InkWell(
+                        onTap: () => Navigator.pop(context),
+                        child: const Icon(Icons.close,
+                            size: 24, color: Colors.black54),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 20),
-                  TextField(
+                  const SizedBox(height: 18),
+
+                  /// ---------- Amount ----------
+                  CustomTextField(
+                    label: "Amount *",
+                    hint: "Enter amount",
                     controller: amountController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: 'Amount *',
-                      prefixText: '₹ ',
-                      border: OutlineInputBorder(),
-                    ),
+                    keyboard: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   ),
                   const SizedBox(height: 16),
-                  TextField(
+
+                  /// ---------- Date ----------
+                  CustomTextField(
+                    label: "Date",
                     controller: dateController,
                     readOnly: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Date',
-                      border: OutlineInputBorder(),
-                      suffixIcon: Icon(Icons.calendar_today),
-                    ),
+                    suffix:
+                    const Icon(Icons.calendar_today, color: Colors.grey),
                     onTap: () async {
-                      final date = await showDatePicker(
+                      final picked = await showDatePicker(
                         context: context,
                         initialDate: DateTime.now(),
                         firstDate: DateTime(2020),
-                        lastDate: DateTime(2030),
+                        lastDate: DateTime(2035),
                       );
-                      if (date != null) {
+                      if (picked != null) {
                         setModalState(() {
-                          dateController.text = DateFormat('yyyy-MM-dd').format(date);
+                          dateController.text =
+                              DateHelper.formatShort(picked.toString());
                         });
                       }
                     },
                   ),
                   const SizedBox(height: 16),
-                  DropdownButtonFormField<String>(
+
+                  /// ---------- Payment Mode ----------
+                  CustomDropdown(
+                    label: "Payment Mode",
                     value: paymentMode,
-                    decoration: const InputDecoration(
-                      labelText: 'Payment Mode',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: ['Cash', 'Online', 'Cheque'].map((mode) {
-                      return DropdownMenuItem(value: mode, child: Text(mode));
-                    }).toList(),
-                    onChanged: (value) {
-                      if (value != null) {
-                        setModalState(() => paymentMode = value);
+                    items: const ["Cash", "Online", "Cheque"],
+                    onChanged: (val) {
+                      if (val != null) {
+                        setModalState(() => paymentMode = val);
                       }
                     },
                   ),
                   const SizedBox(height: 24),
-                  ElevatedButton(
+
+                  /// ---------- Submit Button ----------
+                  CustomButton(
+                    text: "Add Advance",
                     onPressed: () async {
                       if (amountController.text.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Please enter amount')),
+                        ToastHelper.showSnackBarToast(context, 
+                          const SnackBar(content: Text("Please enter amount")),
                         );
                         return;
                       }
@@ -1841,47 +2197,30 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> with SingleTicker
                       Navigator.pop(context);
 
                       try {
-                        final result = await ApiService.addSupplierAdvanceFromTrip(
+                        final result =
+                        await ApiService.addSupplierAdvanceFromTrip(
                           tripId: widget.tripId,
                           amount: amountController.text,
                           date: dateController.text,
                           paymentMode: paymentMode,
                         );
 
-                        if (mounted) {
-                          await _loadTripDetails();
-                        }
+                        if (mounted) await _loadTripDetails();
 
-                        if (!mounted) return;
-
-                        if (result != null) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Supplier advance added successfully')),
-                          );
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Failed to add supplier advance')),
-                          );
-                        }
+                        ToastHelper.showSnackBarToast(context, 
+                          SnackBar(
+                            content: Text(result != null
+                                ? "Supplier advance added successfully"
+                                : "Failed to add supplier advance"),
+                          ),
+                        );
                       } catch (e) {
                         if (!mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Error: $e')),
+                        ToastHelper.showSnackBarToast(context, 
+                          SnackBar(content: Text("Error: $e")),
                         );
                       }
                     },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    child: const Text(
-                      'Add Advance',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
                   ),
                 ],
               ),
@@ -1895,9 +2234,9 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> with SingleTicker
   void _showAddSupplierChargeDialog() {
     final amountController = TextEditingController();
     final dateController = TextEditingController(
-      text: DateFormat('yyyy-MM-dd').format(DateTime.now()),
+      text: DateHelper.formatShort(DateTime.now().toString()),
     );
-    String chargeType = 'Extra Charges';
+    String chargeType = "Extra Charges";
 
     showModalBottomSheet(
       context: context,
@@ -1913,80 +2252,91 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> with SingleTicker
               color: Colors.white,
               borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
             ),
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
             child: SingleChildScrollView(
               child: Column(
-                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
                 children: [
+
+                  /// ---------- Header ----------
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text(
-                        'Add Supplier Charge',
-                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                        "Add Supplier Charge",
+                        style:
+                        TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.pop(context),
+                      InkWell(
+                        onTap: () => Navigator.pop(context),
+                        child: const Icon(Icons.close,
+                            size: 24, color: Colors.black54),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 20),
-                  DropdownButtonFormField<String>(
+                  const SizedBox(height: 18),
+
+                  /// ---------- Charge Type ----------
+                  CustomDropdown(
+                    label: "Charge Type",
                     value: chargeType,
-                    decoration: const InputDecoration(
-                      labelText: 'Charge Type',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: ['Extra Charges', 'Detention', 'Penalty', 'Other'].map((type) {
-                      return DropdownMenuItem(value: type, child: Text(type));
-                    }).toList(),
-                    onChanged: (value) {
-                      if (value != null) {
-                        setModalState(() => chargeType = value);
+                    items: const [
+                      "Extra Charges",
+                      "Detention",
+                      "Penalty",
+                      "Other"
+                    ],
+                    onChanged: (val) {
+                      if (val != null) {
+                        setModalState(() => chargeType = val);
                       }
                     },
                   ),
                   const SizedBox(height: 16),
-                  TextField(
+
+                  /// ---------- Amount ----------
+                  CustomTextField(
+                    label: "Amount *",
+                    hint: "Enter amount",
                     controller: amountController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: 'Amount *',
-                      prefixText: '₹ ',
-                      border: OutlineInputBorder(),
-                    ),
+                    keyboard: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   ),
                   const SizedBox(height: 16),
-                  TextField(
+
+                  /// ---------- Date ----------
+                  CustomTextField(
+                    label: "Date",
                     controller: dateController,
                     readOnly: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Date',
-                      border: OutlineInputBorder(),
-                      suffixIcon: Icon(Icons.calendar_today),
-                    ),
+                    suffix:
+                    const Icon(Icons.calendar_today, color: Colors.grey),
                     onTap: () async {
                       final date = await showDatePicker(
                         context: context,
                         initialDate: DateTime.now(),
                         firstDate: DateTime(2020),
-                        lastDate: DateTime(2030),
+                        lastDate: DateTime(2035),
                       );
                       if (date != null) {
                         setModalState(() {
-                          dateController.text = DateFormat('yyyy-MM-dd').format(date);
+                          dateController.text =
+                              DateHelper.formatShort(date.toString());
                         });
                       }
                     },
                   ),
                   const SizedBox(height: 24),
-                  ElevatedButton(
+
+                  /// ---------- Submit ----------
+                  CustomButton(
+                    text: "Add Charge",
                     onPressed: () async {
                       if (amountController.text.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Please enter amount')),
+                        ToastHelper.showSnackBarToast(context, 
+                          const SnackBar(
+                              content: Text("Please enter amount")),
                         );
                         return;
                       }
@@ -1994,47 +2344,30 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> with SingleTicker
                       Navigator.pop(context);
 
                       try {
-                        final result = await ApiService.addSupplierChargeFromTrip(
+                        final result =
+                        await ApiService.addSupplierChargeFromTrip(
                           tripId: widget.tripId,
                           chargeType: chargeType,
                           amount: amountController.text,
                           date: dateController.text,
                         );
 
-                        if (mounted) {
-                          await _loadTripDetails();
-                        }
+                        if (mounted) await _loadTripDetails();
 
-                        if (!mounted) return;
-
-                        if (result != null) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Supplier charge added successfully')),
-                          );
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Failed to add supplier charge')),
-                          );
-                        }
+                        ToastHelper.showSnackBarToast(context, 
+                          SnackBar(
+                            content: Text(result != null
+                                ? "Supplier charge added successfully"
+                                : "Failed to add supplier charge"),
+                          ),
+                        );
                       } catch (e) {
                         if (!mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Error: $e')),
+                        ToastHelper.showSnackBarToast(context, 
+                          SnackBar(content: Text("Error: $e")),
                         );
                       }
                     },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    child: const Text(
-                      'Add Charge',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
                   ),
                 ],
               ),
@@ -2048,9 +2381,9 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> with SingleTicker
   void _showAddSupplierPaymentDialog() {
     final amountController = TextEditingController();
     final dateController = TextEditingController(
-      text: DateFormat('yyyy-MM-dd').format(DateTime.now()),
+      text: DateHelper.formatShort(DateTime.now().toString()),
     );
-    String paymentMode = 'Cash';
+    String paymentMode = "Cash";
 
     showModalBottomSheet(
       context: context,
@@ -2066,68 +2399,67 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> with SingleTicker
               color: Colors.white,
               borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
             ),
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
             child: SingleChildScrollView(
               child: Column(
-                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
                 children: [
+
+                  /// ---------- Header ----------
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Add Supplier Payment',
-                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    children: const [
+                      Text(
+                        "Add Supplier Payment",
+                        style: TextStyle(
+                            fontSize: 20, fontWeight: FontWeight.w700),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.pop(context),
-                      ),
+                      Icon(Icons.close, size: 24, color: Colors.black54),
                     ],
                   ),
-                  const SizedBox(height: 20),
-                  TextField(
+
+                  const SizedBox(height: 18),
+
+                  /// ---------- Amount ----------
+                  CustomTextField(
+                    label: "Amount *",
+                    hint: "Enter amount",
                     controller: amountController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: 'Amount *',
-                      prefixText: '₹ ',
-                      border: OutlineInputBorder(),
-                    ),
+                    keyboard: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   ),
                   const SizedBox(height: 16),
-                  TextField(
+
+                  /// ---------- Date ----------
+                  CustomTextField(
+                    label: "Date",
                     controller: dateController,
                     readOnly: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Date',
-                      border: OutlineInputBorder(),
-                      suffixIcon: Icon(Icons.calendar_today),
-                    ),
+                    suffix:
+                    const Icon(Icons.calendar_today, color: Colors.grey),
                     onTap: () async {
-                      final date = await showDatePicker(
+                      final picked = await showDatePicker(
                         context: context,
                         initialDate: DateTime.now(),
                         firstDate: DateTime(2020),
-                        lastDate: DateTime(2030),
+                        lastDate: DateTime(2035),
                       );
-                      if (date != null) {
+                      if (picked != null) {
                         setModalState(() {
-                          dateController.text = DateFormat('yyyy-MM-dd').format(date);
+                          dateController.text =
+                              DateHelper.formatShort(picked.toString());
                         });
                       }
                     },
                   ),
                   const SizedBox(height: 16),
-                  DropdownButtonFormField<String>(
+
+                  /// ---------- Payment Mode ----------
+                  CustomDropdown(
+                    label: "Payment Mode",
                     value: paymentMode,
-                    decoration: const InputDecoration(
-                      labelText: 'Payment Mode',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: ['Cash', 'Online', 'Cheque'].map((mode) {
-                      return DropdownMenuItem(value: mode, child: Text(mode));
-                    }).toList(),
+                    items: const ["Cash", "Online", "Cheque"],
                     onChanged: (value) {
                       if (value != null) {
                         setModalState(() => paymentMode = value);
@@ -2135,11 +2467,15 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> with SingleTicker
                     },
                   ),
                   const SizedBox(height: 24),
-                  ElevatedButton(
+
+                  /// ---------- Submit ----------
+                  CustomButton(
+                    text: "Add Payment",
                     onPressed: () async {
                       if (amountController.text.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Please enter amount')),
+                        ToastHelper.showSnackBarToast(context, 
+                          const SnackBar(
+                              content: Text("Please enter amount")),
                         );
                         return;
                       }
@@ -2147,47 +2483,30 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> with SingleTicker
                       Navigator.pop(context);
 
                       try {
-                        final result = await ApiService.addSupplierPaymentFromTrip(
+                        final result =
+                        await ApiService.addSupplierPaymentFromTrip(
                           tripId: widget.tripId,
                           amount: amountController.text,
                           date: dateController.text,
                           paymentMode: paymentMode,
                         );
 
-                        if (mounted) {
-                          await _loadTripDetails();
-                        }
+                        if (mounted) await _loadTripDetails();
 
-                        if (!mounted) return;
-
-                        if (result != null) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Supplier payment added successfully')),
-                          );
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Failed to add supplier payment')),
-                          );
-                        }
+                        ToastHelper.showSnackBarToast(context, 
+                          SnackBar(
+                            content: Text(result != null
+                                ? "Supplier payment added successfully"
+                                : "Failed to add supplier payment"),
+                          ),
+                        );
                       } catch (e) {
                         if (!mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Error: $e')),
+                        ToastHelper.showSnackBarToast(context, 
+                          SnackBar(content: Text("Error: $e")),
                         );
                       }
                     },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    child: const Text(
-                      'Add Payment',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
                   ),
                 ],
               ),
@@ -2331,7 +2650,7 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> with SingleTicker
                   ElevatedButton(
                     onPressed: () async {
                       if (amountController.text.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        ToastHelper.showSnackBarToast(context, 
                           const SnackBar(content: Text('Please enter amount')),
                         );
                         return;
@@ -2375,23 +2694,23 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> with SingleTicker
                         if (!mounted) return;
 
                         if (success) {
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          ToastHelper.showSnackBarToast(context, 
                             SnackBar(content: Text('Supplier $type updated successfully')),
                           );
                         } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          ToastHelper.showSnackBarToast(context, 
                             SnackBar(content: Text('Failed to update supplier $type')),
                           );
                         }
                       } catch (e) {
                         if (!mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        ToastHelper.showSnackBarToast(context, 
                           SnackBar(content: Text('Error: $e')),
                         );
                       }
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
+                      backgroundColor: AppColors.info,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
@@ -2464,17 +2783,17 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> with SingleTicker
                 if (!mounted) return;
 
                 if (success) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  ToastHelper.showSnackBarToast(context, 
                     SnackBar(content: Text('Supplier $itemName deleted successfully')),
                   );
                 } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  ToastHelper.showSnackBarToast(context, 
                     SnackBar(content: Text('Failed to delete supplier $itemName')),
                   );
                 }
               } catch (e) {
                 if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
+                ToastHelper.showSnackBarToast(context, 
                   SnackBar(content: Text('Error: $e')),
                 );
               }
@@ -2505,7 +2824,7 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> with SingleTicker
     // Check if party phone is available
     if (partyPhone == null || partyPhone.toString().isEmpty) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         const SnackBar(
           content: Text('Party phone number not available'),
           backgroundColor: Colors.orange,
@@ -2519,19 +2838,19 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> with SingleTicker
 
 This is a payment reminder for the following trip:
 
-📦 TRIP DETAILS
-━━━━━━━━━━━━━━━━━━━━
-🚚 Truck Number: $truckNumber
-📄 LR Number: $lrNumber
-📍 Route: $origin → $destination
-📅 Start Date: $startDate
+ðŸ“¦ TRIP DETAILS
+â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”
+ðŸšš Truck Number: $truckNumber
+ðŸ“„ LR Number: $lrNumber
+ðŸ“ Route: $origin â†’ $destination
+ðŸ“… Start Date: $startDate
 
-💰 PAYMENT DETAILS
-━━━━━━━━━━━━━━━━━━━━
+ðŸ’° PAYMENT DETAILS
+â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”
 Freight Amount: ${CurrencyFormatter.formatWithSymbol(freightAmount)}
 Advance Paid: ${CurrencyFormatter.formatWithSymbol(totalAdvance)}
 Payments Made: ${CurrencyFormatter.formatWithSymbol(totalPayments)}
-━━━━━━━━━━━━━━━━━━━━
+â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”
 Pending Balance: ${CurrencyFormatter.formatWithSymbol(pendingBalance)}
 
 Please make the payment at your earliest convenience.
@@ -2550,23 +2869,45 @@ Thank you!''';
       // Encode the message for URL
       final encodedMessage = Uri.encodeComponent(message);
 
-      // WhatsApp URL
-      final whatsappUrl = Uri.parse('https://wa.me/$cleanPhone?text=$encodedMessage');
+      // Try different WhatsApp URL schemes for better compatibility
+      bool launched = false;
 
-      if (await canLaunchUrl(whatsappUrl)) {
-        await launchUrl(whatsappUrl, mode: LaunchMode.externalApplication);
-      } else {
+      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+        // Try Android intent URL first (most reliable on Android)
+        final androidIntentUrl = Uri.parse('intent://send?phone=$cleanPhone&text=$encodedMessage#Intent;scheme=whatsapp;package=com.whatsapp;end');
+        if (await canLaunchUrl(androidIntentUrl)) {
+          launched = await launchUrl(androidIntentUrl, mode: LaunchMode.externalApplication);
+        }
+
+        // If intent doesn't work, try whatsapp:// scheme
+        if (!launched) {
+          final whatsappSchemeUrl = Uri.parse('whatsapp://send?phone=$cleanPhone&text=$encodedMessage');
+          if (await canLaunchUrl(whatsappSchemeUrl)) {
+            launched = await launchUrl(whatsappSchemeUrl, mode: LaunchMode.externalApplication);
+          }
+        }
+      }
+
+      // Fallback to https://wa.me (works on iOS and web)
+      if (!launched) {
+        final whatsappUrl = Uri.parse('https://wa.me/$cleanPhone?text=$encodedMessage');
+        if (await canLaunchUrl(whatsappUrl)) {
+          launched = await launchUrl(whatsappUrl, mode: LaunchMode.externalApplication);
+        }
+      }
+
+      if (!launched) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
+        ToastHelper.showSnackBarToast(context,
           const SnackBar(
-            content: Text('Could not open WhatsApp'),
+            content: Text('Could not open WhatsApp. Please make sure WhatsApp is installed.'),
             backgroundColor: Colors.red,
           ),
         );
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         SnackBar(
           content: Text('Error opening WhatsApp: $e'),
           backgroundColor: Colors.red,
@@ -2575,141 +2916,228 @@ Thank you!''';
     }
   }
 
+  PopupMenuItem<String> _popupItem({
+    required String value,
+    required IconData icon,
+    required Color iconColor,
+    required String text,
+  }) {
+    return PopupMenuItem(
+      value: value,
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: iconColor.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, size: 18, color: iconColor),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            text,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: Colors.black87,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0.5,
+        elevation: 0,
+        backgroundColor: AppColors.info,
+        centerTitle: true,
+        automaticallyImplyLeading: false,
+
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            bottom: Radius.circular(20),
+          ),
+        ),
+
+        // Proper spacing
+        titleSpacing: 0,
+
+        // ---- BACK BUTTON ----
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black87),
+          icon: const Icon(
+            Icons.arrow_back_ios_new,
+            color: Colors.white,
+            size: 20,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
+
+        // ---- TITLE ----
         title: const Text(
           'Trip Details',
           style: TextStyle(
-            color: Colors.black87,
-            fontSize: 18,
+            color: Colors.white,
+            fontSize: 20,
             fontWeight: FontWeight.w600,
           ),
         ),
+
+        // ---- ACTIONS ----
         actions: [
-          // Edit Button with outline style
+          // ---- TRIP PROGRESS BUTTON ----
+          IconButton(
+            icon: const Icon(
+              Icons.timeline,
+              color: Colors.white,
+              size: 24,
+            ),
+            tooltip: 'Trip Progress',
+            onPressed: () {
+              if (_tripDetails != null) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => TripProgressScreen(
+                      tripDetails: _tripDetails!,
+                      onUpdate: () => _loadTripDetails(),
+                    ),
+                  ),
+                );
+              }
+            },
+          ),
+
+          // ---- EDIT BUTTON (WHITE OUTLINE & CLEAN STYLE) ----
           Container(
-            margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+            margin: const EdgeInsets.only(right: 6),
             child: OutlinedButton(
               onPressed: () => _showEditTripDialog(),
               style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: Colors.blue, width: 1.5),
+                side: const BorderSide(color: Colors.white, width: 1.2),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 0),
               ),
               child: const Text(
                 'Edit',
                 style: TextStyle(
-                  color: Colors.blue,
+                  color: Colors.white,
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                 ),
               ),
             ),
           ),
-          // More Actions Menu
+
+          // ---- POPUP MENU ----
           PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert, color: Colors.black87),
+            icon: const Icon(
+              Icons.more_vert,
+              color: Colors.white,
+            ),
+            color: Colors.white,
+            elevation: 5,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
             onSelected: (value) => _handleMenuAction(value),
+
             itemBuilder: (context) => [
-              const PopupMenuItem(
+              _popupItem(
                 value: 'delete',
-                child: Row(
-                  children: [
-                    Icon(Icons.delete_outline, color: Colors.red, size: 20),
-                    SizedBox(width: 12),
-                    Text('Delete Trip'),
-                  ],
-                ),
+                icon: Icons.delete_outline,
+                iconColor: Colors.red,
+                text: "Delete Trip",
               ),
-              const PopupMenuItem(
+              _popupItem(
                 value: 'call_party',
-                child: Row(
-                  children: [
-                    Icon(Icons.call, color: Colors.blue, size: 20),
-                    SizedBox(width: 12),
-                    Text('Call Party'),
-                  ],
-                ),
+                icon: Icons.call,
+                iconColor: AppColors.info,
+                text: "Call Party",
               ),
-              const PopupMenuItem(
+              _popupItem(
                 value: 'call_driver',
-                child: Row(
-                  children: [
-                    Icon(Icons.call, color: Colors.green, size: 20),
-                    SizedBox(width: 12),
-                    Text('Call Driver'),
-                  ],
-                ),
+                icon: Icons.call,
+                iconColor: Colors.green,
+                text: "Call Driver",
               ),
-              const PopupMenuItem(
+              _popupItem(
                 value: 'share',
-                child: Row(
-                  children: [
-                    Icon(Icons.share, color: Colors.grey, size: 20),
-                    SizedBox(width: 12),
-                    Text('Share Trip'),
-                  ],
-                ),
+                icon: Icons.share,
+                iconColor: Colors.grey,
+                text: "Share Trip",
               ),
-              const PopupMenuItem(
+              _popupItem(
                 value: 'view_lr',
-                child: Row(
-                  children: [
-                    Icon(Icons.description, color: Colors.orange, size: 20),
-                    SizedBox(width: 12),
-                    Text('View LR'),
-                  ],
-                ),
+                icon: Icons.description,
+                iconColor: Colors.orange,
+                text: "View LR",
               ),
             ],
           ),
+
+          const SizedBox(width: 6),
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: AppLoader())
           : _tripDetails == null
               ? const Center(child: Text('Trip not found'))
               : Column(
                   children: [
                     // Trip Info Header - Dark background with white container
                     Container(
-                      color: const Color(0xFF1E3A5F), // Dark blue background
-                      padding: const EdgeInsets.all(8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: AppColors.navy, // Same as AppBar
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(20), // Same curve as AppBar
+                        ),
+                      ),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 6),
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(14),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
                         ),
                         child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            // Truck Number - Clickable
+                            // ---------------- LEFT : TRUCK NUMBER ----------------
                             Expanded(
                               child: InkWell(
                                 onTap: () => _navigateToTruckDetails(),
+                                borderRadius: BorderRadius.circular(10),
                                 child: Row(
                                   children: [
-                                    const Icon(Icons.local_shipping, color: Color(0xFF2196F3), size: 20),
-                                    const SizedBox(width: 6),
+                                    Icon(
+                                      Icons.local_shipping_outlined,
+                                      color: AppColors.textPrimary,
+                                      size: 22,
+                                    ),
+                                    const SizedBox(width: 8),
                                     Flexible(
                                       child: Text(
                                         _tripDetails!['truckNumber'] ?? 'N/A',
-                                        style: const TextStyle(
-                                          fontSize: 15,
+                                        style: TextStyle(
+                                          fontSize: 14,
                                           fontWeight: FontWeight.w700,
-                                          color: Color(0xFF2196F3),
+                                          color: AppColors.info,
                                         ),
                                         overflow: TextOverflow.ellipsis,
                                       ),
@@ -2718,30 +3146,34 @@ Thank you!''';
                                 ),
                               ),
                             ),
-                            // Driver/Supplier Name - Clickable (shows supplier for Market trucks, driver for Own trucks)
+
+                            // ---------------- RIGHT : DRIVER / SUPPLIER ----------------
                             Expanded(
                               child: InkWell(
                                 onTap: () => _navigateToDriverDetails(),
+                                borderRadius: BorderRadius.circular(10),
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.end,
                                   children: [
                                     Icon(
                                       _tripDetails!['truckType'] == 'Market'
-                                        ? Icons.local_shipping
-                                        : Icons.drive_eta,
-                                      color: const Color(0xFF2196F3),
-                                      size: 18
+                                          ? Icons.badge_outlined
+                                          : Icons.person_outline,
+                                      color: AppColors.textPrimary,
+                                      size: 22,
                                     ),
-                                    const SizedBox(width: 6),
+                                    const SizedBox(width: 8),
                                     Flexible(
                                       child: Text(
                                         _tripDetails!['truckType'] == 'Market'
-                                          ? (_tripDetails!['supplierName'] ?? 'No Supplier')
-                                          : (_tripDetails!['driverName'] ?? 'No Driver'),
-                                        style: const TextStyle(
+                                            ? (_tripDetails!['supplierName'] ??
+                                                'No Supplier')
+                                            : (_tripDetails!['driverName'] ??
+                                                'No Driver'),
+                                        style: TextStyle(
                                           fontSize: 14,
                                           fontWeight: FontWeight.w600,
-                                          color: Color(0xFF2196F3),
+                                          color: AppColors.info,
                                         ),
                                         overflow: TextOverflow.ellipsis,
                                       ),
@@ -2760,9 +3192,12 @@ Thank you!''';
                       color: Colors.white,
                       child: TabBar(
                         controller: _tabController,
-                        labelColor: Colors.blue.shade700,
+                        labelColor: AppColors.info,
                         unselectedLabelColor: Colors.grey.shade600,
-                        indicatorColor: Colors.blue.shade700,
+                        indicator: RoundedTabIndicator(
+                          color: AppColors.info,
+                          radius: 3,
+                        ),
                         indicatorWeight: 3,
                         indicatorSize: TabBarIndicatorSize.tab,
                         tabs: [
@@ -2872,12 +3307,12 @@ Thank you!''';
                     'Add load to this Trip',
                     style: TextStyle(
                       fontSize: 15,
-                      color: Colors.blue.shade700,
+                      color: AppColors.info,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
                   const Spacer(),
-                  Icon(Icons.arrow_forward_ios, size: 16, color: Colors.blue.shade700),
+                  Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.info),
                 ],
               ),
             ),
@@ -2964,7 +3399,7 @@ Thank you!''';
 
                   const SizedBox(height: 8),
 
-                  // Route: Origin → Destination
+                  // Route: Origin â†’ Destination
                   Row(
                     children: [
                       Expanded(
@@ -3254,7 +3689,7 @@ Thank you!''';
                 style: const TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.bold,
-                  color: Colors.blue,
+                  color: AppColors.info,
                 ),
               ),
             ],
@@ -3269,13 +3704,13 @@ Thank you!''';
             Expanded(
               child: OutlinedButton.icon(
                 onPressed: () => _showAddNoteDialogForTrip(tripData),
-                icon: const Icon(Icons.add_circle_outline, color: Colors.blue, size: 20),
+                icon: const Icon(Icons.add_circle_outline, color: AppColors.info, size: 20),
                 label: const Text(
                   'Note',
-                  style: TextStyle(color: Colors.blue, fontSize: 14),
+                  style: TextStyle(color: AppColors.info, fontSize: 14),
                 ),
                 style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Colors.blue),
+                  side: const BorderSide(color: AppColors.info),
                   padding: const EdgeInsets.symmetric(vertical: 10),
                 ),
               ),
@@ -3285,12 +3720,12 @@ Thank you!''';
               child: OutlinedButton(
                 onPressed: () => _sendRequestMoneyWhatsAppForTrip(tripData),
                 style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Colors.blue),
+                  side: const BorderSide(color: AppColors.info),
                   padding: const EdgeInsets.symmetric(vertical: 10),
                 ),
                 child: const Text(
                   'Request Money',
-                  style: TextStyle(color: Colors.blue, fontSize: 14),
+                  style: TextStyle(color: AppColors.info, fontSize: 14),
                 ),
               ),
             ),
@@ -3403,7 +3838,7 @@ Thank you!''';
                 );
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue.shade700,
+                backgroundColor: AppColors.info,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
@@ -3551,7 +3986,7 @@ Thank you!''';
                       child: const Icon(
                         Icons.edit,
                         size: 18,
-                        color: Colors.blue,
+                        color: AppColors.info,
                       ),
                     ),
                   ],
@@ -3618,7 +4053,7 @@ Thank you!''';
                                 child: const Icon(
                                   Icons.edit,
                                   size: 16,
-                                  color: Colors.blue,
+                                  color: AppColors.info,
                                 ),
                               ),
                             ],
@@ -3649,12 +4084,12 @@ Thank you!''';
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 child: Row(
                   children: [
-                    const Icon(Icons.add_circle_outline, color: Colors.blue, size: 18),
+                    const Icon(Icons.add_circle_outline, color:AppColors.info, size: 18),
                     const SizedBox(width: 6),
                     Text(
                       addButtonText,
                       style: const TextStyle(
-                        color: Colors.blue,
+                        color:AppColors.info,
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
                       ),
@@ -3713,9 +4148,19 @@ Thank you!''';
   // Edit and Delete methods for Advances, Charges, Payments
 
   void _showEditAdvanceDialog(int tripId, Map<String, dynamic> advance) {
-    final amountController = TextEditingController(text: advance['amount'].toString());
-    final dateController = TextEditingController(text: advance['date'] ?? '');
+    final amountController =
+    TextEditingController(text: advance['amount'].toString());
+    final dateController =
+    TextEditingController(text: advance['date'] ?? '');
     String paymentMode = advance['paymentMode'] ?? 'Cash';
+
+    final paymentModes = [
+      'Cash',
+      'UPI',
+      'Bank Transfer',
+      'Card',
+      'Cheque',
+    ];
 
     showModalBottomSheet(
       context: context,
@@ -3723,7 +4168,9 @@ Thank you!''';
       backgroundColor: Colors.transparent,
       builder: (context) => StatefulBuilder(
         builder: (context, setModalState) => Padding(
-          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
           child: Container(
             decoration: const BoxDecoration(
               color: Colors.white,
@@ -3732,32 +4179,73 @@ Thank you!''';
             padding: const EdgeInsets.all(24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text('Edit Advance', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                // ---------------- HEADER ----------------
+                const Text(
+                  'Edit Advance',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+
                 const SizedBox(height: 20),
-                TextField(
+
+                // ---------------- AMOUNT ----------------
+                CustomTextField(
+                  label: "Amount",
                   controller: amountController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Amount', border: OutlineInputBorder()),
+                  keyboard: TextInputType.number,
+                  suffix: const Icon(Icons.currency_rupee),
                 ),
+
                 const SizedBox(height: 16),
-                TextField(
+
+                // ---------------- DATE PICKER ----------------
+                GestureDetector(
+                  onTap: () async {
+                    final date = await showDatePicker(
+                      context: context,
+                      initialDate: DateTime.tryParse(dateController.text) ??
+                          DateTime.now(),
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime(2030),
+                    );
+                    if (date != null) {
+                      setModalState(() {
+                        dateController.text =
+                            DateFormat("yyyy-MM-dd").format(date);
+                      });
+                    }
+                  },
+                  child: AbsorbPointer(
+                    child: CustomTextField(
+                      label: "Date",
                   controller: dateController,
-                  decoration: const InputDecoration(labelText: 'Date (YYYY-MM-DD)', border: OutlineInputBorder()),
+                      suffix: const Icon(Icons.calendar_month),
                 ),
+                  ),
+                ),
+
                 const SizedBox(height: 16),
-                DropdownButtonFormField<String>(
+
+                // ---------------- PAYMENT MODE ----------------
+                CustomDropdown(
+                  label: "Payment Mode",
                   value: paymentMode,
-                  decoration: const InputDecoration(labelText: 'Payment Mode', border: OutlineInputBorder()),
-                  items: ['Cash', 'UPI', 'Bank Transfer', 'Card', 'Cheque']
-                      .map((mode) => DropdownMenuItem(value: mode, child: Text(mode)))
-                      .toList(),
-                  onChanged: (value) => setModalState(() => paymentMode = value!),
+                  items: paymentModes,
+                  onChanged: (value) {
+                    setModalState(() => paymentMode = value ?? "Cash");
+                  },
                 ),
+
                 const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
+
+                // ---------------- UPDATE BUTTON ----------------
+                CustomButton(
+                  text: "Update Advance",
+                  color: AppColors.info,
                     onPressed: () async {
                       final success = await ApiService.updateTripAdvance(
                         tripId: tripId,
@@ -3766,33 +4254,29 @@ Thank you!''';
                         date: dateController.text,
                         paymentMode: paymentMode,
                       );
+
                       if (!mounted) return;
                       Navigator.pop(context);
+
                       if (success) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Advance updated successfully')),
+                      ToastHelper.showSnackBarToast(
+                        context,
+                        const SnackBar(
+                          content: Text('Advance updated successfully'),
+                        ),
                         );
                         await _loadTripDetails();
                         await _loadTripLoads();
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2196F3),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                    } else {
+                      ToastHelper.showSnackBarToast(
+                        context,
+                        const SnackBar(
+                          content: Text('Error updating advance'),
+                          backgroundColor: Colors.red,
                       ),
-                      elevation: 0,
-                    ),
-                    child: const Text(
-                      'Update Advance',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
+                      );
+                    }
+                  },
                 ),
               ],
             ),
@@ -3822,7 +4306,7 @@ Thank you!''';
       final success = await ApiService.deleteTripAdvance(tripId: tripId, advanceId: advanceId);
       if (!mounted) return;
       if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ToastHelper.showSnackBarToast(context, 
           const SnackBar(content: Text('Advance deleted successfully')),
         );
         await _loadTripDetails();
@@ -3833,8 +4317,10 @@ Thank you!''';
 
   void _showEditChargeDialog(int tripId, Map<String, dynamic> charge) {
     final typeController = TextEditingController(text: charge['type'] ?? '');
-    final amountController = TextEditingController(text: charge['amount'].toString());
-    final dateController = TextEditingController(text: charge['date'] ?? '');
+    final amountController =
+    TextEditingController(text: charge['amount'].toString());
+    final dateController =
+    TextEditingController(text: charge['date'] ?? '');
 
     showModalBottomSheet(
       context: context,
@@ -3842,7 +4328,9 @@ Thank you!''';
       backgroundColor: Colors.transparent,
       builder: (context) => StatefulBuilder(
         builder: (context, setModalState) => Padding(
-          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
           child: Container(
             decoration: const BoxDecoration(
               color: Colors.white,
@@ -3851,36 +4339,77 @@ Thank you!''';
             padding: const EdgeInsets.all(24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text('Edit Charge', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 20),
-                TextField(
-                  controller: typeController,
-                  decoration: const InputDecoration(
-                    labelText: 'Charge Type',
-                    hintText: 'e.g., Loading, Unloading, Toll',
-                    border: OutlineInputBorder(),
+                // ---------------- TITLE ----------------
+                const Text(
+                  'Edit Charge',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
+
+                const SizedBox(height: 20),
+
+                // ---------------- CHARGE TYPE ----------------
+                CustomTextField(
+                  label: "Charge Type",
+                  hint: "e.g., Loading, Unloading, Toll",
+                  controller: typeController,
+                  ),
+
                 const SizedBox(height: 16),
-                TextField(
+
+                // ---------------- AMOUNT ----------------
+                CustomTextField(
+                  label: "Amount",
                   controller: amountController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Amount', border: OutlineInputBorder()),
+                  keyboard: TextInputType.number,
+                  suffix: const Icon(Icons.currency_rupee),
                 ),
+
                 const SizedBox(height: 16),
-                TextField(
+
+                // ---------------- DATE PICKER ----------------
+                GestureDetector(
+                  onTap: () async {
+                    final date = await showDatePicker(
+                      context: context,
+                      initialDate: DateTime.tryParse(dateController.text) ??
+                          DateTime.now(),
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime(2030),
+                    );
+                    if (date != null) {
+                      setModalState(() {
+                        dateController.text =
+                            DateFormat("yyyy-MM-dd").format(date);
+                      });
+                    }
+                  },
+                  child: AbsorbPointer(
+                    child: CustomTextField(
+                      label: "Date",
                   controller: dateController,
-                  decoration: const InputDecoration(labelText: 'Date (YYYY-MM-DD)', border: OutlineInputBorder()),
+                      suffix: const Icon(Icons.calendar_month),
                 ),
+                  ),
+                ),
+
                 const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
+
+                // ---------------- UPDATE BUTTON ----------------
+                CustomButton(
+                  text: "Update Charge",
+                  color: AppColors.info,
                     onPressed: () async {
                       if (typeController.text.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Please enter charge type')),
+                      ToastHelper.showSnackBarToast(
+                        context,
+                        const SnackBar(
+                          content: Text('Please enter charge type'),
+                        ),
                         );
                         return;
                       }
@@ -3892,33 +4421,29 @@ Thank you!''';
                         amount: amountController.text,
                         date: dateController.text,
                       );
+
                       if (!mounted) return;
                       Navigator.pop(context);
+
                       if (success) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Charge updated successfully')),
+                      ToastHelper.showSnackBarToast(
+                        context,
+                        const SnackBar(
+                          content: Text('Charge updated successfully'),
+                        ),
                         );
                         await _loadTripDetails();
                         await _loadTripLoads();
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2196F3),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                    } else {
+                      ToastHelper.showSnackBarToast(
+                        context,
+                        const SnackBar(
+                          content: Text('Error updating charge'),
+                          backgroundColor: Colors.red,
                       ),
-                      elevation: 0,
-                    ),
-                    child: const Text(
-                      'Update Charge',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
+                      );
+                    }
+                  },
                 ),
               ],
             ),
@@ -3948,11 +4473,262 @@ Thank you!''';
       final success = await ApiService.deleteTripCharge(tripId: tripId, chargeId: chargeId);
       if (!mounted) return;
       if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ToastHelper.showSnackBarToast(context,
           const SnackBar(content: Text('Charge deleted successfully')),
         );
         await _loadTripDetails();
         await _loadTripLoads();
+      }
+    }
+  }
+
+  // Show options dialog for expense (edit/delete)
+  void _showExpenseOptionsDialog(Map<String, dynamic> expense) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              expense['expenseType'] ?? expense['type'] ?? 'Expense',
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              CurrencyFormatter.formatWithSymbol(expense['amount']),
+              style: const TextStyle(
+                fontSize: 16,
+                color: Colors.grey,
+              ),
+            ),
+            const SizedBox(height: 24),
+            ListTile(
+              leading: const Icon(Icons.edit, color: AppColors.info),
+              title: const Text('Edit Expense'),
+              onTap: () {
+                Navigator.pop(context);
+                _showEditExpenseDialog(expense);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete, color: Colors.red),
+              title: const Text('Delete Expense', style: TextStyle(color: Colors.red)),
+              onTap: () {
+                Navigator.pop(context);
+                _deleteExpense(expense['id']);
+              },
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Edit expense dialog
+  void _showEditExpenseDialog(Map<String, dynamic> expense) {
+    final amountController = TextEditingController(text: expense['amount'].toString());
+    final dateController = TextEditingController(text: expense['date'] ?? '');
+    String expenseType = expense['expenseType'] ?? expense['chargeType'] ?? expense['type'] ?? '';
+
+    final List<String> expenseTypes = [
+      'Toll',
+      'Loading',
+      'Unloading',
+      'Labour',
+      'Fuel',
+      'Repair',
+      'Police',
+      'RTO',
+      'Detention',
+      'Other',
+    ];
+
+    // If current type is not in list, add it
+    if (expenseType.isNotEmpty && !expenseTypes.contains(expenseType)) {
+      expenseTypes.insert(0, expenseType);
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  'Edit Expense',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // Expense Type Dropdown
+                CustomDropdown(
+                  label: "Expense Type",
+                  value: expenseType.isNotEmpty ? expenseType : null,
+                  items: expenseTypes,
+                  onChanged: (value) {
+                    setModalState(() => expenseType = value ?? '');
+                  },
+                ),
+
+                const SizedBox(height: 16),
+
+                // Amount
+                CustomTextField(
+                  label: "Amount",
+                  controller: amountController,
+                  keyboard: TextInputType.number,
+                  suffix: const Icon(Icons.currency_rupee),
+                ),
+
+                const SizedBox(height: 16),
+
+                // Date Picker
+                GestureDetector(
+                  onTap: () async {
+                    final date = await showDatePicker(
+                      context: context,
+                      initialDate: DateTime.tryParse(dateController.text) ?? DateTime.now(),
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime(2030),
+                    );
+                    if (date != null) {
+                      setModalState(() {
+                        dateController.text = DateFormat("yyyy-MM-dd").format(date);
+                      });
+                    }
+                  },
+                  child: AbsorbPointer(
+                    child: CustomTextField(
+                      label: "Date",
+                      controller: dateController,
+                      suffix: const Icon(Icons.calendar_month),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                // Update Button
+                CustomButton(
+                  text: "Update Expense",
+                  color: AppColors.info,
+                  onPressed: () async {
+                    if (expenseType.isEmpty) {
+                      ToastHelper.showSnackBarToast(
+                        context,
+                        const SnackBar(content: Text('Please select expense type')),
+                      );
+                      return;
+                    }
+
+                    final result = await ApiService.updateMyExpense(
+                      expense['id'],
+                      {
+                        'expenseType': expenseType,
+                        'amount': amountController.text,
+                        'date': dateController.text,
+                      },
+                    );
+
+                    if (!mounted) return;
+                    Navigator.pop(context);
+
+                    if (result != null) {
+                      ToastHelper.showSnackBarToast(
+                        context,
+                        const SnackBar(content: Text('Expense updated successfully')),
+                      );
+                      await _loadTripDetails();
+                    } else {
+                      ToastHelper.showSnackBarToast(
+                        context,
+                        const SnackBar(
+                          content: Text('Error updating expense'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Delete expense
+  Future<void> _deleteExpense(int expenseId) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Expense'),
+        content: const Text('Are you sure you want to delete this expense?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      final success = await ApiService.deleteMyExpense(expenseId);
+      if (!mounted) return;
+      if (success) {
+        ToastHelper.showSnackBarToast(
+          context,
+          const SnackBar(content: Text('Expense deleted successfully')),
+        );
+        await _loadTripDetails();
+      } else {
+        ToastHelper.showSnackBarToast(
+          context,
+          const SnackBar(
+            content: Text('Error deleting expense'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     }
   }
@@ -4014,7 +4790,7 @@ Thank you!''';
                       if (!mounted) return;
                       Navigator.pop(context);
                       if (success) {
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        ToastHelper.showSnackBarToast(context, 
                           const SnackBar(content: Text('Payment updated successfully')),
                         );
                         await _loadTripDetails();
@@ -4067,7 +4843,7 @@ Thank you!''';
       final success = await ApiService.deleteTripPayment(tripId: tripId, paymentId: paymentId);
       if (!mounted) return;
       if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ToastHelper.showSnackBarToast(context, 
           const SnackBar(content: Text('Payment deleted successfully')),
         );
         await _loadTripDetails();
@@ -4155,7 +4931,7 @@ Thank you!''';
                       'Add load to this Trip',
                       style: TextStyle(
                         fontSize: 15,
-                        color: Colors.blue,
+                        color: AppColors.info,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -4306,12 +5082,12 @@ Thank you!''';
                   'View full details',
                   style: TextStyle(
                     fontSize: 13,
-                    color: Colors.blue.shade700,
+                    color: AppColors.info,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
                 const SizedBox(width: 4),
-                Icon(Icons.arrow_forward_ios, size: 12, color: Colors.blue.shade700),
+                Icon(Icons.arrow_forward_ios, size: 12, color: AppColors.info),
               ],
             ),
           ),
@@ -4322,46 +5098,59 @@ Thank you!''';
 
   Widget _buildPartyTab() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.all(12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Party Name and Amount - Clickable
+          // ----------------- PARTY CARD -----------------
           InkWell(
             onTap: () => _navigateToPartyDetails(),
+            borderRadius: BorderRadius.circular(14),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+              padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(14),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.grey.shade200,
-                    blurRadius: 3,
-                    offset: const Offset(0, 1),
+                    color: Colors.black.withOpacity(0.06),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
                   ),
                 ],
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.person, size: 20, color: Color(0xFF1976D2)),
-                  const SizedBox(width: 8),
+                  Icon(
+                    Icons.account_circle_outlined,
+                    size: 22,
+                    color: AppColors.textPrimary,
+                  ),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       _tripDetails!['partyName'] ?? 'N/A',
-                      style: const TextStyle(
-                        fontSize: 15,
+                      style: TextStyle(
+                        fontSize: 12,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF1976D2),
+                        color: AppColors.info,
                       ),
                     ),
                   ),
-                  Text(
-                    CurrencyFormatter.formatWithSymbol(_tripDetails!['pendingBalance'] ?? 0),
+                  Container(
+                    padding: EdgeInsets.all(5),
+                    decoration: BoxDecoration(
+                        color: Colors.grey.withOpacity(0.2),
+                        borderRadius: BorderRadius.all(Radius.circular(20))
+                    ),
+                    child: Text(
+                    CurrencyFormatter.formatWithSymbol(
+                        _tripDetails!['pendingBalance'] ?? 0),
                     style: const TextStyle(
-                      fontSize: 16,
+                      fontSize: 12,
                       fontWeight: FontWeight.bold,
                       color: Colors.black87,
+                      ),
                     ),
                   ),
                 ],
@@ -4369,14 +5158,21 @@ Thank you!''';
             ),
           ),
 
-          const SizedBox(height: 10),
+          const SizedBox(height: 6),
 
-          // Route and LR Number
+          // ----------------- ROUTE + LR NUMBER + PROGRESS -----------------
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+            padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ],
             ),
             child: Column(
               children: [
@@ -4390,15 +5186,15 @@ Thank you!''';
                           Text(
                             _tripDetails!['origin'] ?? 'Origin',
                             style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            _tripDetails!['startDate'] ?? '',
+                            DateHelper.format( _tripDetails!['startDate'] ?? ''),
                             style: TextStyle(
-                              fontSize: 10,
+                              fontSize: 11,
                               color: Colors.grey.shade600,
                             ),
                           ),
@@ -4406,45 +5202,70 @@ Thank you!''';
                       ),
                     ),
 
-                    // Route Line with Arrow (matching My Trips design)
+                    // Route Arrow
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 6),
-                      child: Column(
+                      child: Row(
                         children: [
-                          Row(
-                            children: [
-                              Container(
-                                width: 6,
-                                height: 6,
-                                decoration: BoxDecoration(
-                                  color: Colors.grey.shade400,
-                                  shape: BoxShape.circle,
-                                ),
+                          // Left Dot
+                          Container(
+                            width: 7,
+                            height: 7,
+                            decoration: BoxDecoration(
+                              color: AppColors.textPrimary,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+
+                          // Left Line
+                          Container(
+                            width: 30,
+                            height: 1.5,
+                            color: AppColors.textPrimary,
+                          ),
+
+                          // â¬…ï¸ Space before circle
+                          const SizedBox(width: 6),
+
+                          // ðŸ”¥ Circular Arrow with Black Border
+                          Container(
+                            width: 18,
+                            height: 18,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: AppColors.textPrimary,
+                                // Black rounded border
+                                width: 1.3,
                               ),
-                              Container(
-                                width: 40,
-                                height: 1.5,
-                                color: Colors.grey.shade300,
+                            ),
+                            child: const Center(
+                              child: Icon(
+                                Icons.arrow_forward_rounded,
+                                size: 12,
+                                color: Colors.black87,
                               ),
-                              Icon(
-                                Icons.arrow_forward,
-                                size: 14,
-                                color: Colors.grey.shade500,
-                              ),
-                              Container(
-                                width: 40,
-                                height: 1.5,
-                                color: Colors.grey.shade300,
-                              ),
-                              Container(
-                                width: 6,
-                                height: 6,
-                                decoration: BoxDecoration(
-                                  color: Colors.grey.shade400,
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                            ],
+                            ),
+                          ),
+
+                          // âž¡ï¸ Space after circle
+                          const SizedBox(width: 6),
+
+                          // Right Line
+                          Container(
+                            width: 30,
+                            height: 1.5,
+                            color: AppColors.textPrimary,
+                          ),
+
+                          // Right Dot
+                          Container(
+                            width: 7,
+                            height: 7,
+                            decoration: BoxDecoration(
+                              color: AppColors.textPrimary,
+                              shape: BoxShape.circle,
+                            ),
                           ),
                         ],
                       ),
@@ -4459,14 +5280,14 @@ Thank you!''';
                             _tripDetails!['destination'] ?? 'Destination',
                             style: const TextStyle(
                               fontSize: 13,
-                              fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            _tripDetails!['endDate'] ?? '',
+                            DateHelper.format(_tripDetails!['endDate'] ?? ''),
                             style: TextStyle(
-                              fontSize: 10,
+                              fontSize: 11,
                               color: Colors.grey.shade600,
                             ),
                           ),
@@ -4475,31 +5296,33 @@ Thank you!''';
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
+
+
                 Text(
                   _tripDetails!['lrNumber'] ?? '',
                   style: TextStyle(
-                    fontSize: 11,
-                    color: Colors.grey.shade700,
-                    fontWeight: FontWeight.w500,
+                    fontSize: 12,
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w700
                   ),
                 ),
 
-                // Trip Progress
                 const SizedBox(height: 12),
+
+                // Progress bar (your function)
                 _buildTripProgress(),
               ],
             ),
           ),
 
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
 
-          // Action Buttons Row (Status Button + View Bill)
+          // ----------------- ACTION BUTTONS ROW -----------------
           _buildActionButtonsRow(),
 
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
 
-          // Freight Amount (Editable)
+          // ----------------- FREIGHT AMOUNT -----------------
           _buildPaymentSection(
             'Freight Amount',
             _tripDetails!['freightAmount'],
@@ -4507,10 +5330,9 @@ Thank you!''';
             showEditIcon: true,
             onEdit: () => _editFreightAmount(),
           ),
+          const SizedBox(height: 4),
 
-          const SizedBox(height: 8),
-
-          // Advances
+          // ----------------- ADVANCES -----------------
           _buildPaymentSection(
             '(-) Advance',
             _tripDetails!['totalAdvance'],
@@ -4521,9 +5343,8 @@ Thank you!''';
             onDeleteItem: (item) => _deleteAdvance(widget.tripId, item['id']),
           ),
 
-          const SizedBox(height: 8),
 
-          // Charges
+          // ----------------- CHARGES -----------------
           _buildPaymentSection(
             '(+) Charges',
             _tripDetails!['totalCharges'],
@@ -4534,9 +5355,7 @@ Thank you!''';
             onDeleteItem: (item) => _deleteCharge(widget.tripId, item['id']),
           ),
 
-          const SizedBox(height: 8),
-
-          // Payments
+          // ----------------- PAYMENTS -----------------
           _buildPaymentSection(
             '(-) Payments',
             _tripDetails!['totalPayments'],
@@ -4549,13 +5368,19 @@ Thank you!''';
 
           const SizedBox(height: 8),
 
-          // Pending Balance
+          // ----------------- PENDING BALANCE -----------------
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+            padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.grey.shade200),
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ],
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -4564,37 +5389,41 @@ Thank you!''';
                   'Pending Balance',
                   style: TextStyle(
                     fontSize: 14,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
                 Text(
-                  CurrencyFormatter.formatWithSymbol(_tripDetails!['pendingBalance'] ?? 0),
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.blue,
+                  CurrencyFormatter.formatWithSymbol(
+                      _tripDetails!['pendingBalance'] ?? 0),
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.info,
                   ),
                 ),
               ],
             ),
           ),
 
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
 
-          // Note and Request Money buttons
+          // ----------------- NOTE + REQUEST MONEY -----------------
           Row(
             children: [
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: () => _showAddNoteDialog(),
-                  icon: const Icon(Icons.add_circle_outline, color: Colors.blue, size: 22),
-                  label: const Text(
+                  icon: Icon(Icons.note_add_outlined,
+                      color: AppColors.info, size: 22),
+                  label: Text(
                     'Note',
-                    style: TextStyle(color: Colors.blue),
+                    style: TextStyle(color: AppColors.info),
                   ),
                   style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Colors.blue),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    side: BorderSide(color: AppColors.info),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
               ),
@@ -4603,21 +5432,23 @@ Thank you!''';
                 child: OutlinedButton(
                   onPressed: () => _sendRequestMoneyWhatsApp(),
                   style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Colors.blue),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    side: BorderSide(color: AppColors.info),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
                   ),
-                  child: const Text(
+                  child: Text(
                     'Request Money',
-                    style: TextStyle(color: Colors.blue),
+                    style: TextStyle(color: AppColors.info),
                   ),
                 ),
               ),
             ],
           ),
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 8),
 
-          // Add load to this Trip
+          // ----------------- ADD LOAD BUTTON -----------------
           InkWell(
             onTap: () async {
               final result = await Navigator.push(
@@ -4638,28 +5469,42 @@ Thank you!''';
                 _loadTripDetails();
               }
             },
+            borderRadius: BorderRadius.circular(14),
             child: Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
+                  Text(
                     'Add load to this Trip',
                     style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.blue,
-                      fontWeight: FontWeight.w500,
+                      fontSize: 12,
+                      color: AppColors.info,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                  const Icon(Icons.arrow_forward_ios, color: Colors.blue, size: 16),
+                  Icon(
+                    Icons.add_circle_outline,
+                    color: AppColors.info,
+                    size: 22,
+                  ),
                 ],
               ),
             ),
           ),
+
+          const SizedBox(height: 20),
         ],
       ),
     );
@@ -4687,14 +5532,14 @@ Thank you!''';
                     const Text(
                       '(+) Revenue',
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: 13,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     Text(
                       CurrencyFormatter.formatWithSymbol(_tripDetails!['revenue']['total']),
                       style: const TextStyle(
-                        fontSize: 14,
+                        fontSize: 13,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -4702,9 +5547,9 @@ Thank you!''';
                 ),
                 const SizedBox(height: 12),
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade50,
+                    color: Colors.grey.shade100,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Column(
@@ -4715,14 +5560,14 @@ Thank you!''';
                           Text(
                             _tripDetails!['partyName'] ?? 'N/A',
                             style: const TextStyle(
-                              fontSize: 14,
+                              fontSize: 12,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
                           Text(
                             CurrencyFormatter.formatWithSymbol(_tripDetails!['revenue']['total']),
                             style: const TextStyle(
-                              fontSize: 14,
+                              fontSize: 12,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -4760,14 +5605,14 @@ Thank you!''';
                           const Text(
                             '(-) Truck Hire Cost',
                             style: TextStyle(
-                              fontSize: 14,
+                              fontSize: 12,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                           Text(
                             CurrencyFormatter.formatWithSymbol(_tripDetails!['truckHireCost']),
                             style: const TextStyle(
-                              fontSize: 14,
+                              fontSize: 12,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -4810,14 +5655,14 @@ Thank you!''';
                     const Text(
                       '(-) Trip Expenses',
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: 13,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     Text(
                       CurrencyFormatter.formatWithSymbol(_tripDetails!['totalExpenses']),
                       style: const TextStyle(
-                        fontSize: 14,
+                        fontSize: 13,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -4826,24 +5671,60 @@ Thank you!''';
                 const SizedBox(height: 10),
                 if (_tripDetails!['expenses'].isNotEmpty)
                   ...(_tripDetails!['expenses'] as List).map((expense) => Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: InkWell(
-                          onTap: () {},
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: Colors.grey.shade300),
+                          ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(
-                                expense['expenseType'] ?? expense['type'] ?? 'N/A',
-                                style: const TextStyle(fontSize: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      expense['expenseType'] ?? expense['chargeType'] ?? expense['type'] ?? 'N/A',
+                                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                                    ),
+                                    if (expense['date'] != null)
+                                      Text(
+                                        expense['date'],
+                                        style: const TextStyle(fontSize: 11, color: Colors.grey),
+                                      ),
+                                  ],
+                                ),
                               ),
                               Row(
                                 children: [
                                   Text(
                                     CurrencyFormatter.formatWithSymbol(expense['amount']),
-                                    style: const TextStyle(fontSize: 14),
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
                                   const SizedBox(width: 8),
-                                  const Icon(Icons.arrow_forward_ios, size: 12, color: Colors.blue),
+                                  InkWell(
+                                    onTap: () => _showEditExpenseDialog(expense),
+                                    child: const Icon(
+                                      Icons.edit,
+                                      size: 16,
+                                      color: AppColors.info,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  InkWell(
+                                    onTap: () => _deleteExpense(expense['id']),
+                                    child: const Icon(
+                                      Icons.delete,
+                                      size: 16,
+                                      color: Colors.red,
+                                    ),
+                                  ),
                                 ],
                               ),
                             ],
@@ -4857,7 +5738,7 @@ Thank you!''';
                     'Add Expense',
                     style: TextStyle(
                       fontSize: 14,
-                      color: Colors.blue,
+                      color: AppColors.info,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -4988,7 +5869,7 @@ Thank you!''';
             onTap: () => _showAddSupplierAdvanceDialog(),
             child: const Text(
               'Add Supplier Advance',
-              style: TextStyle(color: Colors.blue, fontSize: 14),
+              style: TextStyle(color: AppColors.info, fontSize: 14),
             ),
           ),
           const SizedBox(height: 8),
@@ -5021,7 +5902,7 @@ Thank you!''';
             onTap: () => _showAddSupplierChargeDialog(),
             child: const Text(
               'Add Supplier Charge',
-              style: TextStyle(color: Colors.blue, fontSize: 14),
+              style: TextStyle(color: AppColors.info, fontSize: 14),
             ),
           ),
           const SizedBox(height: 8),
@@ -5054,7 +5935,7 @@ Thank you!''';
             onTap: () => _showAddSupplierPaymentDialog(),
             child: const Text(
               'Add Supplier Payment',
-              style: TextStyle(color: Colors.blue, fontSize: 14),
+              style: TextStyle(color: AppColors.info, fontSize: 14),
             ),
           ),
           const SizedBox(height: 8),
@@ -5103,7 +5984,7 @@ Thank you!''';
                 style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
+                backgroundColor:AppColors.info,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
@@ -5142,7 +6023,8 @@ Thank you!''';
                 onTap: () {
                   // TODO: Show edit dialog for truck hire cost
                 },
-                child: const Icon(Icons.edit, size: 18, color: Colors.blue),
+                child: const Icon(Icons.edit, size: 18,                        color: AppColors.info,
+                ),
               ),
             ],
           ],
@@ -5242,7 +6124,7 @@ Thank you!''';
             children: [
               IconButton(
                 icon: const Icon(Icons.edit, size: 18),
-                color: Colors.blue,
+                color: AppColors.info,
                 onPressed: () => _showEditSupplierFinancialDialog(id, type, item),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
@@ -5270,20 +6152,20 @@ Thank you!''';
         children: [
           // Driver Info
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(10),
             ),
             child: Row(
               children: [
-                const Icon(Icons.person, size: 22),
+                const Icon(Icons.person, size: 18),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     _tripDetails!['driverName'] ?? 'N/A',
                     style: const TextStyle(
-                      fontSize: 15,
+                      fontSize: 12,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -5291,7 +6173,7 @@ Thank you!''';
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Colors.blue.shade50,
+                    color: AppColors.info.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
@@ -5300,7 +6182,7 @@ Thank you!''';
                         width: 8,
                         height: 8,
                         decoration: const BoxDecoration(
-                          color: Colors.blue,
+                          color: AppColors.info,
                           shape: BoxShape.circle,
                         ),
                       ),
@@ -5309,7 +6191,7 @@ Thank you!''';
                         _tripDetails!['driverStatus'] ?? 'Available',
                         style: const TextStyle(
                           fontSize: 12,
-                          color: Colors.blue,
+                          color: AppColors.info,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -5331,7 +6213,7 @@ Thank you!''';
                   Text(
                     'Collect from driver',
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize: 13,
                       color: Colors.grey.shade700,
                     ),
                   ),
@@ -5340,7 +6222,7 @@ Thank you!''';
                     CurrencyFormatter.formatWithSymbol(_tripDetails!['collectFromDriver']),
                     style: const TextStyle(
                       fontSize: 16,
-                      color: Colors.green,
+                      color: AppColors.primaryGreen,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -5349,11 +6231,11 @@ Thank you!''';
               OutlinedButton(
                 onPressed: _showSettleAmountDialog,
                 style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Colors.blue),
+                  side: const BorderSide(color: AppColors.info),
                 ),
                 child: const Text(
                   'Settle Amount',
-                  style: TextStyle(color: Colors.blue),
+                  style: TextStyle(color: AppColors.info),
                 ),
               ),
             ],
@@ -5367,18 +6249,18 @@ Thank you!''';
             child: Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.blue.shade50,
+                color: AppColors.info.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.picture_as_pdf, color: Colors.blue.shade700),
+                  Icon(Icons.picture_as_pdf, color: AppColors.info),
                   const SizedBox(width: 12),
                   const Text(
                     'View Report',
                     style: TextStyle(
-                      fontSize: 16,
+                      fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -5452,7 +6334,7 @@ Thank you!''';
                       'No driver transactions found.\nTransactions added in Driver Khata will appear here.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: 11,
                         color: Colors.grey.shade600,
                       ),
                     ),
@@ -5484,7 +6366,7 @@ Thank you!''';
                                 Text(
                                   transaction['reason'] ?? 'N/A',
                                   style: const TextStyle(
-                                    fontSize: 14,
+                                    fontSize: 12,
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
@@ -5492,7 +6374,7 @@ Thank you!''';
                                 Text(
                                   transaction['date'] ?? '',
                                   style: TextStyle(
-                                    fontSize: 12,
+                                    fontSize: 10,
                                     color: Colors.grey.shade600,
                                   ),
                                 ),
@@ -5504,7 +6386,7 @@ Thank you!''';
                             child: Text(
                               driverGave > 0 ? CurrencyFormatter.formatWithSymbol(driverGave.toInt()) : '',
                               style: const TextStyle(
-                                fontSize: 14,
+                                fontSize: 10,
                                 fontWeight: FontWeight.w600,
                                 color: Colors.red,
                               ),
@@ -5519,7 +6401,7 @@ Thank you!''';
                               style: const TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
-                                color: Colors.green,
+                                color: AppColors.primaryGreen,
                               ),
                               textAlign: TextAlign.right,
                             ),
@@ -5538,45 +6420,15 @@ Thank you!''';
           // Driver Buttons
           Row(
             children: [
+
               Expanded(
-                child: ElevatedButton(
-                  onPressed: () => _showDriverGaveDialog(),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red.shade600,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: const Text(
-                    '- Driver Gave',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+                child: CustomButton(text:  '- Driver Gave', color: AppColors.error,           onPressed: () => _showDriverGaveDialog(),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: ElevatedButton(
-                  onPressed: () => _showDriverGotDialog(),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green.shade600,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: const Text(
-                    '+ Driver Got',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+                child: CustomButton(text:   '+ Driver Got', color: AppColors.primaryGreen,                             onPressed: () => _showDriverGotDialog(),
+
                 ),
               ),
             ],
@@ -5622,7 +6474,7 @@ Thank you!''';
         ),
         child: Row(
           children: [
-            Icon(icon, color: Colors.blue.shade700, size: 22),
+            Icon(icon, color: AppColors.info, size: 22),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
@@ -5654,37 +6506,57 @@ Thank you!''';
           const SizedBox(width: 12),
         ],
         // View Bill button
+
         Expanded(
-          child: SizedBox(
-            height: 50,
-            child: ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => TripBillScreen(
-                      tripDetails: _tripDetails!,
-                    ),
+          child: CustomButton(
+            height: 40,
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            text: "View Bill",
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => TripBillScreen(
+                    tripDetails: _tripDetails!,
                   ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue.shade700,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
                 ),
-              ),
-              child: const Text(
-                'View Bill',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
+              );
+            },
           ),
         ),
+
+        // Expanded(
+        //   child: SizedBox(
+        //     height: 50,
+        //     child: ElevatedButton(
+        //       onPressed: () {
+        //         Navigator.push(
+        //           context,
+        //           MaterialPageRoute(
+        //             builder: (context) => TripBillScreen(
+        //               tripDetails: _tripDetails!,
+        //             ),
+        //           ),
+        //         );
+        //       },
+        //       style: ElevatedButton.styleFrom(
+        //         backgroundColor: AppColors.info,
+        //         shape: RoundedRectangleBorder(
+        //           borderRadius: BorderRadius.circular(12),
+        //         ),
+        //       ),
+        //       child: const Text(
+        //         'View Bill',
+        //         style: TextStyle(
+        //           color: Colors.white,
+        //           fontSize: 16,
+        //           fontWeight: FontWeight.w600,
+        //         ),
+        //       ),
+        //     ),
+        //   ),
+        // ),
       ],
     );
   }
@@ -5732,23 +6604,30 @@ Thank you!''';
     }
 
     return SizedBox(
-      height: 50,
-      child: ElevatedButton.icon(
+      height: 40,
+      child: OutlinedButton.icon(
         onPressed: onPressed,
-        icon: Icon(icon, color: Colors.white),
+        icon: Icon(
+          icon,
+          color: AppColors.primaryGreen,  // green icon
+          size: 22,
+        ),
         label: Text(
           buttonText,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
+          style: TextStyle(
+            color: AppColors.primaryGreen, // green text
+            fontSize: 14,
           ),
         ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primaryGreen,
+        style: OutlinedButton.styleFrom(
+          side: BorderSide(
+            color: AppColors.primaryGreen, // green border
+            width: 1.8,
+          ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
         ),
       ),
     );
@@ -5829,13 +6708,13 @@ Thank you!''';
 
   Widget _buildStageIcon(bool completed) {
     return Container(
-      width: 20,
-      height: 20,
+      width: 15,
+      height: 15,
       decoration: BoxDecoration(
-        color: completed ? Colors.green : Colors.white,
+        color: completed ? AppColors.primaryGreen : Colors.white,
         shape: BoxShape.circle,
         border: Border.all(
-          color: completed ? Colors.green : Colors.grey.shade300,
+          color: completed ? AppColors.primaryGreen : Colors.grey.shade300,
           width: 2,
         ),
       ),
@@ -5843,7 +6722,7 @@ Thank you!''';
           ? const Icon(
               Icons.check,
               color: Colors.white,
-              size: 14,
+              size: 10,
             )
           : null,
     );
@@ -5870,7 +6749,7 @@ Thank you!''';
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(8),
@@ -5891,7 +6770,7 @@ Thank you!''';
               Text(
                 title,
                 style: const TextStyle(
-                  fontSize: 14,
+                  fontSize: 12,
                   fontWeight: FontWeight.w600,
                   color: Colors.black87,
                 ),
@@ -5901,7 +6780,7 @@ Thank you!''';
                   Text(
                     CurrencyFormatter.formatWithSymbol(displayAmount),
                     style: const TextStyle(
-                      fontSize: 15,
+                      fontSize: 12,
                       fontWeight: FontWeight.bold,
                       color: Colors.black87,
                     ),
@@ -5913,7 +6792,7 @@ Thank you!''';
                       child: const Icon(
                         Icons.edit,
                         size: 18,
-                        color: Colors.blue,
+                        color: AppColors.info,
                       ),
                     ),
                   ],
@@ -5977,7 +6856,7 @@ Thank you!''';
                               const SizedBox(width: 8),
                               InkWell(
                                 onTap: () => onEditItem(item),
-                                child: const Icon(Icons.edit, size: 18, color: Colors.blue),
+                                child: const Icon(Icons.edit, size: 18, color: AppColors.info),
                               ),
                             ],
                             if (onDeleteItem != null) ...[
@@ -5996,20 +6875,19 @@ Thank you!''';
           ],
           // Add button at the end
           if (addButtonText != null && onAdd != null) ...[
-            const SizedBox(height: 8),
             InkWell(
               onTap: onAdd,
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 child: Row(
                   children: [
-                    const Icon(Icons.add_circle_outline, color: Colors.blue, size: 20),
+                    const Icon(Icons.add_circle_outline, color: AppColors.info, size: 14),
                     const SizedBox(width: 8),
                     Text(
                       addButtonText,
                       style: const TextStyle(
-                        color: Colors.blue,
-                        fontSize: 14,
+                        color: AppColors.info,
+                        fontSize: 12,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -6032,14 +6910,14 @@ Thank you!''';
           Text(
             label,
             style: TextStyle(
-              fontSize: 13,
+              fontSize: 10,
               color: Colors.grey.shade700,
             ),
           ),
           Text(
             CurrencyFormatter.formatWithSymbol(amount),
             style: TextStyle(
-              fontSize: 13,
+              fontSize: 10,
               color: Colors.grey.shade700,
             ),
           ),
@@ -6051,7 +6929,7 @@ Thank you!''';
   // Show Add Note Dialog
   void _showAddNoteDialog({int? tripId}) {
     final int targetTripId = tripId ?? widget.tripId;
-    final noteController = TextEditingController();
+    final TextEditingController noteController = TextEditingController();
 
     showModalBottomSheet(
       context: context,
@@ -6066,92 +6944,93 @@ Thank you!''';
             color: Colors.white,
             borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
           ),
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Add Note for Trip',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+
+                // --------- HEADER ---------
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children:  [
+                    Text(
+                      "Add Note for Trip",
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              TextField(
-                controller: noteController,
-                maxLines: 4,
-                decoration: const InputDecoration(
-                  labelText: 'Note',
-                  hintText: 'Enter your note here...',
-                  border: OutlineInputBorder(),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon:  Icon(
+                        Icons.close,
+                        size: 24,
+                        color: Colors.black54,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
+
+                const SizedBox(height: 18),
+
+                // --------- NOTE TEXT FIELD (CustomTextField) ---------
+                CustomTextField(
+                  label: "Note",
+                  hint: "Enter your note here...",
+                  controller: noteController,
+                  maxLines: 4,    // supports multi-line
+                ),
+
+                const SizedBox(height: 24),
+
+                // --------- SAVE BUTTON (CUSTOM BUTTON) ---------
+                CustomButton(
+                  text: "Save Note",
                   onPressed: () async {
-                    if (noteController.text.isNotEmpty) {
-                      try {
-                        final result = await ApiService.addTripNote(
-                          tripId: targetTripId,
-                          note: noteController.text,
+                    if (noteController.text.isEmpty) {
+                      ToastHelper.showSnackBarToast(context, 
+                        const SnackBar(content: Text('Please enter note')),
+                      );
+                      return;
+                    }
+
+                    try {
+                      final result = await ApiService.addTripNote(
+                        tripId: targetTripId,
+                        note: noteController.text,
+                      );
+
+                      if (!mounted) return;
+
+                      Navigator.pop(context);
+
+                      if (result != null) {
+                        ToastHelper.showSnackBarToast(context, 
+                          const SnackBar(content: Text("Note added successfully")),
                         );
 
-                        if (!mounted) return;
-
-                        Navigator.pop(context);
-
-                        if (result != null) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Note added successfully')),
-                          );
-                          await _loadTripDetails();
-                          await _loadTripLoads();
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Failed to add note')),
-                          );
-                        }
-                      } catch (e) {
-                        if (!mounted) return;
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Error: $e')),
+                        await _loadTripDetails();
+                        await _loadTripLoads();
+                      } else {
+                        ToastHelper.showSnackBarToast(context, 
+                          const SnackBar(content: Text("Failed to add note")),
                         );
                       }
+                    } catch (e) {
+                      if (!mounted) return;
+                      Navigator.pop(context);
+                      ToastHelper.showSnackBarToast(context, 
+                        SnackBar(content: Text("Error: $e")),
+                      );
                     }
                   },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue.shade700,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: const Text(
-                    'Save Note',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
-            ],
+
+                const SizedBox(height: 12),
+              ],
+            ),
           ),
         ),
       ),
@@ -6162,23 +7041,19 @@ Thank you!''';
   void _showAddExpenseDialog() {
     final amountController = TextEditingController();
     final notesController = TextEditingController();
-    String selectedExpenseType = 'Diesel';
+    final expenseTypeController = TextEditingController();
     String selectedPaymentMode = 'Cash';
     DateTime selectedDate = DateTime.now();
-    File? selectedImage;
+    XFile? selectedImage;
+    Uint8List? selectedImageBytes;
     final ImagePicker picker = ImagePicker();
 
-    final List<String> expenseTypes = [
-      'Diesel',
-      'Toll',
-      'Driver Salary',
-      'Loading Charges',
-      'Unloading Charges',
-      'Maintenance',
-      'Other'
+    final List<String> paymentModes = [
+      'Cash',
+      'UPI',
+      'Bank Transfer',
+      'Card',
     ];
-
-    final List<String> paymentModes = ['Cash', 'UPI', 'Bank Transfer', 'Card'];
 
     showModalBottomSheet(
       context: context,
@@ -6194,66 +7069,74 @@ Thank you!''';
               color: Colors.white,
               borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
             ),
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
             child: SingleChildScrollView(
               child: Column(
-                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
+
+                  // ---------------- HEADER ----------------
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Add Expense',
+                    children:  [
+                      Text(
+                        "Add Expense",
                         style: TextStyle(
                           fontSize: 20,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.close),
                         onPressed: () => Navigator.pop(context),
+                        icon:  Icon(
+                          Icons.close,
+                          size: 24,
+                          color: Colors.black54,
+                        ),
                       ),
+
                     ],
                   ),
+
                   const SizedBox(height: 20),
 
-                  // Expense Type Dropdown
-                  DropdownButtonFormField<String>(
-                    value: selectedExpenseType,
-                    decoration: const InputDecoration(
-                      labelText: 'Expense Type',
-                      border: OutlineInputBorder(),
+                  // ---------------- EXPENSE TYPE DROPDOWN ----------------
+                  GestureDetector(
+                    onTap: () => _showExpenseTypePickerDialog(expenseTypeController, setModalState),
+                    child: AbsorbPointer(
+                      child: CustomTextField(
+                        label: "Expense Type",
+                        hint: "Select or add expense type",
+                        controller: expenseTypeController,
+                        suffix: const Icon(Icons.arrow_drop_down, color: Colors.grey),
+                      ),
                     ),
-                    items: expenseTypes.map((type) {
-                      return DropdownMenuItem(value: type, child: Text(type));
-                    }).toList(),
-                    onChanged: (value) {
-                      setModalState(() {
-                        selectedExpenseType = value!;
-                      });
-                    },
                   ),
+
                   const SizedBox(height: 16),
 
-                  // Amount
-                  TextField(
+                  // ---------------- AMOUNT ----------------
+                  CustomTextField(
+                    label: "Amount",
+                    hint: "Enter amount",
                     controller: amountController,
-                    keyboardType: TextInputType.number,
+                    keyboard: TextInputType.number,
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    decoration: const InputDecoration(
-                      labelText: 'Amount',
-                      hintText: 'Enter amount',
-                      prefixText: '₹ ',
-                      border: OutlineInputBorder(),
-                    ),
                   ),
+
                   const SizedBox(height: 16),
 
-                  // Date
-                  InkWell(
+                  // ---------------- DATE ----------------
+                  CustomTextField(
+                    label: "Date",
+                    controller: TextEditingController(
+                      text: DateFormat("dd MMM yyyy").format(selectedDate),
+                    ),
+                    readOnly: true,
+                    suffix: const Icon(Icons.calendar_today, color: Colors.grey),
                     onTap: () async {
-                      final DateTime? picked = await showDatePicker(
+                      DateTime? picked = await showDatePicker(
                         context: context,
                         initialDate: selectedDate,
                         firstDate: DateTime(2020),
@@ -6265,131 +7148,132 @@ Thank you!''';
                         });
                       }
                     },
-                    child: InputDecorator(
-                      decoration: const InputDecoration(
-                        labelText: 'Date',
-                        border: OutlineInputBorder(),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(DateFormat('dd MMM yyyy').format(selectedDate)),
-                          const Icon(Icons.calendar_today, size: 20),
-                        ],
-                      ),
-                    ),
                   ),
+
                   const SizedBox(height: 16),
 
-                  // Payment Mode Dropdown
-                  DropdownButtonFormField<String>(
+                  // ---------------- PAYMENT MODE ----------------
+                  CustomDropdown(
+                    label: "Payment Mode",
                     value: selectedPaymentMode,
-                    decoration: const InputDecoration(
-                      labelText: 'Payment Mode',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: paymentModes.map((mode) {
-                      return DropdownMenuItem(value: mode, child: Text(mode));
-                    }).toList(),
+                    items: paymentModes,
                     onChanged: (value) {
                       setModalState(() {
                         selectedPaymentMode = value!;
                       });
                     },
                   ),
+
                   const SizedBox(height: 16),
 
-                  // Notes
-                  TextField(
+                  // ---------------- NOTES ----------------
+                  CustomTextField(
+                    label: "Notes",
+                    hint: "Add notes (optional)",
                     controller: notesController,
                     maxLines: 3,
-                    decoration: const InputDecoration(
-                      labelText: 'Notes',
-                      hintText: 'Add notes (optional)',
-                      border: OutlineInputBorder(),
-                    ),
                   ),
+
                   const SizedBox(height: 16),
 
-                  // Photo Upload
+                  // ---------------- PHOTO UPLOAD ----------------
                   InkWell(
                     onTap: () async {
-                      final XFile? image = await picker.pickImage(
-                        source: ImageSource.gallery,
-                      );
+                      final XFile? image =
+                      await picker.pickImage(source: ImageSource.gallery);
+
                       if (image != null) {
+                        final bytes = await image.readAsBytes();
                         setModalState(() {
-                          selectedImage = File(image.path);
+                          selectedImage = image;
+                          selectedImageBytes = bytes;
                         });
                       }
                     },
                     child: Container(
-                      height: 120,
+                      height: 140,
                       decoration: BoxDecoration(
                         color: Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: Colors.grey.shade300),
                       ),
-                      child: selectedImage == null
+                      child: selectedImageBytes == null
                           ? Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.add_photo_alternate, size: 40, color: Colors.grey.shade600),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Add Photo (Optional)',
-                                  style: TextStyle(color: Colors.grey.shade600),
-                                ),
-                              ],
-                            )
-                          : ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: Image.file(selectedImage!, fit: BoxFit.cover),
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.add_photo_alternate,
+                            size: 40,
+                            color: Colors.grey.shade600,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Add Photo (Optional)',
+                            style: TextStyle(
+                              color: Colors.grey.shade600,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
                             ),
+                          ),
+                        ],
+                      )
+                          : ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.memory(
+                          selectedImageBytes!,
+                          fit: BoxFit.cover,
+                          width: double.infinity,
+                        ),
+                      ),
                     ),
                   ),
 
                   const SizedBox(height: 24),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton(
-                      onPressed: () async {
-                        if (amountController.text.isNotEmpty) {
-                          final result = await ApiService.addTripExpense(
-                            tripId: widget.tripId,
-                            expenseType: selectedExpenseType,
-                            amount: amountController.text,
-                            date: DateFormat('dd MMM yyyy').format(selectedDate),
-                            paymentMode: selectedPaymentMode,
-                            notes: notesController.text.isNotEmpty ? notesController.text : null,
-                            imagePath: selectedImage?.path,
-                          );
-                          if (result != null && mounted) {
-                            Navigator.pop(context);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Expense added successfully')),
-                            );
-                            _loadTripDetails();
-                          }
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue.shade700,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text(
-                        'Add Expense',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
+
+                  // ---------------- SUBMIT BUTTON ----------------
+                  CustomButton(
+                    text: "Add Expense",
+                    onPressed: () async {
+                      if (expenseTypeController.text.isEmpty) {
+                        ToastHelper.showSnackBarToast(context,
+                          const SnackBar(
+                              content: Text("Please select expense type")),
+                        );
+                        return;
+                      }
+                      if (amountController.text.isEmpty) {
+                        ToastHelper.showSnackBarToast(context,
+                          const SnackBar(
+                              content: Text("Please enter amount")),
+                        );
+                        return;
+                      }
+
+                      final result = await ApiService.addTripExpense(
+                        tripId: widget.tripId,
+                        expenseType: expenseTypeController.text,
+                        amount: amountController.text,
+                        date: DateFormat("dd MMM yyyy").format(selectedDate),
+                        paymentMode: selectedPaymentMode,
+                        notes: notesController.text.isEmpty
+                            ? null
+                            : notesController.text,
+                        imageBytes: selectedImageBytes,
+                        fileName: selectedImage?.name,
+                      );
+
+                      if (mounted && result != null) {
+                        Navigator.pop(context);
+                        ToastHelper.showSnackBarToast(context,
+                          const SnackBar(
+                            content: Text("Expense added successfully"),
+                          ),
+                        );
+                        _loadTripDetails();
+                      }
+                    },
                   ),
+
                   const SizedBox(height: 16),
                 ],
               ),
@@ -6531,7 +7415,7 @@ Thank you!''';
                             );
                             if (result != null && mounted) {
                               Navigator.pop(context);
-                              ScaffoldMessenger.of(context).showSnackBar(
+                              ToastHelper.showSnackBarToast(context, 
                                 const SnackBar(content: Text('Driver Gave transaction added')),
                               );
                               _loadTripDetails();
@@ -6696,7 +7580,7 @@ Thank you!''';
                             );
                             if (result != null && mounted) {
                               Navigator.pop(context);
-                              ScaffoldMessenger.of(context).showSnackBar(
+                              ToastHelper.showSnackBarToast(context, 
                                 const SnackBar(content: Text('Driver Got transaction added')),
                               );
                               _loadTripDetails();
@@ -6705,7 +7589,7 @@ Thank you!''';
                         }
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green.shade600,
+                        backgroundColor: AppColors.primaryGreen.withOpacity(0.7),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -6819,20 +7703,20 @@ Thank you!''';
                         Navigator.pop(context);
 
                         if (success) {
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          ToastHelper.showSnackBarToast(context, 
                             const SnackBar(content: Text('Trip started successfully')),
                           );
                           await _loadTripDetails();
                           await _loadTripLoads();
                         } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          ToastHelper.showSnackBarToast(context, 
                             const SnackBar(content: Text('Failed to start trip')),
                           );
                         }
                       } catch (e) {
                         if (!mounted) return;
                         Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        ToastHelper.showSnackBarToast(context, 
                           SnackBar(content: Text('Error: $e')),
                         );
                       }
@@ -6865,8 +7749,12 @@ Thank you!''';
   // Show Complete Trip Dialog
   void _showCompleteTripDialog({int? tripId}) {
     final int targetTripId = tripId ?? widget.tripId;
+
     DateTime selectedDate = DateTime.now();
-    final kmController = TextEditingController();
+    final TextEditingController dateController = TextEditingController(
+      text: DateHelper.formatShort(DateTime.now().toString()),
+    );
+    final TextEditingController kmController = TextEditingController();
 
     showModalBottomSheet(
       context: context,
@@ -6882,34 +7770,41 @@ Thank you!''';
               color: Colors.white,
               borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
             ),
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
             child: SingleChildScrollView(
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+
+                  // ---------------- HEADER ----------------
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text(
-                        'Complete Trip',
+                        "Complete Trip",
                         style: TextStyle(
                           fontSize: 20,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.pop(context),
+                      InkWell(
+                        onTap: () => Navigator.pop(context),
+                        child: const Icon(Icons.close, size: 24, color: Colors.black54),
                       ),
                     ],
                   ),
+
                   const SizedBox(height: 20),
 
-                  // Trip End Date
-                  InkWell(
+                  // ---------------- TRIP END DATE ----------------
+                  CustomTextField(
+                    label: "Trip End Date *",
+                    controller: dateController,
+                    readOnly: true,
+                    suffix: const Icon(Icons.calendar_today, size: 20, color: Colors.grey),
                     onTap: () async {
-                      final DateTime? picked = await showDatePicker(
+                      final picked = await showDatePicker(
                         context: context,
                         initialDate: selectedDate,
                         firstDate: DateTime(2020),
@@ -6918,89 +7813,61 @@ Thank you!''';
                       if (picked != null) {
                         setModalState(() {
                           selectedDate = picked;
+                          dateController.text = DateHelper.formatShort(picked.toString());
                         });
                       }
                     },
-                    child: InputDecorator(
-                      decoration: const InputDecoration(
-                        labelText: 'Trip End Date *',
-                        border: OutlineInputBorder(),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(DateFormat('dd MMM yyyy').format(selectedDate)),
-                          const Icon(Icons.calendar_today, size: 20),
-                        ],
-                      ),
-                    ),
                   ),
+
                   const SizedBox(height: 16),
 
-                  // Total KM (Optional)
-                  TextField(
+                  // ---------------- TOTAL KM (OPTIONAL) ----------------
+                  CustomTextField(
+                    label: "Total KM (Optional)",
+                    hint: "Enter total kilometers",
                     controller: kmController,
-                    keyboardType: TextInputType.number,
+                    keyboard: TextInputType.number,
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    decoration: const InputDecoration(
-                      labelText: 'Total KM (Optional)',
-                      hintText: 'Enter total kilometers',
-                      border: OutlineInputBorder(),
-                    ),
                   ),
 
                   const SizedBox(height: 24),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton(
-                      onPressed: () async {
-                        try {
-                          final success = await ApiService.completeTrip(
-                            tripId: targetTripId,
-                            tripEndDate: DateFormat('yyyy-MM-dd').format(selectedDate),
-                            totalKm: kmController.text.isNotEmpty ? kmController.text : null,
+
+                  // ---------------- COMPLETE TRIP BUTTON ----------------
+                  CustomButton(
+                    text: "Complete Trip",
+                    onPressed: () async {
+                      try {
+                        final success = await ApiService.completeTrip(
+                          tripId: targetTripId,
+                          tripEndDate: DateFormat('yyyy-MM-dd').format(selectedDate),
+                          totalKm: kmController.text.isNotEmpty ? kmController.text : null,
+                        );
+
+                        if (!mounted) return;
+
+                        Navigator.pop(context);
+
+                        if (success) {
+                          ToastHelper.showSnackBarToast(context, 
+                            const SnackBar(content: Text('Trip completed successfully')),
                           );
-
-                          if (!mounted) return;
-
-                          Navigator.pop(context);
-
-                          if (success) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Trip completed successfully')),
-                            );
-                            await _loadTripDetails();
-                            await _loadTripLoads();
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Failed to complete trip')),
-                            );
-                          }
-                        } catch (e) {
-                          if (!mounted) return;
-                          Navigator.pop(context);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Error: $e')),
+                          await _loadTripDetails();
+                          await _loadTripLoads();
+                        } else {
+                          ToastHelper.showSnackBarToast(context, 
+                            const SnackBar(content: Text('Failed to complete trip')),
                           );
                         }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primaryGreen,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text(
-                        'Complete Trip',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
+                      } catch (e) {
+                        if (!mounted) return;
+                        Navigator.pop(context);
+                        ToastHelper.showSnackBarToast(context, 
+                          SnackBar(content: Text('Error: $e')),
+                        );
+                      }
+                    },
                   ),
+
                   const SizedBox(height: 16),
                 ],
               ),
@@ -7014,8 +7881,14 @@ Thank you!''';
   // Show POD Received Dialog
   void _showPodReceivedDialog({int? tripId}) {
     final int targetTripId = tripId ?? widget.tripId;
+
     DateTime selectedDate = DateTime.now();
-    List<File> selectedImages = [];
+    final TextEditingController dateController = TextEditingController(
+      text: DateHelper.formatShort(DateTime.now().toString()),
+    );
+
+    List<Uint8List> selectedImagesBytes = [];
+    List<String> selectedImageNames = [];
     final ImagePicker picker = ImagePicker();
 
     showModalBottomSheet(
@@ -7032,34 +7905,41 @@ Thank you!''';
               color: Colors.white,
               borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
             ),
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
             child: SingleChildScrollView(
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+
+                  // ---------------- HEADER ----------------
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text(
-                        'POD Received',
+                        "POD Received",
                         style: TextStyle(
                           fontSize: 20,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.pop(context),
+                      InkWell(
+                        onTap: () => Navigator.pop(context),
+                        child: const Icon(Icons.close, size: 24, color: Colors.black54),
                       ),
                     ],
                   ),
+
                   const SizedBox(height: 20),
 
-                  // POD Received Date
-                  InkWell(
+                  // ---------------- POD RECEIVED DATE ----------------
+                  CustomTextField(
+                    label: "POD Received Date *",
+                    controller: dateController,
+                    readOnly: true,
+                    suffix: const Icon(Icons.calendar_today, size: 20, color: Colors.grey),
                     onTap: () async {
-                      final DateTime? picked = await showDatePicker(
+                      final picked = await showDatePicker(
                         context: context,
                         initialDate: selectedDate,
                         firstDate: DateTime(2020),
@@ -7068,83 +7948,94 @@ Thank you!''';
                       if (picked != null) {
                         setModalState(() {
                           selectedDate = picked;
+                          dateController.text =
+                              DateHelper.formatShort(selectedDate.toString());
                         });
                       }
                     },
-                    child: InputDecorator(
-                      decoration: const InputDecoration(
-                        labelText: 'POD Received Date *',
-                        border: OutlineInputBorder(),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(DateFormat('dd MMM yyyy').format(selectedDate)),
-                          const Icon(Icons.calendar_today, size: 20),
-                        ],
-                      ),
-                    ),
                   ),
-                  const SizedBox(height: 16),
 
-                  // Photos Upload
+                  const SizedBox(height: 18),
+
+                  // ---------------- PHOTO UPLOAD ----------------
                   const Text(
-                    'Upload POD Photos',
+                    "Upload POD Photos",
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   const SizedBox(height: 8),
+
                   InkWell(
                     onTap: () async {
                       final List<XFile> images = await picker.pickMultiImage();
                       if (images.isNotEmpty) {
+                        // Read bytes for cross-platform support
+                        final List<Uint8List> bytesList = [];
+                        final List<String> names = [];
+                        for (var img in images) {
+                          bytesList.add(await img.readAsBytes());
+                          names.add(img.name);
+                        }
                         setModalState(() {
-                          selectedImages = images.map((img) => File(img.path)).toList();
+                          selectedImagesBytes = bytesList;
+                          selectedImageNames = names;
                         });
                       }
                     },
                     child: Container(
-                      height: 120,
+                      height: selectedImagesBytes.isEmpty ? 130 : null,
+                      padding: selectedImagesBytes.isEmpty ? null : const EdgeInsets.all(10),
                       decoration: BoxDecoration(
                         color: Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: Colors.grey.shade300),
                       ),
-                      child: selectedImages.isEmpty
+                      child: selectedImagesBytes.isEmpty
                           ? Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.add_photo_alternate, size: 40, color: Colors.grey.shade600),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Add Photos (Optional)',
-                                  style: TextStyle(color: Colors.grey.shade600),
-                                ),
-                              ],
-                            )
-                          : GridView.builder(
-                              padding: const EdgeInsets.all(8),
-                              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 3,
-                                crossAxisSpacing: 8,
-                                mainAxisSpacing: 8,
-                              ),
-                              itemCount: selectedImages.length,
-                              itemBuilder: (context, index) {
-                                return ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: Image.file(selectedImages[index], fit: BoxFit.cover),
-                                );
-                              },
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.add_photo_alternate,
+                              size: 40, color: Colors.grey.shade600),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Add Photos (Optional)',
+                            style: TextStyle(
+                              color: Colors.grey.shade600,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
                             ),
+                          ),
+                        ],
+                      )
+                          : GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 3,
+                          crossAxisSpacing: 8,
+                          mainAxisSpacing: 8,
+                        ),
+                        itemCount: selectedImagesBytes.length,
+                        itemBuilder: (context, index) {
+                          return ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: Image.memory(
+                              selectedImagesBytes[index],
+                              fit: BoxFit.cover,
+                            ),
+                          );
+                        },
+                      ),
                     ),
                   ),
-                  if (selectedImages.isNotEmpty) ...[
+
+                  if (selectedImagesBytes.isNotEmpty) ...[
                     const SizedBox(height: 8),
                     Text(
-                      '${selectedImages.length} photo(s) selected',
+                      "${selectedImagesBytes.length} photo(s) selected",
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey.shade600,
@@ -7153,69 +8044,48 @@ Thank you!''';
                   ],
 
                   const SizedBox(height: 24),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton(
-                      onPressed: () async {
-                        print('=== SUBMITTING POD RECEIVED ===');
-                        print('Trip ID: $targetTripId');
-                        print('POD Received Date: ${DateFormat('yyyy-MM-dd').format(selectedDate)}');
-                        print('Photos: ${selectedImages.length}');
 
-                        try {
-                          final success = await ApiService.podReceived(
-                            tripId: targetTripId,
-                            podReceivedDate: DateFormat('yyyy-MM-dd').format(selectedDate),
-                            podPhotos: selectedImages.map((img) => img.path).toList(),
-                          );
+                  // ---------------- SUBMIT BUTTON ----------------
+                  CustomButton(
+                    text: "Submit",
+                    onPressed: () async {
+                      try {
+                        final success = await ApiService.podReceived(
+                          tripId: targetTripId,
+                          podReceivedDate:
+                          DateFormat("yyyy-MM-dd").format(selectedDate),
+                          podPhotosBytes: selectedImagesBytes,
+                          fileNames: selectedImageNames,
+                        );
 
-                          print('POD Received API returned: $success');
+                        if (!mounted) return;
 
-                          if (!mounted) return;
+                        Navigator.pop(context);
 
-                          Navigator.pop(context);
+                        ToastHelper.showSnackBarToast(context, 
+                          SnackBar(
+                            content: Text(
+                              success
+                                  ? "POD received successfully"
+                                  : "Failed to mark POD as received",
+                            ),
+                          ),
+                        );
 
-                          if (success) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('POD received successfully')),
-                            );
-                            print('Reloading trip details after POD received...');
-                            await _loadTripDetails();
-                            await _loadTripLoads();
-                            print('Trip details reloaded. New status: ${_tripDetails?['status']}');
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Failed to mark POD as received'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                          }
-                        } catch (e) {
-                          if (!mounted) return;
-                          Navigator.pop(context);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Error: $e')),
-                          );
+                        if (success) {
+                          await _loadTripDetails();
+                          await _loadTripLoads();
                         }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primaryGreen,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text(
-                        'Submit',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
+                      } catch (e) {
+                        if (!mounted) return;
+                        Navigator.pop(context);
+                        ToastHelper.showSnackBarToast(context, 
+                          SnackBar(content: Text("Error: $e")),
+                        );
+                      }
+                    },
                   ),
+
                   const SizedBox(height: 16),
                 ],
               ),
@@ -7229,147 +8099,11 @@ Thank you!''';
   // Show POD Submitted Dialog
   void _showPodSubmittedDialog({int? tripId}) {
     final int targetTripId = tripId ?? widget.tripId;
+
     DateTime selectedDate = DateTime.now();
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setModalState) => Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
-          ),
-          child: Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-            ),
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'POD Submitted',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-
-                // POD Submitted Date
-                InkWell(
-                  onTap: () async {
-                    final DateTime? picked = await showDatePicker(
-                      context: context,
-                      initialDate: selectedDate,
-                      firstDate: DateTime(2020),
-                      lastDate: DateTime.now(),
-                    );
-                    if (picked != null) {
-                      setModalState(() {
-                        selectedDate = picked;
-                      });
-                    }
-                  },
-                  child: InputDecorator(
-                    decoration: const InputDecoration(
-                      labelText: 'POD Submitted Date *',
-                      border: OutlineInputBorder(),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(DateFormat('dd MMM yyyy').format(selectedDate)),
-                        const Icon(Icons.calendar_today, size: 20),
-                      ],
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed: () async {
-                      try {
-                        final success = await ApiService.podSubmitted(
-                          tripId: targetTripId,
-                          podSubmittedDate: DateFormat('yyyy-MM-dd').format(selectedDate),
-                        );
-
-                        if (!mounted) return;
-
-                        Navigator.pop(context);
-
-                        if (success) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('POD submitted successfully')),
-                          );
-                          await _loadTripDetails();
-                          await _loadTripLoads();
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Failed to submit POD')),
-                          );
-                        }
-                      } catch (e) {
-                        if (!mounted) return;
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Error: $e')),
-                        );
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primaryGreen,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: const Text(
-                      'Submit',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-              ],
-            ),
-          ),
-        ),
-      ),
+    final TextEditingController dateController = TextEditingController(
+      text: DateHelper.formatShort(DateTime.now().toString()),
     );
-  }
-
-  // Show Settle Trip Dialog
-  void _showSettleTripDialog({int? tripId}) {
-    final int targetTripId = tripId ?? widget.tripId;
-    DateTime selectedDate = DateTime.now();
-
-    // Auto-fill with pending balance amount
-    final pendingBalance = _tripDetails?['pendingBalance'] ?? 0;
-    final amountController = TextEditingController(text: pendingBalance.toString());
-
-    final notesController = TextEditingController();
-    String selectedPaymentMode = 'Cash';
-    final List<String> paymentModes = ['Cash', 'UPI', 'Bank Transfer', 'Card', 'Cheque'];
 
     showModalBottomSheet(
       context: context,
@@ -7385,64 +8119,39 @@ Thank you!''';
               color: Colors.white,
               borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
             ),
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
             child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+
+                  // ---------------- HEADER ----------------
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text(
-                        'Settle Trip',
+                        "POD Submitted",
                         style: TextStyle(
                           fontSize: 20,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.pop(context),
+                      InkWell(
+                        onTap: () => Navigator.pop(context),
+                        child: const Icon(Icons.close, size: 24, color: Colors.black54),
                       ),
                     ],
                   ),
+
                   const SizedBox(height: 20),
 
-                  // Settlement Amount
-                  TextField(
-                    controller: amountController,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    decoration: const InputDecoration(
-                      labelText: 'Settlement Amount *',
-                      hintText: 'Enter amount',
-                      prefixText: '₹ ',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Payment Mode
-                  DropdownButtonFormField<String>(
-                    value: selectedPaymentMode,
-                    decoration: const InputDecoration(
-                      labelText: 'Payment Mode *',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: paymentModes.map((mode) {
-                      return DropdownMenuItem(value: mode, child: Text(mode));
-                    }).toList(),
-                    onChanged: (value) {
-                      setModalState(() {
-                        selectedPaymentMode = value!;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Settlement Date
-                  InkWell(
+                  // ---------------- POD SUBMITTED DATE ----------------
+                  CustomTextField(
+                    label: "POD Submitted Date *",
+                    controller: dateController,
+                    readOnly: true,
+                    suffix: const Icon(Icons.calendar_today, size: 20, color: Colors.grey),
                     onTap: () async {
                       final DateTime? picked = await showDatePicker(
                         context: context,
@@ -7453,102 +8162,247 @@ Thank you!''';
                       if (picked != null) {
                         setModalState(() {
                           selectedDate = picked;
+                          dateController.text =
+                              DateHelper.formatShort(selectedDate.toString());
                         });
                       }
                     },
-                    child: InputDecorator(
-                      decoration: const InputDecoration(
-                        labelText: 'Settlement Date *',
-                        border: OutlineInputBorder(),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(DateFormat('dd MMM yyyy').format(selectedDate)),
-                          const Icon(Icons.calendar_today, size: 20),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Notes
-                  TextField(
-                    controller: notesController,
-                    maxLines: 3,
-                    decoration: const InputDecoration(
-                      labelText: 'Notes',
-                      hintText: 'Add notes (optional)',
-                      border: OutlineInputBorder(),
-                    ),
                   ),
 
                   const SizedBox(height: 24),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton(
-                      onPressed: () async {
-                        if (amountController.text.isNotEmpty) {
-                          try {
-                            final result = await ApiService.settleTrip(
-                              tripId: targetTripId,
-                              settleAmount: amountController.text,
-                              settlePaymentMode: selectedPaymentMode,
-                              settleDate: DateFormat('yyyy-MM-dd').format(selectedDate),
-                              settleNotes: notesController.text.isNotEmpty ? notesController.text : null,
-                            );
 
-                            if (!mounted) return;
+                  // ---------------- SUBMIT BUTTON ----------------
+                  CustomButton(
+                    text: "Submit",
+                    onPressed: () async {
+                      try {
+                        final success = await ApiService.podSubmitted(
+                          tripId: targetTripId,
+                          podSubmittedDate:
+                          DateFormat('yyyy-MM-dd').format(selectedDate),
+                        );
 
-                            Navigator.pop(context);
+                        if (!mounted) return;
+                        Navigator.pop(context);
 
-                            if (result['success'] == true) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Trip settled successfully'),
-                                  backgroundColor: Colors.green,
-                                ),
-                              );
-                              await _loadTripDetails();
-                              await _loadTripLoads();
-                            } else {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(result['message'] ?? 'Failed to settle trip'),
-                                  backgroundColor: Colors.red,
-                                  duration: const Duration(seconds: 5),
-                                ),
-                              );
-                            }
-                          } catch (e) {
-                            if (!mounted) return;
-                            Navigator.pop(context);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Error: $e'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                          }
+                        ToastHelper.showSnackBarToast(context, 
+                          SnackBar(
+                            content: Text(
+                              success
+                                  ? "POD submitted successfully"
+                                  : "Failed to submit POD",
+                            ),
+                          ),
+                        );
+
+                        if (success) {
+                          await _loadTripDetails();
+                          await _loadTripLoads();
                         }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primaryGreen,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text(
-                        'Settle Trip',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
+                      } catch (e) {
+                        if (!mounted) return;
+                        Navigator.pop(context);
+                        ToastHelper.showSnackBarToast(context, 
+                          SnackBar(content: Text("Error: $e")),
+                        );
+                      }
+                    },
                   ),
+
+                  const SizedBox(height: 16),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Show Settle Trip Dialog
+  void _showSettleTripDialog({int? tripId}) {
+    final int targetTripId = tripId ?? widget.tripId;
+
+    final pendingBalance = _tripDetails?['pendingBalance'] ?? 0;
+
+    final TextEditingController amountController =
+    TextEditingController(text: pendingBalance.toString());
+
+    final TextEditingController notesController = TextEditingController();
+    final TextEditingController dateController = TextEditingController(
+      text: DateHelper.formatShort(DateTime.now().toString()),
+    );
+
+    String selectedPaymentMode = 'Cash';
+    DateTime selectedDate = DateTime.now();
+
+    final List<String> paymentModes = [
+      'Cash',
+      'UPI',
+      'Bank Transfer',
+      'Card',
+      'Cheque'
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+
+                  // ---------------- HEADER ----------------
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        "Settle Trip",
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      InkWell(
+                        onTap: () => Navigator.pop(context),
+                        child: const Icon(Icons.close, size: 24, color: Colors.black54),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // ---------------- SETTLEMENT AMOUNT ----------------
+                  CustomTextField(
+                    label: "Settlement Amount *",
+                    hint: "Enter amount",
+                    controller: amountController,
+                    keyboard: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // ---------------- PAYMENT MODE ----------------
+                  CustomDropdown(
+                    label: "Payment Mode *",
+                    value: selectedPaymentMode,
+                    items: paymentModes,
+                    onChanged: (val) {
+                      if (val != null) {
+                        setModalState(() => selectedPaymentMode = val);
+                      }
+                    },
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // ---------------- SETTLEMENT DATE ----------------
+                  CustomTextField(
+                    label: "Settlement Date *",
+                    controller: dateController,
+                    readOnly: true,
+                    suffix: const Icon(Icons.calendar_today, size: 20, color: Colors.grey),
+                    onTap: () async {
+                      final DateTime? picked = await showDatePicker(
+                        context: context,
+                        initialDate: selectedDate,
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime.now(),
+                      );
+                      if (picked != null) {
+                        setModalState(() {
+                          selectedDate = picked;
+                          dateController.text = DateHelper.formatShort(picked.toString());
+                        });
+                      }
+                    },
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // ---------------- NOTES ----------------
+                  CustomTextField(
+                    label: "Notes",
+                    hint: "Add notes (optional)",
+                    controller: notesController,
+                    maxLines: 3,
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // ---------------- SUBMIT BUTTON ----------------
+                  CustomButton(
+                    text: "Settle Trip",
+                    onPressed: () async {
+                      if (amountController.text.isEmpty) {
+                        ToastHelper.showSnackBarToast(context, 
+                          const SnackBar(content: Text("Please enter amount")),
+                        );
+                        return;
+                      }
+
+                      try {
+                        final result = await ApiService.settleTrip(
+                          tripId: targetTripId,
+                          settleAmount: amountController.text,
+                          settlePaymentMode: selectedPaymentMode,
+                          settleDate: DateFormat('yyyy-MM-dd').format(selectedDate),
+                          settleNotes: notesController.text.isNotEmpty
+                              ? notesController.text
+                              : null,
+                        );
+
+                        if (!mounted) return;
+
+                        Navigator.pop(context);
+
+                        if (result['success'] == true) {
+                          ToastHelper.showSnackBarToast(context, 
+                            const SnackBar(
+                              content: Text("Trip settled successfully"),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+
+                          await _loadTripDetails();
+                          await _loadTripLoads();
+                        } else {
+                          ToastHelper.showSnackBarToast(context, 
+                            SnackBar(
+                              content: Text(result['message'] ??
+                                  "Failed to settle trip"),
+                              backgroundColor: Colors.red,
+                              duration: const Duration(seconds: 5),
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        if (!mounted) return;
+                        Navigator.pop(context);
+                        ToastHelper.showSnackBarToast(context, 
+                          SnackBar(
+                            content: Text("Error: $e"),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    },
+                  ),
+
                   const SizedBox(height: 16),
                 ],
               ),
@@ -7653,7 +8507,7 @@ Thank you!''';
     if (!mounted) return;
 
     final searchController = TextEditingController();
-    List<String> filteredCities = List.from(_cities);
+    List<Map<String, dynamic>> filteredCities = List.from(_cities);
 
     showModalBottomSheet(
       context: context,
@@ -7698,7 +8552,7 @@ Thank you!''';
                       filteredCities = List.from(_cities);
                     } else {
                       filteredCities = _cities
-                          .where((city) => city.toLowerCase().contains(value.toLowerCase()))
+                          .where((city) => (city['name'] ?? '').toString().toLowerCase().contains(value.toLowerCase()))
                           .toList();
                     }
                   });
@@ -7710,10 +8564,11 @@ Thank you!''';
                   itemCount: filteredCities.length,
                   itemBuilder: (context, index) {
                     final city = filteredCities[index];
+                    final cityName = city['name'] ?? '';
                     return ListTile(
-                      title: Text(city),
+                      title: Text(cityName),
                       onTap: () {
-                        controller.text = city;
+                        controller.text = cityName;
                         Navigator.pop(context);
                       },
                     );
@@ -7934,11 +8789,11 @@ Thank you!''';
                             setModalState(() => selectedBillingType = val);
                           }),
                           const SizedBox(width: 6),
-                          _buildCompactBillingButton('Per Tonne', selectedBillingType, (val) {
+                          _buildCompactBillingButton('Per Ton', selectedBillingType, (val) {
                             setModalState(() => selectedBillingType = val);
                           }),
                           const SizedBox(width: 6),
-                          _buildCompactBillingButton('Per KG', selectedBillingType, (val) {
+                          _buildCompactBillingButton('Per Kg', selectedBillingType, (val) {
                             setModalState(() => selectedBillingType = val);
                           }),
                         ],
@@ -8202,7 +9057,7 @@ Thank you!''';
 
                           if (success && mounted) {
                             Navigator.pop(context);
-                            ScaffoldMessenger.of(context).showSnackBar(
+                            ToastHelper.showSnackBarToast(context, 
                               const SnackBar(
                                 content: Text('Trip updated successfully'),
                                 backgroundColor: Colors.green,
@@ -8210,7 +9065,7 @@ Thank you!''';
                             );
                             _loadTripDetails();
                           } else if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
+                            ToastHelper.showSnackBarToast(context, 
                               const SnackBar(
                                 content: Text('Failed to update trip'),
                                 backgroundColor: Colors.red,
@@ -8218,7 +9073,7 @@ Thank you!''';
                             );
                           }
                         } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          ToastHelper.showSnackBarToast(context, 
                             const SnackBar(
                               content: Text('Please fill all required fields'),
                               backgroundColor: Colors.orange,
@@ -8252,3 +9107,5 @@ Thank you!''';
     );
   }
 }
+
+

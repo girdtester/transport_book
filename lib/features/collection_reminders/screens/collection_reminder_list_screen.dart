@@ -1,5 +1,6 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:transport_book_app/utils/appbar.dart';
 import '../../../services/api_service.dart';
 import '../../../utils/app_colors.dart';
 import 'collection_reminder_details_screen.dart';
@@ -115,7 +116,7 @@ class _CollectionReminderListScreenState extends State<CollectionReminderListScr
       case 'Pending':
         return Colors.orange;
       case 'Reminded':
-        return Colors.blue;
+        return AppColors.info;
       default:
         return Colors.grey;
     }
@@ -138,12 +139,9 @@ class _CollectionReminderListScreenState extends State<CollectionReminderListScr
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        backgroundColor: AppColors.appBarColor,
-        foregroundColor: AppColors.appBarTextColor,
-        title: const Text('My Reminders'),
-        elevation: 0,
-      ),
+      appBar: CustomAppBar(title: "My Reminders",onBack: () {
+        Navigator.pop(context);
+      },),
       body: Column(
         children: [
           // Info Section
@@ -155,22 +153,23 @@ class _CollectionReminderListScreenState extends State<CollectionReminderListScr
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.blue.shade50,
+                    color: AppColors.info.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
-                    Icons.calendar_today,
-                    color: Colors.blue.shade700,
+                    Icons.schedule,
                     size: 32,
+                    color: AppColors.info,
                   ),
                 ),
+
                 const SizedBox(width: 16),
                 Expanded(
                   child: Text(
                     'Never miss a payment, document renewal or maintenance by keeping Reminders',
                     style: TextStyle(
                       fontSize: 14,
-                      color: Colors.grey[700],
+                      color: AppColors.textSecondary,fontWeight: FontWeight.w500,
                       height: 1.3,
                     ),
                   ),
@@ -184,14 +183,15 @@ class _CollectionReminderListScreenState extends State<CollectionReminderListScr
             color: Colors.white,
             child: TabBar(
               controller: _tabController,
-              indicatorColor: Colors.blue,
+              indicatorColor: AppColors.info,
               indicatorWeight: 3,
               indicatorSize: TabBarIndicatorSize.tab,
-              labelColor: AppColors.appBarTextColor,
+              labelColor: AppColors.textSecondary,
               unselectedLabelColor: Colors.grey,
               labelStyle: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary
               ),
               tabs: const [
                 Tab(text: 'Upcoming'),
@@ -205,40 +205,41 @@ class _CollectionReminderListScreenState extends State<CollectionReminderListScr
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _filteredReminders.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.notifications_none,
-                              size: 64,
-                              color: Colors.grey[400],
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'No reminders found',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                    : RefreshIndicator(
-                        onRefresh: _loadReminders,
-                        child: ListView(
-                          padding: const EdgeInsets.fromLTRB(0, 16, 0, 80),
-                          children: _buildGroupedReminders(),
-                        ),
-                      ),
+                ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.schedule,
+                    size: 32,
+                    color: AppColors.info,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No reminders found',
+                    style: TextStyle(
+                        fontSize: 16,
+                        color: AppColors.textSecondary
+                    ),
+                  ),
+                ],
+              ),
+            )
+                : RefreshIndicator(
+              onRefresh: _loadReminders,
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(0, 16, 0, 80),
+                children: _buildGroupedReminders(),
+              ),
+            ),
           ),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
         onPressed: _showAddReminderDialog,
         backgroundColor: AppColors.primaryGreen,
-        foregroundColor: Colors.white,
+        foregroundColor: AppColors.textWhite,
         icon: const Icon(Icons.add_circle_outline, size: 22),
         label: const Text('Collection Reminder'),
       ),
@@ -260,7 +261,7 @@ class _CollectionReminderListScreenState extends State<CollectionReminderListScr
             style: const TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.bold,
-              color: Colors.black87,
+              color: AppColors.textPrimary,
               letterSpacing: 0.5,
             ),
           ),
@@ -340,7 +341,7 @@ class _CollectionReminderListScreenState extends State<CollectionReminderListScr
                       dayOfWeek,
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.grey[600],
+                        color: AppColors.textSecondary,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -355,9 +356,9 @@ class _CollectionReminderListScreenState extends State<CollectionReminderListScr
                       child: Text(
                         dayNumber.toString().padLeft(2, '0'),
                         style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
                         ),
                       ),
                     ),
@@ -376,7 +377,7 @@ class _CollectionReminderListScreenState extends State<CollectionReminderListScr
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
-                        color: Colors.black87,
+                        color: AppColors.textPrimary,
                       ),
                     ),
                     if (subtitle.isNotEmpty) ...[
@@ -385,7 +386,7 @@ class _CollectionReminderListScreenState extends State<CollectionReminderListScr
                         subtitle,
                         style: TextStyle(
                           fontSize: 14,
-                          color: Colors.grey[600],
+                          color:AppColors.textSecondary,
                         ),
                       ),
                     ],
@@ -400,7 +401,7 @@ class _CollectionReminderListScreenState extends State<CollectionReminderListScr
                 decoration: BoxDecoration(
                   border: Border.all(color: Colors.grey.shade400, width: 2),
                   borderRadius: BorderRadius.circular(4),
-                  color: isCompleted ? Colors.green : Colors.transparent,
+                  color: isCompleted ? AppColors.primaryGreen : Colors.transparent,
                 ),
                 child: isCompleted
                     ? const Icon(Icons.check, size: 16, color: Colors.white)
@@ -499,32 +500,32 @@ class _AddReminderModalState extends State<_AddReminderModal> with SingleTickerP
             child: _parties.isEmpty
                 ? const Center(child: Text('No parties found'))
                 : ListView.builder(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    itemCount: _parties.length,
-                    itemBuilder: (context, index) {
-                      final party = _parties[index];
-                      final name = party['name']?.toString() ?? '';
-                      final phone = party['phone']?.toString() ?? '';
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              itemCount: _parties.length,
+              itemBuilder: (context, index) {
+                final party = _parties[index];
+                final name = party['name']?.toString() ?? '';
+                final phone = party['phone']?.toString() ?? '';
 
-                      return ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: AppColors.primaryGreen,
-                          child: Text(
-                            name.isNotEmpty ? name[0].toUpperCase() : '?',
-                            style: const TextStyle(color: Colors.white),
-                          ),
-                        ),
-                        title: Text(name),
-                        subtitle: Text(phone),
-                        onTap: () {
-                          setState(() {
-                            _selectedParty = party;
-                          });
-                          Navigator.pop(context);
-                        },
-                      );
-                    },
+                return ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: AppColors.primaryGreen,
+                    child: Text(
+                      name.isNotEmpty ? name[0].toUpperCase() : '?',
+                      style: const TextStyle(color: Colors.white),
+                    ),
                   ),
+                  title: Text(name),
+                  subtitle: Text(phone),
+                  onTap: () {
+                    setState(() {
+                      _selectedParty = party;
+                    });
+                    Navigator.pop(context);
+                  },
+                );
+              },
+            ),
           ),
         ],
       ),
@@ -653,8 +654,9 @@ class _AddReminderModalState extends State<_AddReminderModal> with SingleTickerP
                 const Text(
                   'Collection Reminder',
                   style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary
                   ),
                 ),
                 IconButton(
@@ -668,14 +670,15 @@ class _AddReminderModalState extends State<_AddReminderModal> with SingleTickerP
           // Tabs
           TabBar(
             controller: _tabController,
-            indicatorColor: Colors.blue,
+            indicatorColor: AppColors.info,
             indicatorWeight: 3,
             indicatorSize: TabBarIndicatorSize.tab,
-            labelColor: Colors.blue,
+            labelColor: AppColors.info,
             unselectedLabelColor: Colors.grey,
             labelStyle: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary
             ),
             tabs: const [
               Tab(text: 'Collection Reminder'),
@@ -711,7 +714,7 @@ class _AddReminderModalState extends State<_AddReminderModal> with SingleTickerP
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: Colors.blue,
+              color: AppColors.info,
             ),
           ),
           const SizedBox(height: 8),
@@ -720,7 +723,7 @@ class _AddReminderModalState extends State<_AddReminderModal> with SingleTickerP
             child: Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                border: Border.all(color: Colors.blue, width: 2),
+                border: Border.all(color: AppColors.info, width: 2),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
@@ -732,7 +735,7 @@ class _AddReminderModalState extends State<_AddReminderModal> with SingleTickerP
                         : 'Select or enter party name',
                     style: TextStyle(
                       fontSize: 16,
-                      color: _selectedParty != null ? Colors.black87 : Colors.grey[600],
+                      color: _selectedParty != null ?AppColors.textSecondary : AppColors.textSecondary,
                     ),
                   ),
                   Icon(Icons.arrow_drop_down, color: Colors.grey[600]),
@@ -753,8 +756,8 @@ class _AddReminderModalState extends State<_AddReminderModal> with SingleTickerP
                     Text(
                       'Reminder Date *',
                       style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[600],
+                          fontSize: 14,
+                          color: AppColors.textSecondary
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -839,11 +842,10 @@ class _AddReminderModalState extends State<_AddReminderModal> with SingleTickerP
             child: _isLoading
                 ? const CircularProgressIndicator(color: Colors.white)
                 : const Text(
-                    'Set Reminder',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                  ),
+              'Set Reminder',
+              style: TextStyle(fontSize: 16,color: AppColors.textWhite, fontWeight: FontWeight.w600),
+            ),
           ),
-          const SizedBox(height: 16),
         ],
       ),
     );
@@ -861,7 +863,7 @@ class _AddReminderModalState extends State<_AddReminderModal> with SingleTickerP
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: Colors.blue,
+              color:AppColors.info,
             ),
           ),
           const SizedBox(height: 8),
@@ -869,17 +871,18 @@ class _AddReminderModalState extends State<_AddReminderModal> with SingleTickerP
             maxLines: 4,
             decoration: InputDecoration(
               hintText: 'Enter reminder notes for all parties',
+              hintStyle: TextStyle(color: AppColors.textSecondary,fontSize: 12),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: Colors.blue, width: 2),
+                borderSide: const BorderSide(color: AppColors.info, width: 2),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: Colors.blue, width: 2),
+                borderSide: const BorderSide(color: AppColors.info, width: 2),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: Colors.blue, width: 2),
+                borderSide: const BorderSide(color: AppColors.info, width: 2),
               ),
             ),
             onChanged: (value) {
@@ -901,8 +904,8 @@ class _AddReminderModalState extends State<_AddReminderModal> with SingleTickerP
                     Text(
                       'Reminder Date *',
                       style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[600],
+                          fontSize: 14,
+                          color: AppColors.textSecondary
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -987,9 +990,9 @@ class _AddReminderModalState extends State<_AddReminderModal> with SingleTickerP
             child: _isLoading
                 ? const CircularProgressIndicator(color: Colors.white)
                 : const Text(
-                    'Set Reminder',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                  ),
+              'Set Reminder',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600,color: AppColors.textWhite),
+            ),
           ),
           const SizedBox(height: 16),
         ],

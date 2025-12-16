@@ -1,11 +1,14 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
 import '../../../services/api_service.dart';
 import '../../../utils/app_colors.dart';
+import '../../../utils/appbar.dart';
 import '../../../utils/currency_formatter.dart';
 import '../../trips/screens/add_trip_from_dashboard_screen.dart';
 import 'supplier_detail_screen.dart';
 import 'supplier_balance_report_screen.dart';
+import 'package:transport_book_app/utils/toast_helper.dart';
+import 'package:transport_book_app/utils/app_loader.dart';
 
 class SupplierKhataScreen extends StatefulWidget {
   const SupplierKhataScreen({super.key});
@@ -43,7 +46,7 @@ class _SupplierKhataScreenState extends State<SupplierKhataScreen> {
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ToastHelper.showSnackBarToast(context, 
           SnackBar(content: Text('Error loading suppliers: $e')),
         );
       }
@@ -184,7 +187,7 @@ class _SupplierKhataScreenState extends State<SupplierKhataScreen> {
                 ElevatedButton(
                   onPressed: () async {
                     if (nameController.text.isEmpty || phoneController.text.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      ToastHelper.showSnackBarToast(context, 
                         const SnackBar(content: Text('Name and Phone are required')),
                       );
                       return;
@@ -197,12 +200,12 @@ class _SupplierKhataScreenState extends State<SupplierKhataScreen> {
 
                     if (result != null && mounted) {
                       Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      ToastHelper.showSnackBarToast(context, 
                         const SnackBar(content: Text('Supplier added successfully')),
                       );
                       _loadSuppliers();
                     } else if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      ToastHelper.showSnackBarToast(context, 
                         const SnackBar(content: Text('Failed to add supplier')),
                       );
                     }
@@ -278,14 +281,14 @@ class _SupplierKhataScreenState extends State<SupplierKhataScreen> {
         }
       } else {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
+          ToastHelper.showSnackBarToast(context, 
             const SnackBar(content: Text('Contact permission denied')),
           );
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ToastHelper.showSnackBarToast(context, 
           SnackBar(content: Text('Error accessing contacts: $e')),
         );
       }
@@ -301,12 +304,12 @@ class _SupplierKhataScreenState extends State<SupplierKhataScreen> {
     );
 
     if (result != null && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         const SnackBar(content: Text('Supplier added from contact')),
       );
       _loadSuppliers();
     } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         const SnackBar(content: Text('Failed to add supplier')),
       );
     }
@@ -324,7 +327,7 @@ class _SupplierKhataScreenState extends State<SupplierKhataScreen> {
   Color _getAvatarColor(int index) {
     final colors = [
       const Color(0xFFFF8C00),
-      const Color(0xFF4CAF50),
+      AppColors.primaryGreen,
       const Color(0xFF2196F3),
       const Color(0xFFE91E63),
       const Color(0xFF9C27B0),
@@ -337,12 +340,9 @@ class _SupplierKhataScreenState extends State<SupplierKhataScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        backgroundColor: AppColors.appBarColor,
-        foregroundColor: AppColors.appBarTextColor,
-        title: const Text('Suppliers'),
-        elevation: 0,
-        actions: const [],
+      appBar: CustomAppBar(
+        title: 'Suppliers',
+        showBackButton: true,
       ),
       body: Column(
         children: [
@@ -471,7 +471,7 @@ class _SupplierKhataScreenState extends State<SupplierKhataScreen> {
           // Supplier List
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? const Center(child: AppLoader())
                 : _filteredSuppliers.isEmpty
                     ? Center(
                         child: Column(
@@ -600,3 +600,5 @@ class _SupplierKhataScreenState extends State<SupplierKhataScreen> {
     );
   }
 }
+
+

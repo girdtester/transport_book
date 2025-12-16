@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../../../services/api_service.dart';
@@ -50,6 +50,24 @@ class _TruckDetailsScreenState extends State<TruckDetailsScreen> with WidgetsBin
 
   // Filter states for expenses
   final Set<String> _selectedExpenseTypes = {};
+
+  List<Widget> _buildCombinedList() {
+    List<Widget> widgets = [];
+
+    // Add trips (limit to 5)
+    int tripsToShow = _filteredTrips.length > 5 ? 5 : _filteredTrips.length;
+    for (int i = 0; i < tripsToShow; i++) {
+      widgets.add(_buildTripCard(_filteredTrips[i]));
+    }
+
+    // Add expenses (limit to 5)
+    int expensesToShow = _filteredExpenses.length > 5 ? 5 : _filteredExpenses.length;
+    for (int i = 0; i < expensesToShow; i++) {
+      widgets.add(_buildExpenseCard(_filteredExpenses[i]));
+    }
+
+    return widgets;
+  }
 
   @override
   void initState() {
@@ -256,33 +274,48 @@ class _TruckDetailsScreenState extends State<TruckDetailsScreen> with WidgetsBin
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
-        backgroundColor: AppColors.appBarColor,
-        foregroundColor: AppColors.appBarTextColor,
+        backgroundColor: AppColors.info,
         elevation: 0,
+        centerTitle: true,
+        automaticallyImplyLeading: false,
+
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            bottom: Radius.circular(20),
+          ),
+        ),
+
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: AppColors.appBarTextColor),
+          icon: const Icon(
+            Icons.arrow_back,
+            color: AppColors.textWhite,
+            size: 26,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
+
         title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               widget.truckNumber,
-              style: TextStyle(
-                color: AppColors.appBarTextColor,
+              style: const TextStyle(
+                color: AppColors.textWhite,
                 fontSize: 20,
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w700,
               ),
             ),
             if (truckDetails != null)
               Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Container(
                     width: 8,
                     height: 8,
                     decoration: BoxDecoration(
                       color: truckDetails!['status'] == 'On Trip'
-                          ? Colors.blue
+                          ? AppColors.info
                           : Colors.green,
                       shape: BoxShape.circle,
                     ),
@@ -291,7 +324,7 @@ class _TruckDetailsScreenState extends State<TruckDetailsScreen> with WidgetsBin
                   Text(
                     '${truckDetails!['status']} • ${truckDetails!['location'] ?? ''}',
                     style: TextStyle(
-                      color: AppColors.appBarTextColor.withOpacity(0.7),
+                      color: AppColors.textWhite.withOpacity(0.7),
                       fontSize: 12,
                     ),
                   ),
@@ -300,504 +333,576 @@ class _TruckDetailsScreenState extends State<TruckDetailsScreen> with WidgetsBin
           ],
         ),
         actions: [
-          TextButton.icon(
-            onPressed: () => _showEditTruckDialog(),
-            icon: Icon(Icons.edit, color: AppColors.appBarTextColor, size: 18),
-            label: Text(
-              'Edit',
-              style: TextStyle(color: AppColors.appBarTextColor),
+          IconButton(
+            icon: const Icon(
+              Icons.edit,
+              color: AppColors.textWhite,
             ),
+            onPressed: () => _showEditTruckDialog(),
           ),
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : truckDetails == null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.error_outline,
-                        size: 64,
-                        color: Colors.grey,
-                      ),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'Failed to load truck details',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.grey,
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      ElevatedButton.icon(
-                        onPressed: _loadAllData,
-                        icon: const Icon(Icons.refresh),
-                        label: const Text('Retry'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primaryGreen,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: 12,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _loadAllData,
-                  color: AppColors.primaryGreen,
-                  child: SingleChildScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: 16),
+        ? const Center(child: CircularProgressIndicator())
+        : truckDetails == null
+        ? Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(
+            Icons.error_outline,
+            size: 64,
+            color: Colors.grey,
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Failed to load truck details',
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.grey,
+            ),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: _loadAllData,
+            icon: const Icon(Icons.refresh),
+            label: const Text('Retry'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryGreen,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(
+                horizontal: 24,
+                vertical: 12,
+              ),
+            ),
+          ),
+        ],
+      ),
+    )
+        : RefreshIndicator(
+      onRefresh: _loadAllData,
+      color: AppColors.primaryGreen,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 16),
 
-                      // Driver Info
-                      if (truckDetails!['driver'] != null)
-                        Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 16),
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
+            // Driver Info
+            if (truckDetails != null)
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.withOpacity(0.2),
+                      blurRadius: 8,
+                      spreadRadius: 1,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // LEFT SIDE → Icon + Texts
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.local_gas_station,
+                            size: 30,
+                            color: Colors.grey[700],
                           ),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text(
-                                      'Driver Name',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.grey,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      truckDetails!['driver']['name'] ?? 'N/A',
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                          const SizedBox(width: 12),
+
+                          // Text + rupee grouped together
+                          RichText(
+                            text: TextSpan(
+                              style: const TextStyle(
+                                fontSize: 16,
+                                color: Colors.black,
+                                fontWeight: FontWeight.w500,
                               ),
-                              IconButton(
-                                icon: const Icon(Icons.phone, color: Colors.blue),
-                                onPressed: () {},
-                              ),
-                            ],
-                          ),
-                        ),
-
-                      const SizedBox(height: 16),
-
-                      // Action Grid
-                      Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 16),
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: GridView.count(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          crossAxisCount: 3,
-                          mainAxisSpacing: 12,
-                          crossAxisSpacing: 12,
-                          childAspectRatio: 1.1,
-                          children: [
-                            _buildActionCard('Diesel Book', Icons.local_gas_station,
-                                Colors.pink.shade50, Colors.red.shade400, 'Diesel'),
-                            _buildActionCard(
-                                'Documents', Icons.description, Colors.blue.shade50, Colors.blue.shade600, 'Documents Book'),
-                            _buildActionCard(
-                                'Maintenance\nBook', Icons.build, Colors.grey.shade100, Colors.grey.shade600, 'Maintenance'),
-                            _buildActionCard('Driver & Other\nexpenses',
-                                Icons.person, Colors.teal.shade50, Colors.teal.shade600, 'Driver Payment'),
-                            _buildActionCard(
-                                'EMI Book', Icons.calendar_today, Colors.purple.shade50, Colors.purple.shade600, 'EMI'),
-                            _buildActionCard(
-                                'Trip Book', Icons.local_shipping, Colors.blue.shade50, Colors.blue.shade700, 'Trip Book'),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(height: 24),
-
-                      // Profit & Loss Summary
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Text(
-                          'PROFIT & LOSS SUMMARY',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.grey.shade600,
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 12),
-
-                      Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 16),
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Column(
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                const Text('All Months'),
-                                ElevatedButton.icon(
-                                  onPressed: () async {
-                                    await Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => TruckProfitLossReportScreen(
-                                          truckId: widget.truckId,
-                                          truckNumber: widget.truckNumber,
-                                        ),
-                                      ),
-                                    );
-                                    // Always reload after returning
-                                    _loadAllData();
-                                  },
-                                  icon: const Icon(Icons.assessment, size: 16, color: Colors.white),
-                                  label: const Text('View P&L Report', style: TextStyle(color: Colors.white, fontSize: 13)),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.green[700],
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                    elevation: 2,
+                                const TextSpan(text: 'Diesel Balance: '),
+                                TextSpan(
+                                  text: '₹',
+                                  style: const TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.info, // Same as screenshot
+                                  ),
+                                ),
+                                const TextSpan(
+                                  text: '0',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 16),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceAround,
-                              children: [
-                                _buildStatColumn(
-                                  'Revenue',
-                                  '₹${_totalRevenue.toStringAsFixed(0)}',
-                                  Colors.black,
-                                ),
-                                _buildStatColumn(
-                                  'Expenses',
-                                  '₹${_totalExpenses.toStringAsFixed(0)}',
-                                  Colors.black,
-                                ),
-                                _buildStatColumn(
-                                  'Profit',
-                                  '₹${_totalProfit.toStringAsFixed(0)}',
-                                  _totalProfit >= 0 ? Colors.green : Colors.red,
-                                ),
-                              ],
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // RIGHT SIDE → Recharge Button
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primaryGreen,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                      ),
+                      onPressed: () {},
+                      child: const Text('Recharge'),
+                    ),
+                  ],
+                ),
+              ),
+
+            SizedBox(height: 10,),
+            if (truckDetails != null && truckDetails!['driver'] != null)
+
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.withOpacity(0.2),
+                      blurRadius: 8,
+                      spreadRadius: 1,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Driver Name',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
                             ),
-                            const SizedBox(height: 16),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceAround,
-                              children: [
-                                _buildStatColumn(
-                                  'Trip Days',
-                                  '$_tripDays',
-                                  Colors.black,
-                                ),
-                                _buildStatColumn(
-                                  'Refuel',
-                                  '$_refuelCount',
-                                  Colors.black,
-                                ),
-                                _buildStatColumn(
-                                  'Trips Started',
-                                  '$_tripsStarted',
-                                  Colors.black,
-                                ),
-                              ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            truckDetails!['driver']['name'] ?? 'N/A',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
                             ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.grey.shade300)
+                    ),
+                      child: IconButton(
+                        icon: const Icon(Icons.phone, color: AppColors.info),
+                        onPressed: () {},
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+            const SizedBox(height: 16),
+
+            // Action Grid
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: GridView.count(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisCount: 4,
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
+                childAspectRatio: 0.9,
+                children: [
+                  // New way - with image asset
+                  _buildActionCard('Diesel Book', Icons.local_gas_station,
+                      Colors.pink.shade50, Colors.pink.shade600, 'Diesel'),
+                  _buildActionCard(
+                      'Documents', Icons.file_copy_sharp, AppColors.info.withOpacity(0.1), AppColors.info.withOpacity(0.8), 'Documents Book'),
+                  _buildActionCard(
+                      'Maintenance\nBook', Icons.build, Colors.grey.shade100, Colors.grey.shade700, 'Maintenance'),
+                  _buildActionCard('Driver & Other\nexpenses',
+                      Icons.person, Colors.teal.shade50, Colors.teal.shade600, 'Driver Payment'),
+                  _buildActionCard(
+                      'EMI Book', Icons.calendar_month, Colors.purple.shade50, Colors.purple.shade600, 'EMI'),
+                  _buildActionCard(
+                      'Trip Book', Icons.local_shipping, AppColors.info.withOpacity(0.1), AppColors.info, 'Trip Book'),
+                  _buildActionCard(
+                      'Fastag', Icons.credit_card, Colors.orange.shade50, Colors.orange.shade700, 'Fastag'),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // Profit & Loss Summary
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                'PROFIT & LOSS SUMMARY',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Dropdown-style button for "All Months"
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey.shade300),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'All Mont...',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey.shade700,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Icon(Icons.arrow_drop_down, color: Colors.grey.shade700, size: 20),
                           ],
                         ),
                       ),
+                      // View Profit Report button
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          TextButton(
+                            onPressed: () async {
+                              await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => TruckProfitLossReportScreen(
+                                    truckId: widget.truckId,
+                                    truckNumber: widget.truckNumber,
+                                  ),
+                                ),
+                              );
+                              _loadAllData();
+                            },
+                            child: Text(
+                              "View Profit Report",
+                              style: TextStyle(
+                                color: AppColors.info,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                          Icon(Icons.chevron_right, color: AppColors.info, size: 18),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  // First row: Revenue, Expenses, Profit
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      Expanded(
+                        child: _buildStatColumn(
+                          'Revenue',
+                          '₹${_totalRevenue.toStringAsFixed(0)}',
+                          AppColors.info,
+                        ),
+                      ),
+                      Expanded(
+                        child: _buildStatColumn(
+                          'Expenses',
+                          '₹${_totalExpenses.toStringAsFixed(0)}',
+                          Colors.black,
+                        ),
+                      ),
+                      Expanded(
+                        child: _buildStatColumn(
+                          'Profit',
+                          '₹${_totalProfit.toStringAsFixed(0)}',
+                          _totalProfit >= 0 ? Colors.green : Colors.red,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  // Second row: Trip Days, Refuel, Trips Started
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      Expanded(
+                        child: _buildStatColumn(
+                          'Trip Days',
+                          '$_tripDays',
+                          Colors.black,
+                        ),
+                      ),
+                      Expanded(
+                        child: _buildStatColumn(
+                          'Refuel',
+                          _refuelCount > 0 ? '$_refuelCount' : '--',
+                          Colors.black,
+                        ),
+                      ),
+                      Expanded(
+                        child: _buildStatColumn(
+                          'Trips Started',
+                          '$_tripsStarted Trip',
+                          Colors.black,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
 
-                      const SizedBox(height: 24),
+            const SizedBox(height: 24),
 
-                      // Trips & Expenses Header
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
+            // Trips & Expenses Header
+            const SizedBox(height: 24),
+
+// Trips & Expenses Header - REMOVED "Clear Filters" button
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                'TRIPS & EXPENSES',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey.shade600,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+// Filter Dropdowns Row
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  // Month Filter Dropdown
+                  SizedBox(
+                    width: 120, // 👈 set the width you want
+                    child: InkWell(
+                      onTap: () => _showTripMonthFilter(),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          border: Border.all(color: Colors.grey.shade300),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              'TRIPS & EXPENSES',
+                              _selectedTripMonth ?? 'All Mont...',
                               style: TextStyle(
                                 fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.grey.shade600,
+                                color: Colors.grey.shade700,
+                                fontWeight: FontWeight.w500,
                               ),
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            TextButton(
-                              onPressed: () {
-                                setState(() {
-                                  _selectedTripMonth = null;
-                                  _selectedExpenseTypes.clear();
-                                  _filterTrips();
-                                  _filterExpenses();
-                                });
-                              },
-                              child: const Text(
-                                'Clear Filters',
-                                style: TextStyle(fontSize: 12),
-                              ),
-                            ),
+                            Icon(Icons.arrow_drop_down, color: Colors.grey.shade600, size: 20),
                           ],
                         ),
                       ),
-
-                      const SizedBox(height: 12),
-
-                      // Trips Section
-                      Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 16),
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text(
-                                  'Trips',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                Row(
-                                  children: [
-                                    TextButton.icon(
-                                      onPressed: () => _showTripMonthFilter(),
-                                      icon: const Icon(Icons.filter_list, size: 16),
-                                      label: Text(
-                                        _selectedTripMonth ?? 'All Months',
-                                        style: const TextStyle(fontSize: 12),
-                                      ),
-                                    ),
-                                    TextButton(
-                                      onPressed: () async {
-                                        await Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) => TripBookScreen(
-                                              truckId: widget.truckId,
-                                              truckNumber: widget.truckNumber,
-                                            ),
-                                          ),
-                                        );
-                                        // Always reload after returning
-                                        _loadAllData();
-                                      },
-                                      child: const Text(
-                                        'View All >',
-                                        style: TextStyle(fontSize: 12),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                            const Divider(),
-                            const SizedBox(height: 8),
-                            if (_filteredTrips.isEmpty)
-                              const Center(
-                                child: Padding(
-                                  padding: EdgeInsets.all(20),
-                                  child: Text(
-                                    'No trips found',
-                                    style: TextStyle(color: Colors.grey),
-                                  ),
-                                ),
-                              )
-                            else
-                              ...List.generate(
-                                _filteredTrips.length > 5 ? 5 : _filteredTrips.length,
-                                (index) {
-                                  final trip = _filteredTrips[index];
-                                  return _buildTripCard(trip);
-                                },
-                              ),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(height: 16),
-
-                      // Expenses Section
-                      Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 16),
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text(
-                                  'Expenses',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                Row(
-                                  children: [
-                                    TextButton.icon(
-                                      onPressed: () => _showExpenseTypeFilter(),
-                                      icon: const Icon(Icons.filter_list, size: 16),
-                                      label: Text(
-                                        _selectedExpenseTypes.isEmpty
-                                            ? 'All Types'
-                                            : '${_selectedExpenseTypes.length} Selected',
-                                        style: const TextStyle(fontSize: 12),
-                                      ),
-                                    ),
-                                    TextButton(
-                                      onPressed: () async {
-                                        await Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) => ExpenseListScreen(
-                                              truckId: widget.truckId,
-                                              truckNumber: widget.truckNumber,
-                                              expenseType: null, // Show all expenses
-                                            ),
-                                          ),
-                                        );
-                                        // Always reload after returning
-                                        _loadAllData();
-                                      },
-                                      child: const Text(
-                                        'View All >',
-                                        style: TextStyle(fontSize: 12),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                            const Divider(),
-                            const SizedBox(height: 8),
-                            if (_filteredExpenses.isEmpty)
-                              const Center(
-                                child: Padding(
-                                  padding: EdgeInsets.all(20),
-                                  child: Text(
-                                    'No expenses found',
-                                    style: TextStyle(color: Colors.grey),
-                                  ),
-                                ),
-                              )
-                            else
-                              ...List.generate(
-                                _filteredExpenses.length > 5 ? 5 : _filteredExpenses.length,
-                                (index) {
-                                  final expense = _filteredExpenses[index];
-                                  return _buildExpenseCard(expense);
-                                },
-                              ),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(height: 100),
-                    ],
+                    ),
                   ),
-                ),
+                  const SizedBox(width: 12),
+                  // Trips & Expenses Filter Dropdown
+                  SizedBox(
+                    width: 160, // 👈 adjust as needed
+                    child: InkWell(
+                      onTap: () => _showExpenseTypeFilter(),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          border: Border.all(color: Colors.grey.shade300),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                _selectedExpenseTypes.isEmpty
+                                    ? 'All Trips & Expenses'
+                                    : '${_selectedExpenseTypes.length} Selected',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.grey.shade700,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            Icon(Icons.arrow_drop_down, color: Colors.grey.shade600, size: 20),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
+            ),
+
+            const SizedBox(height: 12),
+
+// Combined Trips & Expenses List
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Build combined list of trips and expenses
+                  if (_filteredTrips.isEmpty && _filteredExpenses.isEmpty)
+                    const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(20),
+                        child: Text(
+                          'No trips or expenses found',
+                          style: TextStyle(color: Colors.grey),
+                        ),
+                      ),
+                    )
+                  else
+                    ..._buildCombinedList(),
+                ],
+              ),
+            ),
+
+
+            const SizedBox(height: 100),
+          ],
+        ),
+      ),
+    ),
       floatingActionButton: _isLoading
           ? null
           : Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                FloatingActionButton.extended(
-                  heroTag: 'add_trip_button',
-                  onPressed: () async {
-                    // Try to determine truck type from truckDetails, or show picker
-                    String truckType = truckDetails?['type']?.toString() ?? 'Own';
-
-                    // If truck details are not loaded, ask user to select type
-                    if (truckDetails == null) {
-                      final selectedType = await _showTruckTypeDialog();
-                      if (selectedType == null) return;
-                      truckType = selectedType;
-                    }
-
-                    await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => AddTripScreen(
-                          truckId: widget.truckId,
-                          truckNumber: widget.truckNumber,
-                          truckType: truckType,
-                        ),
-                      ),
-                    );
-                    // Always reload after returning, regardless of result
-                    _loadAllData();
-                  },
-                  backgroundColor: AppColors.primaryGreen,
-                  icon: const Icon(Icons.add_circle_outline, color: Colors.white, size: 22),
-                  label: const Text(
-                    'Add Trip',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                FloatingActionButton.extended(
-                  heroTag: 'add_expense_button',
-                  onPressed: () async {
-                    await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => AddExpenseScreen(
-                          truckId: widget.truckId,
-                          truckNumber: widget.truckNumber,
-                        ),
-                      ),
-                    );
-                    // Always reload after returning, regardless of result
-                    _loadAllData();
-                  },
-                  backgroundColor: Colors.blue,
-                  icon: const Icon(Icons.add_circle_outline, color: Colors.white, size: 22),
-                  label: const Text(
-                    'Add Expense',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                ),
-              ],
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          FloatingActionButton.extended(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(30), // circular border
             ),
+            heroTag: 'add_trip_button',
+            onPressed: () async {
+              // Try to determine truck type from truckDetails, or show picker
+              String truckType = truckDetails?['type']?.toString() ?? 'Own';
+
+              // If truck details are not loaded, ask user to select type
+              if (truckDetails == null) {
+                final selectedType = await _showTruckTypeDialog();
+                if (selectedType == null) return;
+                truckType = selectedType;
+              }
+
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => AddTripScreen(
+                    truckId: widget.truckId,
+                    truckNumber: widget.truckNumber,
+                    truckType: truckType,
+                  ),
+                ),
+              );
+              // Always reload after returning, regardless of result
+              _loadAllData();
+            },
+            backgroundColor: AppColors.info,
+            icon: const Icon(Icons.add_circle_rounded, color: Colors.white, size: 22),
+            label: const Text(
+              'Add ',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+          const SizedBox(width: 16),
+          FloatingActionButton.extended(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(30), // circular border
+            ),
+            heroTag: 'add_expense_button',
+            onPressed: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => AddExpenseScreen(
+                    truckId: widget.truckId,
+                    truckNumber: widget.truckNumber,
+                  ),
+                ),
+              );
+              // Always reload after returning, regardless of result
+              _loadAllData();
+            },
+            backgroundColor: AppColors.info,
+            icon: const Icon(Icons.auto_graph, color: Colors.white, size: 22),
+            label: const Text(
+              'Add Expense',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }
@@ -811,11 +916,10 @@ class _TruckDetailsScreenState extends State<TruckDetailsScreen> with WidgetsBin
             builder: (context) => TripDetailsScreen(tripId: trip['id'] ?? 1),
           ),
         );
-        // Reload data when returning from trip details
         _loadAllData();
       },
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
+        margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           border: Border.all(color: Colors.grey.shade200),
@@ -823,67 +927,69 @@ class _TruckDetailsScreenState extends State<TruckDetailsScreen> with WidgetsBin
         ),
         child: Row(
           children: [
-            Icon(
-              Icons.local_shipping,
-              size: 32,
-              color: Colors.grey.shade600,
+            // Truck icon
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.info.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                Icons.local_shipping,
+                size: 24,
+                color: AppColors.info,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 7,
-                        height: 7,
-                        decoration: BoxDecoration(
-                          color: trip['status'] == 'Settled' ? Colors.green : Colors.orange,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        trip['status']?.toString() ?? 'N/A',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
+                  Text(
+                    trip['status']?.toString() ?? 'N/A',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: trip['status'] == 'Settled' ? Colors.green : Colors.orange,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '${trip['origin'] ?? 'N/A'} → ${trip['destination'] ?? 'N/A'}',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey.shade700,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    trip['partyName']?.toString() ?? 'N/A',
+                    trip['startDate']?.toString() ?? 'N/A',
                     style: TextStyle(
                       fontSize: 11,
                       color: Colors.grey.shade600,
                     ),
                   ),
+                  const SizedBox(height: 2),
                   Text(
-                    trip['startDate']?.toString() ?? 'N/A',
+                    '${trip['origin'] ?? 'N/A'} - ${trip['destination'] ?? 'N/A'}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey.shade700,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    trip['partyName']?.toString() ?? 'N/A',
                     style: TextStyle(
                       fontSize: 11,
                       color: Colors.grey.shade500,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
             ),
+            const SizedBox(width: 8),
             Text(
               '₹${trip['freightAmount']?.toString() ?? '0'}',
               style: const TextStyle(
-                fontSize: 14,
+                fontSize: 15,
                 fontWeight: FontWeight.bold,
+                color: Colors.black,
               ),
             ),
           ],
@@ -894,7 +1000,7 @@ class _TruckDetailsScreenState extends State<TruckDetailsScreen> with WidgetsBin
 
   Widget _buildExpenseCard(Map<String, dynamic> expense) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         border: Border.all(color: Colors.grey.shade200),
@@ -902,10 +1008,18 @@ class _TruckDetailsScreenState extends State<TruckDetailsScreen> with WidgetsBin
       ),
       child: Row(
         children: [
-          Icon(
-            Icons.receipt,
-            size: 32,
-            color: Colors.grey.shade600,
+          // Receipt icon with background
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              Icons.receipt_long,
+              size: 24,
+              color: Colors.grey.shade600,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -927,23 +1041,16 @@ class _TruckDetailsScreenState extends State<TruckDetailsScreen> with WidgetsBin
                     color: Colors.grey.shade600,
                   ),
                 ),
-                if (expense['paymentMode'] != null)
-                  Text(
-                    'Payment: ${expense['paymentMode']}',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.grey.shade500,
-                    ),
-                  ),
               ],
             ),
           ),
+          const SizedBox(width: 8),
           Text(
             '₹${expense['amount']?.toString() ?? '0'}',
             style: const TextStyle(
-              fontSize: 14,
+              fontSize: 15,
               fontWeight: FontWeight.bold,
-              color: Colors.red,
+              color: Colors.black,
             ),
           ),
         ],
@@ -1264,11 +1371,17 @@ class _TruckDetailsScreenState extends State<TruckDetailsScreen> with WidgetsBin
     return types.toList()..sort();
   }
 
-  Widget _buildActionCard(String label, IconData icon, Color bgColor, Color iconColor, String action) {
+  Widget _buildActionCard(
+      String label,
+      IconData icon,                 // Only IconData now
+      Color bgColor,
+      Color? iconColor,             // Made optional
+      String action,
+      ) {
     return InkWell(
+      borderRadius: BorderRadius.circular(12),
       onTap: () async {
         if (action == 'Diesel') {
-          // Open diesel expense list
           await Navigator.push(
             context,
             MaterialPageRoute(
@@ -1279,7 +1392,6 @@ class _TruckDetailsScreenState extends State<TruckDetailsScreen> with WidgetsBin
               ),
             ),
           );
-          // Always reload after returning
           _loadAllData();
         } else if (action == 'Documents Book') {
           Navigator.push(
@@ -1302,21 +1414,18 @@ class _TruckDetailsScreenState extends State<TruckDetailsScreen> with WidgetsBin
               ),
             ),
           );
-          // Always reload after returning
           _loadAllData();
         } else if (action == 'Driver Payment') {
-          // Show ALL truck-related expenses (no expenseType filter)
           await Navigator.push(
             context,
             MaterialPageRoute(
               builder: (context) => ExpenseListScreen(
                 truckId: widget.truckId,
                 truckNumber: widget.truckNumber,
-                expenseType: null, // Show all expenses for this truck
+                expenseType: null,
               ),
             ),
           );
-          // Always reload after returning
           _loadAllData();
         } else if (action == 'EMI') {
           Navigator.push(
@@ -1338,12 +1447,11 @@ class _TruckDetailsScreenState extends State<TruckDetailsScreen> with WidgetsBin
               ),
             ),
           );
-          // Always reload after returning
           _loadAllData();
         }
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4), // Reduced horizontal padding for wider cards
         decoration: BoxDecoration(
           color: bgColor,
           borderRadius: BorderRadius.circular(12),
@@ -1351,13 +1459,15 @@ class _TruckDetailsScreenState extends State<TruckDetailsScreen> with WidgetsBin
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 36, color: iconColor),
-            const SizedBox(height: 6),
+            // Icon – using Material Icons
+            Icon(icon, size: 32, color: iconColor ?? Colors.grey),
+
+            const SizedBox(height: 10),
             Text(
               label,
               textAlign: TextAlign.center,
               style: const TextStyle(
-                fontSize: 11,
+                fontSize: 9,
                 fontWeight: FontWeight.w500,
                 color: Colors.black87,
               ),
@@ -1369,26 +1479,32 @@ class _TruckDetailsScreenState extends State<TruckDetailsScreen> with WidgetsBin
       ),
     );
   }
-
   Widget _buildStatColumn(String label, String value, Color valueColor) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               label,
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.grey.shade600,
+                fontWeight: FontWeight.w500,
+              ),
             ),
             const SizedBox(width: 4),
-            const Icon(Icons.info_outline, size: 14, color: Colors.grey),
+            Icon(Icons.info_outline, size: 16, color: Colors.grey.shade400),
           ],
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 6),
         Text(
           value,
           style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
             color: valueColor,
           ),
         ),
@@ -1437,122 +1553,159 @@ class _TruckDetailsScreenState extends State<TruckDetailsScreen> with WidgetsBin
 
   void _showEditTruckDialog() {
     final truckNumberController = TextEditingController(text: widget.truckNumber);
+    String selectedTruckType = truckDetails?['type']?.toString() ?? 'Own';
+
+    final List<String> truckTypes = ['Own', 'Market'];
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-        ),
-        child: Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
           ),
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Edit Truck Details',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
+          child: Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Edit Truck Details',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              TextField(
-                controller: truckNumberController,
-                decoration: const InputDecoration(
-                  labelText: 'Truck Number',
-                  hintText: 'Enter truck number',
-                  border: OutlineInputBorder(),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
                 ),
-                textCapitalization: TextCapitalization.characters,
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9\s]')),
-                  TextInputFormatter.withFunction((oldValue, newValue) {
-                    return TextEditingValue(
-                      text: newValue.text.toUpperCase(),
-                      selection: newValue.selection,
-                    );
-                  }),
-                ],
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: () async {
-                    if (truckNumberController.text.isNotEmpty) {
-                      // Call API to update truck number
-                      final success = await ApiService.updateTruck(
-                        truckId: widget.truckId,
-                        truckNumber: truckNumberController.text,
+                const SizedBox(height: 20),
+                TextField(
+                  controller: truckNumberController,
+                  decoration: const InputDecoration(
+                    labelText: 'Truck Number',
+                    hintText: 'Enter truck number',
+                    border: OutlineInputBorder(),
+                  ),
+                  textCapitalization: TextCapitalization.characters,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9\s]')),
+                    TextInputFormatter.withFunction((oldValue, newValue) {
+                      return TextEditingValue(
+                        text: newValue.text.toUpperCase(),
+                        selection: newValue.selection,
                       );
-
-                      if (success && mounted) {
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Truck updated successfully'),
-                            backgroundColor: Colors.green,
-                          ),
-                        );
-                        // Reload the screen with new data
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => TruckDetailsScreen(
-                              truckId: widget.truckId,
-                              truckNumber: truckNumberController.text,
-                            ),
-                          ),
-                        );
-                      } else if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Failed to update truck'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                      }
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primaryGreen,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                    }),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                // Truck Type Dropdown
+                DropdownButtonFormField<String>(
+                  value: selectedTruckType,
+                  decoration: const InputDecoration(
+                    labelText: 'Truck Type',
+                    border: OutlineInputBorder(),
                   ),
-                  child: const Text(
-                    'Save Changes',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
+                  items: truckTypes.map((type) {
+                    return DropdownMenuItem<String>(
+                      value: type,
+                      child: Row(
+                        children: [
+                          Icon(
+                            type == 'Own' ? Icons.check_circle : Icons.local_shipping,
+                            color: type == 'Own' ? Colors.green : Colors.orange,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(type == 'Own' ? 'Own Truck' : 'Market Truck'),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    setModalState(() {
+                      selectedTruckType = value ?? 'Own';
+                    });
+                  },
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      if (truckNumberController.text.isNotEmpty) {
+                        // Call API to update truck
+                        final success = await ApiService.updateTruck(
+                          truckId: widget.truckId,
+                          truckNumber: truckNumberController.text,
+                          truckType: selectedTruckType,
+                        );
+
+                        if (success && mounted) {
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Truck updated successfully'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                          // Reload the screen with new data
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => TruckDetailsScreen(
+                                truckId: widget.truckId,
+                                truckNumber: truckNumberController.text,
+                              ),
+                            ),
+                          );
+                        } else if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Failed to update truck'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryGreen,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'Save Changes',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 16),
-            ],
+                const SizedBox(height: 16),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 }
+

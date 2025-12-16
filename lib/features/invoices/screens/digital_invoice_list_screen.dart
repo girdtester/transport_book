@@ -1,5 +1,6 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:transport_book_app/utils/appbar.dart';
 import '../../../services/api_service.dart';
 import '../../../utils/app_colors.dart';
 import 'invoice_details_screen.dart';
@@ -84,7 +85,9 @@ class _DigitalInvoiceListScreenState extends State<DigitalInvoiceListScreen> {
   }
 
   void _filterInvoices(String query) {
-    _searchQuery = query;
+    setState(() {
+      _searchQuery = query;
+    });
     _applyFilters();
   }
 
@@ -124,21 +127,39 @@ class _DigitalInvoiceListScreenState extends State<DigitalInvoiceListScreen> {
       case 'Pending':
         return Colors.orange;
       case 'Partially Paid':
-        return Colors.blue;
+        return AppColors.info;
       default:
         return Colors.grey;
     }
+  }
+
+  int _getActiveFiltersCount() {
+    int count = 0;
+    if (_selectedFilter != 'All') count++;
+    if (_searchQuery.isNotEmpty) count++;
+    return count;
+  }
+
+  bool _hasActiveFilters() {
+    return _getActiveFiltersCount() > 0;
+  }
+
+  void _clearFilters() {
+    setState(() {
+      _selectedFilter = 'All';
+      _searchQuery = '';
+    });
+    _applyFilters();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        backgroundColor: AppColors.appBarColor,
-        foregroundColor: AppColors.appBarTextColor,
-        title: const Text('Invoices'),
-        elevation: 0,
+      appBar: CustomAppBar(title: "Invoices",onBack: () {
+        Navigator.pop(context);
+      },
+
       ),
       body: Column(
         children: [
@@ -153,7 +174,7 @@ class _DigitalInvoiceListScreenState extends State<DigitalInvoiceListScreen> {
                     title: 'All Invoices',
                     count: _getFilterCount('All'),
                     isSelected: _selectedFilter == 'All',
-                    color: Colors.blue,
+                    color: AppColors.info,
                     onTap: () => _setFilter('All'),
                   ),
                 ),
@@ -163,7 +184,7 @@ class _DigitalInvoiceListScreenState extends State<DigitalInvoiceListScreen> {
                     title: 'Paid Invoices',
                     count: _getFilterCount('Paid'),
                     isSelected: _selectedFilter == 'Paid',
-                    color: Colors.green,
+                    color: AppColors.lightGreen,
                     onTap: () => _setFilter('Paid'),
                   ),
                 ),
@@ -173,7 +194,7 @@ class _DigitalInvoiceListScreenState extends State<DigitalInvoiceListScreen> {
                     title: 'Unpaid Invoices',
                     count: _getFilterCount('Unpaid'),
                     isSelected: _selectedFilter == 'Unpaid',
-                    color: Colors.red,
+                    color: AppColors.error,
                     onTap: () => _setFilter('Unpaid'),
                   ),
                 ),
@@ -186,6 +207,7 @@ class _DigitalInvoiceListScreenState extends State<DigitalInvoiceListScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             color: Colors.white,
             child: TextField(
+              controller: TextEditingController(text: _searchQuery),
               onChanged: _filterInvoices,
               decoration: InputDecoration(
                 hintText: 'Search Invoice No, Party',
@@ -205,6 +227,45 @@ class _DigitalInvoiceListScreenState extends State<DigitalInvoiceListScreen> {
             ),
           ),
 
+          // Filter Applied Banner
+          if (_hasActiveFilters())
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              color: AppColors.info.withOpacity(0.1),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.check_circle,
+                    color: AppColors.info,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '${_getActiveFiltersCount()} Filter${_getActiveFiltersCount() == 1 ? '' : 's'} has been applied',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppColors.info,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: _clearFilters,
+                    child: Text(
+                      'Clear',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppColors.info,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
           // Section Header with Sort
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -217,7 +278,7 @@ class _DigitalInvoiceListScreenState extends State<DigitalInvoiceListScreen> {
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
-                    color: Colors.black87,
+                    color: AppColors.textPrimary,
                   ),
                 ),
                 InkWell(
@@ -228,7 +289,7 @@ class _DigitalInvoiceListScreenState extends State<DigitalInvoiceListScreen> {
                         _sortLatestToOldest ? 'Latest to Oldest' : 'Oldest to Latest',
                         style: const TextStyle(
                           fontSize: 14,
-                          color: Colors.blue,
+                          color: AppColors.info,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -236,7 +297,7 @@ class _DigitalInvoiceListScreenState extends State<DigitalInvoiceListScreen> {
                       Icon(
                         _sortLatestToOldest ? Icons.arrow_downward : Icons.arrow_upward,
                         size: 16,
-                        color: Colors.blue,
+                        color: AppColors.info,
                       ),
                     ],
                   ),
@@ -250,43 +311,43 @@ class _DigitalInvoiceListScreenState extends State<DigitalInvoiceListScreen> {
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _filteredInvoices.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.receipt_long_outlined,
-                              size: 64,
-                              color: Colors.grey[400],
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              _searchQuery.isEmpty
-                                  ? 'No invoices found'
-                                  : 'No invoices match your search',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                    : RefreshIndicator(
-                        onRefresh: _loadInvoices,
-                        child: ListView.builder(
-                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 80),
-                          itemCount: _filteredInvoices.length,
-                          itemBuilder: (context, index) {
-                            final invoice = _filteredInvoices[index];
-                            return _buildInvoiceCard(invoice);
-                          },
-                        ),
-                      ),
+                ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.receipt_long_outlined,
+                    size: 64,
+                    color: Colors.grey[400],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    _searchQuery.isEmpty
+                        ? 'No invoices found'
+                        : 'No invoices match your search',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            )
+                : RefreshIndicator(
+              onRefresh: _loadInvoices,
+              child: ListView.builder(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 80),
+                itemCount: _filteredInvoices.length,
+                itemBuilder: (context, index) {
+                  final invoice = _filteredInvoices[index];
+                  return _buildInvoiceCard(invoice);
+                },
+              ),
+            ),
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: FloatingActionButton.extended(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
         onPressed: _showCreateInvoiceBottomSheet,
         backgroundColor: const Color(0xFF2E8B57),
         foregroundColor: Colors.white,
@@ -304,39 +365,44 @@ class _DigitalInvoiceListScreenState extends State<DigitalInvoiceListScreen> {
     required Color color,
     required VoidCallback onTap,
   }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: isSelected ? color : Colors.grey.shade300,
-            width: isSelected ? 2 : 1,
+    return Expanded( // Add this to make all cards equal width
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: isSelected ? color : Colors.grey.shade300,
+              width: isSelected ? 2 : 1,
+            ),
           ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 12,
-                color: isSelected ? color : Colors.grey[700],
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min, // Add this
+            children: [
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 9.5,
+                  color: isSelected ? color : AppColors.textSecondary,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                ),
+                maxLines: 2, // Allow text to wrap if needed
+                overflow: TextOverflow.ellipsis,
               ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              count.toString(),
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: isSelected ? color : Colors.black,
+              const SizedBox(height: 8),
+              Text(
+                count.toString(),
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: isSelected ? color : AppColors.textPrimary,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -396,7 +462,7 @@ class _DigitalInvoiceListScreenState extends State<DigitalInvoiceListScreen> {
                         invoice['invoiceNumber']?.toString() ?? '',
                         style: TextStyle(
                           fontSize: 14,
-                          color: Colors.grey[600],
+                          color: AppColors.textSecondary,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -404,8 +470,8 @@ class _DigitalInvoiceListScreenState extends State<DigitalInvoiceListScreen> {
                         invoice['partyName']?.toString() ?? '',
                         style: const TextStyle(
                           fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
+                          fontWeight: FontWeight.w600,
+                          color:AppColors.textPrimary,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -413,7 +479,7 @@ class _DigitalInvoiceListScreenState extends State<DigitalInvoiceListScreen> {
                         formattedDate,
                         style: TextStyle(
                           fontSize: 14,
-                          color: Colors.grey[600],
+                          color: AppColors.textSecondary,
                         ),
                       ),
                     ],
@@ -425,9 +491,9 @@ class _DigitalInvoiceListScreenState extends State<DigitalInvoiceListScreen> {
                     Text(
                       '₹${totalAmount.toStringAsFixed(0)}',
                       style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -437,15 +503,15 @@ class _DigitalInvoiceListScreenState extends State<DigitalInvoiceListScreen> {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: isPaid ? Colors.green.shade100 : Colors.orange.shade100,
+                        color: isPaid ? AppColors.primaryGreen : AppColors.error,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
                         isPaid ? 'Paid' : 'Unpaid',
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: isPaid ? Colors.green.shade700 : Colors.orange.shade700,
+                          color: Colors.white,
                         ),
                       ),
                     ),
@@ -660,7 +726,7 @@ class _CreateInvoiceSheetState extends State<_CreateInvoiceSheet> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFF2E8B57),
+                color: AppColors.primaryGreen,
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(20),
                   topRight: Radius.circular(20),
@@ -673,12 +739,12 @@ class _CreateInvoiceSheetState extends State<_CreateInvoiceSheet> {
                     'Create Invoice',
                     style: TextStyle(
                       fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.textWhite,
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
+                    icon: const Icon(Icons.close, color: AppColors.textWhite),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ],
@@ -701,7 +767,7 @@ class _CreateInvoiceSheetState extends State<_CreateInvoiceSheet> {
                       'Invoice Number',
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.grey[600],
+                        color: AppColors.textSecondary,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -715,8 +781,9 @@ class _CreateInvoiceSheetState extends State<_CreateInvoiceSheet> {
                       child: Text(
                         _invoiceNumber,
                         style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimary
                         ),
                       ),
                     ),
@@ -727,7 +794,7 @@ class _CreateInvoiceSheetState extends State<_CreateInvoiceSheet> {
                       'Select Party',
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.grey[600],
+                        color: AppColors.textSecondary,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -771,7 +838,7 @@ class _CreateInvoiceSheetState extends State<_CreateInvoiceSheet> {
                                 'Invoice Date',
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: Colors.grey[600],
+                                  color: AppColors.textSecondary,
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
@@ -818,7 +885,7 @@ class _CreateInvoiceSheetState extends State<_CreateInvoiceSheet> {
                                 'Due Date',
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: Colors.grey[600],
+                                  color: AppColors.textSecondary,
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
@@ -893,50 +960,50 @@ class _CreateInvoiceSheetState extends State<_CreateInvoiceSheet> {
                         ),
                         child: _getPartTrips().isEmpty
                             ? const Padding(
-                                padding: EdgeInsets.all(24),
-                                child: Center(
-                                  child: Text(
-                                    'No trips found for this party',
-                                    style: TextStyle(color: Colors.grey),
-                                  ),
-                                ),
-                              )
+                          padding: EdgeInsets.all(24),
+                          child: Center(
+                            child: Text(
+                              'No trips found for this party',
+                              style: TextStyle(color: Colors.grey),
+                            ),
+                          ),
+                        )
                             : ListView.builder(
-                                shrinkWrap: true,
-                                itemCount: _getPartTrips().length,
-                                itemBuilder: (context, index) {
-                                  final trip = _getPartTrips()[index];
-                                  final isSelected = _selectedTrips.contains(trip);
+                          shrinkWrap: true,
+                          itemCount: _getPartTrips().length,
+                          itemBuilder: (context, index) {
+                            final trip = _getPartTrips()[index];
+                            final isSelected = _selectedTrips.contains(trip);
 
-                                  return CheckboxListTile(
-                                    dense: true,
-                                    value: isSelected,
-                                    onChanged: (value) {
-                                      setState(() {
-                                        if (value == true) {
-                                          _selectedTrips.add(trip);
-                                        } else {
-                                          _selectedTrips.remove(trip);
-                                        }
-                                      });
-                                    },
-                                    title: Text(
-                                      '${trip['origin']} → ${trip['destination']}',
-                                      style: const TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    subtitle: Text(
-                                      '${trip['truckNumber']} • ₹${trip['freightAmount']}',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.grey[600],
-                                      ),
-                                    ),
-                                  );
-                                },
+                            return CheckboxListTile(
+                              dense: true,
+                              value: isSelected,
+                              onChanged: (value) {
+                                setState(() {
+                                  if (value == true) {
+                                    _selectedTrips.add(trip);
+                                  } else {
+                                    _selectedTrips.remove(trip);
+                                  }
+                                });
+                              },
+                              title: Text(
+                                '${trip['origin']} → ${trip['destination']}',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
+                              subtitle: Text(
+                                '${trip['truckNumber']} • ₹${trip['freightAmount']}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
                       ),
                       const SizedBox(height: 16),
 
@@ -977,7 +1044,7 @@ class _CreateInvoiceSheetState extends State<_CreateInvoiceSheet> {
                     ElevatedButton(
                       onPressed: _createInvoice,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF2E8B57),
+                        backgroundColor: AppColors.primaryGreen,
                         foregroundColor: Colors.white,
                         minimumSize: const Size(double.infinity, 50),
                         shape: RoundedRectangleBorder(
@@ -987,8 +1054,9 @@ class _CreateInvoiceSheetState extends State<_CreateInvoiceSheet> {
                       child: const Text(
                         'Create Invoice',
                         style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textWhite
                         ),
                       ),
                     ),

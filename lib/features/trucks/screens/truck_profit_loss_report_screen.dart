@@ -1,7 +1,9 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../../utils/app_colors.dart';
 import '../../../services/api_service.dart';
 import 'truck_profit_loss_pdf_screen.dart';
+import 'package:transport_book_app/utils/toast_helper.dart';
+import 'package:transport_book_app/utils/app_loader.dart';
 
 class TruckProfitLossReportScreen extends StatefulWidget {
   final int truckId;
@@ -47,7 +49,7 @@ class _TruckProfitLossReportScreenState extends State<TruckProfitLossReportScree
       print('Error loading profit/loss data: $e');
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
+        ToastHelper.showSnackBarToast(context, 
           SnackBar(content: Text('Error loading data: $e')),
         );
       }
@@ -59,25 +61,38 @@ class _TruckProfitLossReportScreenState extends State<TruckProfitLossReportScree
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        backgroundColor: AppColors.appBarColor,
-        foregroundColor: AppColors.appBarTextColor,
+        backgroundColor: AppColors.info,
+        foregroundColor: Colors.white,
         elevation: 0,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            bottom: Radius.circular(20),
+          ),
+        ),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
               'Profit & Loss Report',
-              style: TextStyle(fontSize: 18),
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+              ),
             ),
             Text(
               'TL $_truckNumber',
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w400),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.normal,
+              ),
             ),
           ],
         ),
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: AppLoader())
           : _months.isEmpty
               ? Center(
                   child: Column(
@@ -156,7 +171,7 @@ class _TruckProfitLossReportScreenState extends State<TruckProfitLossReportScree
                   icon: const Icon(Icons.picture_as_pdf, size: 18),
                   label: const Text('View PDF'),
                   style: TextButton.styleFrom(
-                    foregroundColor: Colors.blue,
+                    foregroundColor: AppColors.info,
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   ),
                 ),
@@ -214,7 +229,7 @@ class _TruckProfitLossReportScreenState extends State<TruckProfitLossReportScree
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
-                        color: Colors.blue,
+                        color: AppColors.info,
                       ),
                     ),
                   ],
@@ -313,3 +328,5 @@ class _TruckProfitLossReportScreenState extends State<TruckProfitLossReportScree
     );
   }
 }
+
+

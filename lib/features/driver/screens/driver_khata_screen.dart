@@ -1,9 +1,14 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
+import 'package:transport_book_app/utils/appbar.dart';
+import 'package:transport_book_app/utils/custom_button.dart';
+import 'package:transport_book_app/utils/custom_textfield.dart';
 import '../../../services/api_service.dart';
 import '../../../utils/app_colors.dart';
 import '../../../utils/currency_formatter.dart';
 import 'driver_detail_screen.dart';
+import 'package:transport_book_app/utils/toast_helper.dart';
+import 'package:transport_book_app/utils/app_loader.dart';
 
 class DriverKhataScreen extends StatefulWidget {
   const DriverKhataScreen({super.key});
@@ -58,7 +63,7 @@ class _DriverKhataScreenState extends State<DriverKhataScreen> {
       print('Error loading drivers: $e');
       setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ToastHelper.showSnackBarToast(context, 
           SnackBar(content: Text('Error loading drivers: $e')),
         );
       }
@@ -120,7 +125,7 @@ class _DriverKhataScreenState extends State<DriverKhataScreen> {
     } catch (e) {
       print('Error picking contact: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ToastHelper.showSnackBarToast(context, 
           const SnackBar(content: Text('Error accessing contacts')),
         );
       }
@@ -152,6 +157,7 @@ class _DriverKhataScreenState extends State<DriverKhataScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // ---------- HEADER ----------
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -168,27 +174,25 @@ class _DriverKhataScreenState extends State<DriverKhataScreen> {
                     ),
                   ],
                 ),
+
                 const SizedBox(height: 20),
+
+                // ---------- NAME + CONTACT PICKER ----------
                 Row(
                   children: [
                     Expanded(
-                      child: TextField(
+                      child: CustomTextField(
+                        label: "Driver Name",
+                        hint: "Name *",
                         controller: _nameController,
-                        decoration: const InputDecoration(
-                          hintText: 'Name *',
-                          filled: true,
-                          fillColor: Colors.white,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.all(Radius.circular(8)),
-                            borderSide: BorderSide(color: Colors.grey),
-                          ),
-                        ),
                         onChanged: (value) {
                           setModalState(() {});
                         },
                       ),
                     ),
                     const SizedBox(width: 8),
+
+                    // Contact Button
                     IconButton(
                       onPressed: () async {
                         await _pickFromContacts();
@@ -196,28 +200,25 @@ class _DriverKhataScreenState extends State<DriverKhataScreen> {
                       },
                       icon: const Icon(Icons.contacts),
                       style: IconButton.styleFrom(
-                        backgroundColor: Colors.blue.shade50,
-                        foregroundColor: Colors.blue,
+                        backgroundColor: AppColors.info.withOpacity(0.1),
+                        foregroundColor: AppColors.info,
                         padding: const EdgeInsets.all(16),
                       ),
                       tooltip: 'Pick from contacts',
                     ),
                   ],
                 ),
+
                 const SizedBox(height: 16),
-                TextField(
+
+                // ---------- PHONE FIELD ----------
+                CustomTextField(
+                  label: "Mobile No.",
+                  hint: "Enter mobile number",
                   controller: _phoneController,
-                  keyboardType: TextInputType.phone,
-                  decoration: const InputDecoration(
-                    hintText: 'Mobile No.',
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(8)),
-                      borderSide: BorderSide(color: Colors.grey),
-                    ),
-                  ),
+                  keyboard: TextInputType.phone,
                 ),
+
                 const SizedBox(height: 8),
                 Text(
                   'Optional',
@@ -226,42 +227,62 @@ class _DriverKhataScreenState extends State<DriverKhataScreen> {
                     color: Colors.grey[600],
                   ),
                 ),
+
                 const SizedBox(height: 16),
+
+                // ---------- OPENING BALANCE BUTTON ----------
                 OutlinedButton(
                   onPressed: () {
                     showDialog(
                       context: context,
                       builder: (context) => AlertDialog(
-                        title: const Text('Add Opening Balance'),
-                        content: TextField(
-                          controller: _openingBalanceController,
-                          keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
-                            hintText: 'Enter amount',
-                            prefixText: '₹',
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        title: const Text(
+                          'Add Opening Balance',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
                           ),
+                        ),
+                        content: CustomTextField(
+                          label: "Opening Balance",
+                          hint: "Enter amount",
+                          controller: _openingBalanceController,
+                          keyboard: TextInputType.number,
+                          suffix: const Icon(Icons.currency_rupee),
                         ),
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(context),
-                            child: const Text('Cancel'),
+                            child: const Text(
+                              'Cancel',
+                              style: TextStyle(color: Colors.grey),
+                            ),
                           ),
                           TextButton(
                             onPressed: () => Navigator.pop(context),
-                            child: const Text('Add'),
+                            child: const Text(
+                              'Add',
+                              style: TextStyle(color: AppColors.info),
+                            ),
                           ),
                         ],
                       ),
                     );
                   },
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.blue,
-                    side: const BorderSide(color: Colors.blue),
+                    foregroundColor: AppColors.info,
+                    side: const BorderSide(color: AppColors.info),
                     padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
                   child: const Text('Add Opening Balance'),
                 ),
+
                 const SizedBox(height: 16),
+
+                // ---------- SMS ENABLE ----------
                 Row(
                   children: [
                     Checkbox(
@@ -271,65 +292,58 @@ class _DriverKhataScreenState extends State<DriverKhataScreen> {
                           _enableSMS = value ?? false;
                         });
                       },
-                      activeColor: Colors.blue,
+                      activeColor: AppColors.info,
                     ),
                     const Text('Enable SMS for transactions'),
                   ],
                 ),
+
                 const SizedBox(height: 24),
-                ElevatedButton(
+
+                // ---------- SAVE BUTTON ----------
+                CustomButton(
+                  text: "Save Driver",
+                  color: _nameController.text.isEmpty
+                      ? Colors.grey.shade400
+                      : AppColors.info,
                   onPressed: _nameController.text.isEmpty
-                      ? null
+                      ? () {}
                       : () async {
-                          final name = _nameController.text;
-                          final phone = _phoneController.text;
-                          final openingBalance = double.tryParse(
-                                _openingBalanceController.text,
-                              ) ??
-                              0.0;
+                    final name = _nameController.text;
+                    final phone = _phoneController.text;
+                    final openingBalance = double.tryParse(
+                      _openingBalanceController.text,
+                    ) ??
+                        0.0;
 
-                          Navigator.pop(context);
+                    Navigator.pop(context);
 
-                          final result = await ApiService.addDriver(
-                            name: name,
-                            phone: phone,
-                            openingBalance: openingBalance,
-                            enableSMS: _enableSMS,
-                          );
+                    final result = await ApiService.addDriver(
+                      name: name,
+                      phone: phone,
+                      openingBalance: openingBalance,
+                      enableSMS: _enableSMS,
+                    );
 
-                          if (result != null) {
-                            _loadDrivers();
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Driver added successfully'),
-                                ),
-                              );
-                            }
-                          } else {
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Error adding driver'),
-                                ),
-                              );
-                            }
-                          }
-                        },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _nameController.text.isEmpty
-                        ? Colors.grey.shade400
-                        : Colors.grey.shade400,
-                    foregroundColor: Colors.white,
-                    minimumSize: const Size(double.infinity, 50),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: const Text(
-                    'Save Driver',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                  ),
+                    if (result != null) {
+                      _loadDrivers();
+                      if (mounted) {
+                        ToastHelper.showSnackBarToast(context, 
+                          const SnackBar(
+                            content: Text('Driver added successfully'),
+                          ),
+                        );
+                      }
+                    } else {
+                      if (mounted) {
+                        ToastHelper.showSnackBarToast(context, 
+                          const SnackBar(
+                            content: Text('Error adding driver'),
+                          ),
+                        );
+                      }
+                    }
+                  },
                 ),
               ],
             ),
@@ -343,12 +357,7 @@ class _DriverKhataScreenState extends State<DriverKhataScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        backgroundColor: AppColors.appBarColor,
-        foregroundColor: AppColors.appBarTextColor,
-        title: const Text('Drivers'),
-        elevation: 0,
-      ),
+     appBar: CustomAppBar(title: 'Drivers',onBack: () => Navigator.pop(context),),
       body: Column(
         children: [
           // Total Driver Balance Card
@@ -382,7 +391,7 @@ class _DriverKhataScreenState extends State<DriverKhataScreen> {
                   style: const TextStyle(
                     fontSize: 32,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF4CAF50),
+                    color: AppColors.appBarColor,
                   ),
                 ),
               ],
@@ -449,7 +458,7 @@ class _DriverKhataScreenState extends State<DriverKhataScreen> {
           // Driver List
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? const Center(child: AppLoader())
                 : _filteredDrivers.isEmpty
                     ? Center(
                         child: Column(
@@ -489,9 +498,9 @@ class _DriverKhataScreenState extends State<DriverKhataScreen> {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _showAddDriverDialog,
-        backgroundColor: const Color(0xFF4CAF50),
+        backgroundColor: AppColors.primaryGreen,
         foregroundColor: Colors.white,
-        icon: const Icon(Icons.add_circle_outline, size: 22),
+        icon: const Icon(Icons.add_circle_sharp, size: 22),
         label: const Text(
           'Add Driver',
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white),
@@ -576,3 +585,5 @@ class _DriverKhataScreenState extends State<DriverKhataScreen> {
     );
   }
 }
+
+

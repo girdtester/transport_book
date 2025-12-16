@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
+import 'package:transport_book_app/utils/appbar.dart';
 import '../../../services/api_service.dart';
 import '../../../utils/app_colors.dart';
+import '../../../utils/app_constants.dart';
 import '../../../utils/validators.dart';
 import '../../../utils/truck_number_formatter.dart';
 import 'truck_details_screen.dart';
@@ -89,6 +92,25 @@ class _MyTrucksScreenState extends State<MyTrucksScreen>
     }
   }
 
+  int _getActiveFiltersCount() {
+    int count = 0;
+    if (_selectedFilter != 'All Trucks') count++;
+    if (_searchController.text.trim().isNotEmpty) count++;
+    return count;
+  }
+
+  bool _hasActiveFilters() {
+    return _getActiveFiltersCount() > 0;
+  }
+
+  void _clearFilters() {
+    setState(() {
+      _selectedFilter = 'All Trucks';
+      _searchController.clear();
+    });
+    _applyFilters();
+  }
+
   int get _allTrucksCount => trucks.length;
 
   int get _availableTrucksCount {
@@ -166,25 +188,9 @@ class _MyTrucksScreenState extends State<MyTrucksScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
-      appBar: AppBar(
-        backgroundColor: AppColors.appBarColor,
-        foregroundColor: AppColors.appBarTextColor,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          'Trucks & Documents',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        actions: const [
-          SizedBox(width: 8),
-        ],
-      ),
+      appBar:CustomAppBar(title: "Trucks & Documents",onBack: () {
+        Navigator.pop(context);
+      },),
       body: Column(
         children: [
           // Tabs
@@ -192,14 +198,18 @@ class _MyTrucksScreenState extends State<MyTrucksScreen>
             color: Colors.white,
             child: TabBar(
               controller: _tabController,
-              indicatorColor: AppColors.primaryGreen,
+              indicatorColor: AppColors.info,
               indicatorWeight: 3,
               indicatorSize: TabBarIndicatorSize.tab,
-              labelColor: AppColors.appBarTextColor,
-              unselectedLabelColor: Colors.grey,
+              labelColor: AppColors.info,
+              unselectedLabelColor:AppColors.textSecondary,
               labelStyle: const TextStyle(
-                fontSize: 15,
+                fontSize: 16,
                 fontWeight: FontWeight.w600,
+              ),
+              unselectedLabelStyle: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
               ),
               tabs: const [
                 Tab(text: 'Trucks'),
@@ -217,7 +227,7 @@ class _MyTrucksScreenState extends State<MyTrucksScreen>
                   children: [
                     // Filter Cards
                     Container(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
                       color: Colors.white,
                       child: Row(
                         children: [
@@ -228,22 +238,22 @@ class _MyTrucksScreenState extends State<MyTrucksScreen>
                               isSelected: _selectedFilter == 'All Trucks',
                             ),
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 10),
                           Expanded(
                             child: _buildFilterCard(
                               'Available Trucks',
                               _availableTrucksCount.toString(),
                               isSelected: _selectedFilter == 'Available Trucks',
-                              textColor: Colors.green,
+                              textColor: AppColors.primaryGreen,
                             ),
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 10),
                           Expanded(
                             child: _buildFilterCard(
                               'Trucks On Trip',
                               _trucksOnTripCount.toString(),
                               isSelected: _selectedFilter == 'Trucks On Trip',
-                              textColor: Colors.blue,
+                              textColor: const Color(0xFF2563EB),
                             ),
                           ),
                         ],
@@ -251,7 +261,7 @@ class _MyTrucksScreenState extends State<MyTrucksScreen>
                     ),
                     // Search Bar
                     Container(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                       color: Colors.white,
                       child: TextField(
                         controller: _searchController,
@@ -262,15 +272,24 @@ class _MyTrucksScreenState extends State<MyTrucksScreen>
                         },
                         decoration: InputDecoration(
                           hintText: 'Search by Truck Number',
-                          hintStyle: TextStyle(color: Colors.grey.shade400),
-                          suffixIcon: const Icon(Icons.search, color: Colors.grey),
+                          hintStyle: TextStyle(
+                            color: Colors.grey.shade400,
+                            fontSize: 16,
+                          ),
+                          suffixIcon: Icon(Icons.search, color: Colors.grey.shade500),
+                          filled: true,
+                          fillColor: Colors.grey.shade50,
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(8),
                             borderSide: BorderSide(color: Colors.grey.shade300),
                           ),
                           enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(8),
                             borderSide: BorderSide(color: Colors.grey.shade300),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.grey.shade400),
                           ),
                           contentPadding: const EdgeInsets.symmetric(
                             horizontal: 16,
@@ -279,24 +298,64 @@ class _MyTrucksScreenState extends State<MyTrucksScreen>
                         ),
                       ),
                     ),
+
+                    // Filter Applied Banner
+                    if (_hasActiveFilters())
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                        color: AppColors.info.withOpacity(0.1),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.check_circle,
+                              color: AppColors.info,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                '${_getActiveFiltersCount()} Filter${_getActiveFiltersCount() == 1 ? '' : 's'} has been applied',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: AppColors.info,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: _clearFilters,
+                              child: Text(
+                                'Clear',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: AppColors.info,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
                     // Truck List
                     Expanded(
                       child: _isLoading
                           ? const Center(child: CircularProgressIndicator())
                           : filteredTrucks.isEmpty
-                              ? const Center(
-                                  child: Text(
-                                    'No trucks found',
-                                    style: TextStyle(fontSize: 16, color: Colors.grey),
-                                  ),
-                                )
-                              : ListView.builder(
-                                  padding: const EdgeInsets.all(16),
-                                  itemCount: filteredTrucks.length,
-                                  itemBuilder: (context, index) {
-                                    return _buildTruckCard(filteredTrucks[index]);
-                                  },
-                                ),
+                          ? const Center(
+                        child: Text(
+                          'No trucks found',
+                          style: TextStyle(fontSize: 16, color: Colors.grey),
+                        ),
+                      )
+                          : ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: filteredTrucks.length,
+                        itemBuilder: (context, index) {
+                          return _buildTruckCard(filteredTrucks[index]);
+                        },
+                      ),
                     ),
                   ],
                 ),
@@ -311,13 +370,17 @@ class _MyTrucksScreenState extends State<MyTrucksScreen>
         onPressed: () => _showAddTruckBottomSheet(context),
         backgroundColor: AppColors.primaryGreen,
         foregroundColor: Colors.white,
-        icon: const Icon(Icons.add_circle_outline, size: 22),
+        icon: const Icon(Icons.add, size: 24),
         label: const Text(
           'ADD TRUCK',
           style: TextStyle(
             fontWeight: FontWeight.w600,
-            fontSize: 15,
+            fontSize: 14,
+            letterSpacing: 0.5,
           ),
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(30),
         ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
@@ -334,14 +397,14 @@ class _MyTrucksScreenState extends State<MyTrucksScreen>
         });
       },
       child: Container(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primaryGreen.withOpacity(0.1) : Colors.white,
+          color: Colors.white,
           border: Border.all(
-            color: isSelected ? AppColors.primaryGreen : Colors.grey.shade300,
+            color: isSelected ? const Color(0xFF2563EB) : Colors.grey.shade300,
             width: isSelected ? 2 : 1,
           ),
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(8),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -349,20 +412,20 @@ class _MyTrucksScreenState extends State<MyTrucksScreen>
             Text(
               label,
               style: TextStyle(
-                fontSize: 10,
-                color: isSelected ? AppColors.primaryGreen : Colors.grey.shade600,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                fontSize: 11,
+                color: isSelected ? AppColors.info : AppColors.textSecondary,
+                fontWeight: FontWeight.w500,
               ),
-              maxLines: 2,
+              maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 6),
             Text(
               count,
               style: TextStyle(
                 fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: isSelected ? AppColors.primaryGreen : (textColor ?? Colors.black87),
+                fontWeight: FontWeight.w600,
+                color: textColor ?? AppColors.textPrimary,
               ),
             ),
           ],
@@ -377,16 +440,16 @@ class _MyTrucksScreenState extends State<MyTrucksScreen>
     String statusText = truck['status'] ?? 'Available';
 
     if (statusText.toLowerCase().contains('trip')) {
-      statusColor = Colors.blue;
+      statusColor = AppColors.info;
     } else if (statusText.toLowerCase().contains('maintenance')) {
-      statusColor = Colors.orange;
+      statusColor = AppColors.badgeMarket;
     } else if (statusText.toLowerCase().contains('inactive')) {
-      statusColor = Colors.red;
+      statusColor =AppColors.error;
     }
 
     // Determine type badge color
     bool isOwn = truck['type'] == 'Own';
-    Color typeColor = isOwn ? const Color(0xFF2196F3) : const Color(0xFFFF9800);
+    Color typeColor = isOwn ?  AppColors.info: AppColors.badgeMarket;
 
     return GestureDetector(
       onTap: () async {
@@ -410,7 +473,7 @@ class _MyTrucksScreenState extends State<MyTrucksScreen>
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Colors.black.withOpacity(0.05),
               blurRadius: 4,
               offset: const Offset(0, 2),
             ),
@@ -420,35 +483,38 @@ class _MyTrucksScreenState extends State<MyTrucksScreen>
           children: [
             // Truck Number and Badge
             Expanded(
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Truck Number
                   Text(
                     truck['number'],
                     style: const TextStyle(
-                      fontSize: 18,
+                      fontSize: 15,
                       fontWeight: FontWeight.w600,
                       color: Colors.black87,
                       letterSpacing: 0.3,
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  // Type Badge
+
+                  const SizedBox(height: 6),
+
+                  // Type Badge BELOW the number
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
+                      horizontal: 8,
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
                       color: typeColor,
-                      borderRadius: BorderRadius.circular(6),
+                      borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(
                       truck['type'],
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ),
@@ -489,21 +555,18 @@ class _MyTrucksScreenState extends State<MyTrucksScreen>
                   Text(
                     truck['location'],
                     style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey[600],
+                      fontSize: 12,
+                      color: Colors.grey.shade600,
                     ),
                   ),
                 ],
+                const SizedBox(height: 10),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  size: 16,
+                  color: Colors.grey.shade400,
+                ),
               ],
-            ),
-
-            const SizedBox(width: 8),
-
-            // Arrow Icon
-            Icon(
-              Icons.arrow_forward_ios,
-              size: 16,
-              color: Colors.grey[400],
             ),
           ],
         ),
@@ -531,7 +594,7 @@ class _MyTrucksScreenState extends State<MyTrucksScreen>
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: Colors.black87,
+                          color: AppColors.textSecondary,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -539,8 +602,7 @@ class _MyTrucksScreenState extends State<MyTrucksScreen>
                         'Last Updated at ${_lastRefreshed.day.toString().padLeft(2, '0')}-${_lastRefreshed.month.toString().padLeft(2, '0')}-${_lastRefreshed.year.toString().substring(2)}, ${_lastRefreshed.hour.toString().padLeft(2, '0')}:${_lastRefreshed.minute.toString().padLeft(2, '0')} ${_lastRefreshed.hour >= 12 ? 'PM' : 'AM'}',
                         style: TextStyle(
                           fontSize: 12,
-                          color: Colors.grey.shade600,
-                        ),
+                          color: AppColors.textSecondary,                        ),
                       ),
                     ],
                   ),
@@ -550,7 +612,7 @@ class _MyTrucksScreenState extends State<MyTrucksScreen>
                   icon: const Icon(Icons.refresh, size: 18),
                   label: const Text('Refresh'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF1E3A8A),
+                    backgroundColor:AppColors.info,
                     foregroundColor: Colors.white,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
@@ -567,478 +629,900 @@ class _MyTrucksScreenState extends State<MyTrucksScreen>
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : groupedDocuments.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.description_outlined, size: 80, color: Colors.grey.shade300),
-                            const SizedBox(height: 16),
-                            Text(
-                              'No documents uploaded',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Colors.grey.shade600,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                    : ListView.builder(
+                ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.description_outlined, size: 80, color: Colors.grey.shade300),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No documents uploaded',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: AppColors.textSecondary,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            )
+                : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: documentTypes.length,
+              itemBuilder: (context, index) {
+                final docType = documentTypes[index];
+                final docs = groupedDocuments[docType] ?? [];
+
+                if (docs.isEmpty) {
+                  return const SizedBox.shrink();
+                }
+
+                // Count document statuses
+                int expired = 0;
+                int expiringSoon = 0;
+                int allOk = 0;
+
+                for (var doc in docs) {
+                  final status = doc['status']?.toString() ?? 'Active';
+                  if (status == 'Expired') {
+                    expired++;
+                  } else if (status == 'Expiring Soon') {
+                    expiringSoon++;
+                  } else {
+                    allOk++;
+                  }
+                }
+
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.04),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Document Type Header
+                      Padding(
                         padding: const EdgeInsets.all(16),
-                        itemCount: documentTypes.length,
-                        itemBuilder: (context, index) {
-                          final docType = documentTypes[index];
-                          final docs = groupedDocuments[docType] ?? [];
-
-                          if (docs.isEmpty) {
-                            return const SizedBox.shrink();
-                          }
-
-                          // Count document statuses
-                          int expired = 0;
-                          int expiringSoon = 0;
-                          int allOk = 0;
-
-                          for (var doc in docs) {
-                            final status = doc['status']?.toString() ?? 'Active';
-                            if (status == 'Expired') {
-                              expired++;
-                            } else if (status == 'Expiring Soon') {
-                              expiringSoon++;
-                            } else {
-                              allOk++;
-                            }
-                          }
-
-                          return Container(
-                            margin: const EdgeInsets.only(bottom: 16),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(12),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.04),
-                                  blurRadius: 4,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                // Document Type Header
-                                Padding(
-                                  padding: const EdgeInsets.all(16),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                Text(
+                                  docType,
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color:AppColors.textPrimary,
+                                  ),
+                                ),
+                                GestureDetector(
+                                  onTap: () {
+                                    // TODO: Navigate to view all documents of this type
+                                  },
+                                  child: const Row(
                                     children: [
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text(
-                                            docType,
-                                            style: const TextStyle(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.black87,
-                                            ),
-                                          ),
-                                          GestureDetector(
-                                            onTap: () {
-                                              // TODO: Navigate to view all documents of this type
-                                            },
-                                            child: const Row(
-                                              children: [
-                                                Text(
-                                                  'View all Documents',
-                                                  style: TextStyle(
-                                                    fontSize: 12,
-                                                    color: Color(0xFF2196F3),
-                                                    fontWeight: FontWeight.w600,
-                                                  ),
-                                                ),
-                                                SizedBox(width: 4),
-                                                Icon(
-                                                  Icons.arrow_forward_ios,
-                                                  size: 12,
-                                                  color: Color(0xFF2196F3),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ],
+                                      Text(
+                                        'View all Documents',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: AppColors.info,
+                                          fontWeight: FontWeight.w600,
+                                        ),
                                       ),
-                                      const SizedBox(height: 12),
-                                      // Status badges
-                                      Row(
-                                        children: [
-                                          if (expired > 0)
-                                            Container(
-                                              margin: const EdgeInsets.only(right: 12),
-                                              child: Column(
-                                                children: [
-                                                  Container(
-                                                    width: 40,
-                                                    height: 40,
-                                                    decoration: BoxDecoration(
-                                                      shape: BoxShape.circle,
-                                                      color: Colors.red.shade50,
-                                                    ),
-                                                    child: Center(
-                                                      child: Text(
-                                                        expired.toString(),
-                                                        style: TextStyle(
-                                                          fontSize: 16,
-                                                          fontWeight: FontWeight.bold,
-                                                          color: Colors.red.shade700,
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  const SizedBox(height: 4),
-                                                  Text(
-                                                    'Expired',
-                                                    style: TextStyle(
-                                                      fontSize: 10,
-                                                      color: Colors.grey.shade600,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          if (expiringSoon > 0)
-                                            Container(
-                                              margin: const EdgeInsets.only(right: 12),
-                                              child: Column(
-                                                children: [
-                                                  Container(
-                                                    width: 40,
-                                                    height: 40,
-                                                    decoration: BoxDecoration(
-                                                      shape: BoxShape.circle,
-                                                      color: Colors.orange.shade50,
-                                                    ),
-                                                    child: Center(
-                                                      child: Text(
-                                                        expiringSoon.toString(),
-                                                        style: TextStyle(
-                                                          fontSize: 16,
-                                                          fontWeight: FontWeight.bold,
-                                                          color: Colors.orange.shade700,
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  const SizedBox(height: 4),
-                                                  Text(
-                                                    'Expiring soon',
-                                                    style: TextStyle(
-                                                      fontSize: 10,
-                                                      color: Colors.grey.shade600,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          if (allOk > 0)
-                                            Container(
-                                              margin: const EdgeInsets.only(right: 12),
-                                              child: Column(
-                                                children: [
-                                                  Container(
-                                                    width: 40,
-                                                    height: 40,
-                                                    decoration: BoxDecoration(
-                                                      shape: BoxShape.circle,
-                                                      color: Colors.green.shade50,
-                                                    ),
-                                                    child: Center(
-                                                      child: Text(
-                                                        allOk.toString(),
-                                                        style: TextStyle(
-                                                          fontSize: 16,
-                                                          fontWeight: FontWeight.bold,
-                                                          color: Colors.green.shade700,
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  const SizedBox(height: 4),
-                                                  Text(
-                                                    'All Ok',
-                                                    style: TextStyle(
-                                                      fontSize: 10,
-                                                      color: Colors.grey.shade600,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                        ],
+                                      SizedBox(width: 4),
+                                      Icon(
+                                          Icons.arrow_forward_ios,
+                                          size: 12,
+                                          color:AppColors.info
                                       ),
                                     ],
                                   ),
                                 ),
-                                const Divider(height: 1),
-                                // Trucks list
-                                ...docs.map((doc) {
-                                  final truckNumber = doc['truckNumber']?.toString() ?? 'Unknown';
-                                  return InkWell(
-                                    onTap: () => _showDocumentDetailPopup(doc),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                      decoration: BoxDecoration(
-                                        border: Border(
-                                          bottom: BorderSide(color: Colors.grey.shade200),
-                                        ),
-                                      ),
-                                      child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text(
-                                            truckNumber,
-                                            style: const TextStyle(
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.w500,
-                                              color: Colors.black87,
-                                            ),
-                                          ),
-                                          Icon(
-                                            Icons.arrow_forward_ios,
-                                            size: 14,
-                                            color: Colors.grey.shade400,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  );
-                                }).toList(),
                               ],
                             ),
-                          );
-                        },
+                            const SizedBox(height: 12),
+                            // Status badges
+                            Row(
+                              children: [
+                                if (expired > 0)
+                                  Container(
+                                    margin: const EdgeInsets.only(right: 12),
+                                    child: Column(
+                                      children: [
+                                        Container(
+                                          width: 40,
+                                          height: 40,
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            color: Colors.red.shade50,
+                                          ),
+                                          child: Center(
+                                            child: Text(
+                                              expired.toString(),
+                                              style: TextStyle(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.red.shade700,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'Expired',
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            color: Colors.grey.shade600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                if (expiringSoon > 0)
+                                  Container(
+                                    margin: const EdgeInsets.only(right: 12),
+                                    child: Column(
+                                      children: [
+                                        Container(
+                                          width: 40,
+                                          height: 40,
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            color: Colors.orange.shade50,
+                                          ),
+                                          child: Center(
+                                            child: Text(
+                                              expiringSoon.toString(),
+                                              style: TextStyle(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.orange.shade700,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'Expiring soon',
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            color: Colors.grey.shade600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                if (allOk > 0)
+                                  Container(
+                                    margin: const EdgeInsets.only(right: 12),
+                                    child: Column(
+                                      children: [
+                                        Container(
+                                          width: 40,
+                                          height: 40,
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            color: Colors.green.shade50,
+                                          ),
+                                          child: Center(
+                                            child: Text(
+                                              allOk.toString(),
+                                              style: TextStyle(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.green.shade700,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'All Ok',
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            color: Colors.grey.shade600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
+                      const Divider(height: 1),
+                      // Trucks list with images and action buttons
+                      ...docs.map((doc) {
+                        final truckNumber = doc['truckNumber']?.toString() ?? 'Unknown';
+                        final status = doc['status']?.toString() ?? 'Active';
+                        final expiryDate = doc['expiry_date'] ?? doc['expiryDate'];
+
+                        // Get image URL
+                        String? imageUrl;
+                        if (doc['image_url'] != null) {
+                          imageUrl = '${AppConstants.serverUrl}${doc['image_url']}';
+                        } else if (doc['image_path'] != null) {
+                          imageUrl = '${AppConstants.serverUrl}/api/v1/documents/file/${doc['image_path']}';
+                        }
+
+                        return Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            border: Border(
+                              bottom: BorderSide(color: Colors.grey.shade200),
+                            ),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Document Image
+                              GestureDetector(
+                                onTap: imageUrl != null ? () => _showFullImage(imageUrl!) : null,
+                                child: Container(
+                                  width: 70,
+                                  height: 70,
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.shade100,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: Colors.grey.shade300),
+                                  ),
+                                  child: imageUrl != null
+                                      ? ClipRRect(
+                                          borderRadius: BorderRadius.circular(7),
+                                          child: Image.network(
+                                            imageUrl,
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (context, error, stackTrace) => Icon(
+                                              Icons.description,
+                                              color: Colors.grey.shade400,
+                                              size: 32,
+                                            ),
+                                            loadingBuilder: (context, child, loadingProgress) {
+                                              if (loadingProgress == null) return child;
+                                              return Center(
+                                                child: SizedBox(
+                                                  width: 20,
+                                                  height: 20,
+                                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                        )
+                                      : Icon(
+                                          Icons.description,
+                                          color: Colors.grey.shade400,
+                                          size: 32,
+                                        ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              // Document Info
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Text(
+                                          truckNumber,
+                                          style: const TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.black87,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: status == 'Active' ? Colors.green : Colors.red,
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                          child: Text(
+                                            status,
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 9,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 4),
+                                    if (expiryDate != null)
+                                      Text(
+                                        'Expiry: ${_formatDateString(expiryDate.toString())}',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey.shade600,
+                                        ),
+                                      ),
+                                    if (doc['document_number'] != null || doc['documentNumber'] != null)
+                                      Text(
+                                        'No: ${doc['document_number'] ?? doc['documentNumber']}',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: Colors.grey.shade500,
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                              // Action Buttons
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  // View Button
+                                  IconButton(
+                                    onPressed: () => _showDocumentDetailPopup(doc),
+                                    icon: const Icon(Icons.visibility, color: AppColors.info, size: 20),
+                                    tooltip: 'View',
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                  ),
+                                  // Edit Button
+                                  IconButton(
+                                    onPressed: () => _showEditDocumentDialog(doc),
+                                    icon: const Icon(Icons.edit, color: Colors.orange, size: 20),
+                                    tooltip: 'Edit',
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                  ),
+                                  // Delete Button
+                                  IconButton(
+                                    onPressed: () => _confirmDeleteDocument(doc),
+                                    icon: const Icon(Icons.delete, color: Colors.red, size: 20),
+                                    tooltip: 'Delete',
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    ],
+                  ),
+                );
+              },
+            ),
           ),
         ],
       ),
     );
   }
 
+  // Format date string helper
+  String _formatDateString(String dateStr) {
+    try {
+      final date = DateTime.parse(dateStr);
+      return DateFormat('dd MMM yyyy').format(date);
+    } catch (e) {
+      return dateStr;
+    }
+  }
+
+  // Show full screen image
+  void _showFullImage(String imageUrl) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: EdgeInsets.zero,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Container(color: Colors.black87),
+            ),
+            InteractiveViewer(
+              child: Center(
+                child: Image.network(
+                  imageUrl,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) => const Center(
+                    child: Text('Failed to load image', style: TextStyle(color: Colors.white)),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              top: 40,
+              right: 16,
+              child: IconButton(
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.close, color: Colors.white, size: 32),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Confirm delete document
+  Future<void> _confirmDeleteDocument(Map<String, dynamic> doc) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Document'),
+        content: Text('Are you sure you want to delete "${doc['name']}" for ${doc['truckNumber']}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      final docId = doc['id'] as int?;
+      if (docId != null) {
+        final success = await ApiService.deleteDocument(docId);
+        if (success) {
+          await _loadAllDocuments();
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Document deleted successfully'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Failed to delete document'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        }
+      }
+    }
+  }
+
+  // Show edit document dialog
+  void _showEditDocumentDialog(Map<String, dynamic> doc) {
+    final nameController = TextEditingController(text: doc['name'] ?? '');
+    final documentNumberController = TextEditingController(text: doc['document_number'] ?? doc['documentNumber'] ?? '');
+    DateTime? issueDate;
+    DateTime? expiryDate;
+    String selectedStatus = doc['status'] ?? 'Active';
+
+    // Parse dates
+    final issueDateStr = doc['issue_date'] ?? doc['issueDate'];
+    final expiryDateStr = doc['expiry_date'] ?? doc['expiryDate'];
+    if (issueDateStr != null) {
+      try {
+        issueDate = DateTime.parse(issueDateStr.toString());
+      } catch (e) {}
+    }
+    if (expiryDateStr != null) {
+      try {
+        expiryDate = DateTime.parse(expiryDateStr.toString());
+      } catch (e) {}
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => Container(
+          height: MediaQuery.of(context).size.height * 0.75,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              // Header
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Edit ${doc['name']}',
+                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              // Form
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Truck Info
+                      Text('Truck: ${doc['truckNumber']}', style: TextStyle(color: Colors.grey.shade600)),
+                      const SizedBox(height: 16),
+
+                      // Document Type
+                      const Text('Document Type', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                      const SizedBox(height: 4),
+                      TextField(
+                        controller: nameController,
+                        decoration: InputDecoration(
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Document Number
+                      const Text('Document Number', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                      const SizedBox(height: 4),
+                      TextField(
+                        controller: documentNumberController,
+                        decoration: InputDecoration(
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Issue Date
+                      const Text('Issue Date', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                      const SizedBox(height: 4),
+                      GestureDetector(
+                        onTap: () async {
+                          final picked = await showDatePicker(
+                            context: context,
+                            initialDate: issueDate ?? DateTime.now(),
+                            firstDate: DateTime(2000),
+                            lastDate: DateTime.now(),
+                          );
+                          if (picked != null) setModalState(() => issueDate = picked);
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey.shade400),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                issueDate != null ? DateFormat('dd MMM yyyy').format(issueDate!) : 'Select date',
+                                style: TextStyle(color: issueDate != null ? Colors.black : Colors.grey),
+                              ),
+                              const Icon(Icons.calendar_today, size: 18, color: Colors.grey),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Expiry Date
+                      const Text('Expiry Date', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                      const SizedBox(height: 4),
+                      GestureDetector(
+                        onTap: () async {
+                          final picked = await showDatePicker(
+                            context: context,
+                            initialDate: expiryDate ?? DateTime.now().add(const Duration(days: 365)),
+                            firstDate: DateTime.now(),
+                            lastDate: DateTime(2100),
+                          );
+                          if (picked != null) setModalState(() => expiryDate = picked);
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey.shade400),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                expiryDate != null ? DateFormat('dd MMM yyyy').format(expiryDate!) : 'Select date',
+                                style: TextStyle(color: expiryDate != null ? Colors.black : Colors.grey),
+                              ),
+                              const Icon(Icons.calendar_today, size: 18, color: Colors.grey),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Status
+                      const Text('Status', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                      const SizedBox(height: 4),
+                      DropdownButtonFormField<String>(
+                        value: selectedStatus,
+                        decoration: InputDecoration(
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                        ),
+                        items: ['Active', 'Expired', 'Expiring Soon'].map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                        onChanged: (v) { if (v != null) setModalState(() => selectedStatus = v); },
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Save Button
+                      ElevatedButton(
+                        onPressed: () async {
+                          final result = await ApiService.updateDocument(
+                            documentId: doc['id'],
+                            name: nameController.text,
+                            documentNumber: documentNumberController.text,
+                            issueDate: issueDate != null ? DateFormat('yyyy-MM-dd').format(issueDate!) : null,
+                            expiryDate: expiryDate != null ? DateFormat('yyyy-MM-dd').format(expiryDate!) : null,
+                            status: selectedStatus,
+                          );
+
+                          if (result != null) {
+                            Navigator.pop(context);
+                            await _loadAllDocuments();
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Document updated successfully'),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            }
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Failed to update document'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primaryGreen,
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size(double.infinity, 50),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        child: const Text('Save Changes'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   void _showDocumentDetailPopup(Map<String, dynamic> doc) {
+    // Get image URL
+    String? imageUrl;
+    if (doc['image_url'] != null) {
+      imageUrl = '${AppConstants.serverUrl}${doc['image_url']}';
+    } else if (doc['image_path'] != null) {
+      imageUrl = '${AppConstants.serverUrl}/api/v1/documents/file/${doc['image_path']}';
+    }
+
+    final expiryDate = doc['expiry_date'] ?? doc['expiryDate'];
+    final issueDate = doc['issue_date'] ?? doc['issueDate'];
+    final documentNumber = doc['document_number'] ?? doc['documentNumber'];
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.8,
         decoration: const BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
-        padding: const EdgeInsets.all(16),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header with title and action buttons
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    doc['name']?.toString() ?? 'Document',
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                // Edit button
-                IconButton(
-                  icon: const Icon(Icons.edit, color: Color(0xFF2196F3)),
-                  onPressed: () {
-                    Navigator.pop(context);
-                    // TODO: Navigate to edit document screen
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Edit document feature coming soon')),
-                    );
-                  },
-                ),
-                // Delete button
-                IconButton(
-                  icon: const Icon(Icons.delete, color: Colors.red),
-                  onPressed: () async {
-                    // Show confirmation dialog
-                    final confirm = await showDialog<bool>(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        title: const Text('Delete Document'),
-                        content: const Text('Are you sure you want to delete this document?'),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context, false),
-                            child: const Text('Cancel'),
-                          ),
-                          TextButton(
-                            onPressed: () => Navigator.pop(context, true),
-                            style: TextButton.styleFrom(foregroundColor: Colors.red),
-                            child: const Text('Delete'),
-                          ),
-                        ],
-                      ),
-                    );
-
-                    if (confirm == true) {
-                      Navigator.pop(context);
-                      final docId = doc['id'] as int?;
-                      if (docId != null) {
-                        final success = await ApiService.deleteDocument(docId);
-                        if (success) {
-                          await _loadAllDocuments();
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Document deleted successfully'),
-                                backgroundColor: Colors.green,
-                              ),
-                            );
-                          }
-                        } else {
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Failed to delete document'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                          }
-                        }
-                      } else {
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Document ID not found'),
-                              backgroundColor: Colors.red,
-                            ),
-                          );
-                        }
-                      }
-                    }
-                  },
-                ),
-                // Close button
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.pop(context),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            // Expiry date
-            Text(
-              'Expiring on ${doc['expiryDate'] ?? 'N/A'}',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey.shade600,
-              ),
-            ),
-            const SizedBox(height: 24),
-            // View all documents link
-            GestureDetector(
-              onTap: () {
-                // TODO: Navigate to all documents of this truck
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Viewing all documents of ${doc['truckNumber']}')),
-                );
-              },
+            // Header
+            Padding(
+              padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
-                  Text(
-                    'View all Documents of ${doc['truckNumber']}',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Color(0xFF2196F3),
-                      fontWeight: FontWeight.w600,
+                  Expanded(
+                    child: Text(
+                      doc['name']?.toString() ?? 'Document',
+                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                     ),
                   ),
-                  const SizedBox(width: 4),
-                  const Icon(
-                    Icons.arrow_forward_ios,
-                    size: 14,
-                    color: Color(0xFF2196F3),
+                  IconButton(
+                    icon: const Icon(Icons.edit, color: Colors.orange),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _showEditDocumentDialog(doc);
+                    },
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.delete, color: Colors.red),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _confirmDeleteDocument(doc);
+                    },
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 24),
-            // Add Photo button
-            OutlinedButton.icon(
-              onPressed: () {
-                // TODO: Implement add photo
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Add photo feature coming soon')),
-                );
-              },
-              icon: const Icon(Icons.add_a_photo, color: Color(0xFF2196F3)),
-              label: const Text('Add Photo', style: TextStyle(color: Color(0xFF2196F3))),
-              style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: Color(0xFF2196F3)),
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                minimumSize: const Size(double.infinity, 48),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+            const Divider(height: 1),
+
+            // Content
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Document Image
+                    if (imageUrl != null)
+                      GestureDetector(
+                        onTap: () => _showFullImage(imageUrl!),
+                        child: Container(
+                          width: double.infinity,
+                          height: 200,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey.shade300),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.network(
+                              imageUrl,
+                              fit: BoxFit.contain,
+                              errorBuilder: (context, error, stackTrace) => Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.broken_image, size: 48, color: Colors.grey.shade400),
+                                    const SizedBox(height: 8),
+                                    Text('Image not available', style: TextStyle(color: Colors.grey.shade600)),
+                                  ],
+                                ),
+                              ),
+                              loadingBuilder: (context, child, loadingProgress) {
+                                if (loadingProgress == null) return child;
+                                return const Center(child: CircularProgressIndicator());
+                              },
+                            ),
+                          ),
+                        ),
+                      )
+                    else
+                      Container(
+                        width: double.infinity,
+                        height: 150,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey.shade300),
+                        ),
+                        child: Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.description, size: 48, color: Colors.grey.shade400),
+                              const SizedBox(height: 8),
+                              Text('No image uploaded', style: TextStyle(color: Colors.grey.shade600)),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                    if (imageUrl != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text('Tap image to view full size', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                      ),
+
+                    const SizedBox(height: 20),
+
+                    // Document Details
+                    _buildDetailRow('Truck', doc['truckNumber'] ?? 'Unknown'),
+                    _buildDetailRow('Document Type', doc['name'] ?? 'Unknown'),
+                    if (documentNumber != null) _buildDetailRow('Document Number', documentNumber.toString()),
+                    if (issueDate != null) _buildDetailRow('Issue Date', _formatDateString(issueDate.toString())),
+                    if (expiryDate != null) _buildDetailRow('Expiry Date', _formatDateString(expiryDate.toString())),
+                    _buildDetailRow('Status', doc['status'] ?? 'Active'),
+
+                    const SizedBox(height: 24),
+
+                    // Action Buttons
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () {
+                              Navigator.pop(context);
+                              _showEditDocumentDialog(doc);
+                            },
+                            icon: const Icon(Icons.edit, color: Colors.orange),
+                            label: const Text('Edit', style: TextStyle(color: Colors.orange)),
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: Colors.orange),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () {
+                              Navigator.pop(context);
+                              _confirmDeleteDocument(doc);
+                            },
+                            icon: const Icon(Icons.delete, color: Colors.red),
+                            label: const Text('Delete', style: TextStyle(color: Colors.red)),
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: Colors.red),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
             ),
-            const SizedBox(height: 16),
-            // Download and Share buttons
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      // TODO: Implement download
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Download feature coming soon')),
-                      );
-                    },
-                    icon: const Icon(Icons.download, size: 20),
-                    label: const Text('Download'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      // TODO: Implement share
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Share feature coming soon')),
-                      );
-                    },
-                    icon: const Icon(Icons.share, size: 20),
-                    label: const Text('Share'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2196F3),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(label, style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
+          ),
+          Expanded(
+            child: Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+          ),
+        ],
       ),
     );
   }
@@ -1049,6 +1533,7 @@ class _MyTrucksScreenState extends State<MyTrucksScreen>
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => AddTruckBottomSheet(
+        preselectedType: _tabController.index == 0 ? 'Own' : 'Market',
         onTruckAdded: () {
           _loadTrucks(); // Reload trucks after adding
         },
@@ -1066,8 +1551,9 @@ class _MyTrucksScreenState extends State<MyTrucksScreen>
 
 class AddTruckBottomSheet extends StatefulWidget {
   final VoidCallback onTruckAdded;
+  final String? preselectedType; // 'Own' or 'Market'
 
-  const AddTruckBottomSheet({super.key, required this.onTruckAdded});
+  const AddTruckBottomSheet({super.key, required this.onTruckAdded, this.preselectedType});
 
   @override
   State<AddTruckBottomSheet> createState() => _AddTruckBottomSheetState();
@@ -1076,30 +1562,54 @@ class AddTruckBottomSheet extends StatefulWidget {
 class _AddTruckBottomSheetState extends State<AddTruckBottomSheet> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _registrationController = TextEditingController();
-  String _selectedType = 'My Truck';
+  late String _selectedType;
   String? _selectedSupplier;
   bool _isLoading = false;
+  bool _isSuppliersLoading = true;
   String? _validationError;
 
-  List<String> suppliers = [
-    'Satish Supplier',
-    'Ram Supplier',
-    'Krishna Transport',
-  ];
+  List<Map<String, dynamic>> _suppliersData = [];
+  List<String> suppliers = [];
 
   @override
   void initState() {
     super.initState();
+    // Map 'Own' -> 'My Truck', 'Market' -> 'Market Truck'
+    if (widget.preselectedType == 'Own') {
+      _selectedType = 'My Truck';
+    } else if (widget.preselectedType == 'Market') {
+      _selectedType = 'Market Truck';
+    } else {
+      _selectedType = 'My Truck'; // Default
+    }
     _loadSuppliers();
   }
 
   Future<void> _loadSuppliers() async {
-    final suppliersData = await ApiService.getSuppliers();
     setState(() {
-      suppliers = suppliersData
-          .map((supplier) => supplier['name'] as String)
-          .toList();
+      _isSuppliersLoading = true;
     });
+
+    try {
+      final suppliersData = await ApiService.getSuppliers();
+      if (mounted) {
+        setState(() {
+          _suppliersData = List<Map<String, dynamic>>.from(suppliersData);
+          suppliers = suppliersData
+              .where((supplier) => supplier['name'] != null)
+              .map((supplier) => supplier['name'].toString())
+              .toList();
+          _isSuppliersLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Error loading suppliers: $e');
+      if (mounted) {
+        setState(() {
+          _isSuppliersLoading = false;
+        });
+      }
+    }
   }
 
   @override
@@ -1128,8 +1638,8 @@ class _AddTruckBottomSheetState extends State<AddTruckBottomSheet> {
                   'Add Truck',
                   style: TextStyle(
                     fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
                   ),
                 ),
                 IconButton(
@@ -1139,7 +1649,7 @@ class _AddTruckBottomSheetState extends State<AddTruckBottomSheet> {
               ],
             ),
           ),
-          const Divider(height: 1),
+          const Divider(height: 1,color: AppColors.divider,),
           Padding(
             padding: const EdgeInsets.all(16),
             child: Form(
@@ -1148,13 +1658,6 @@ class _AddTruckBottomSheetState extends State<AddTruckBottomSheet> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Registration Number Input
-                  const Text(
-                    'Truck Registration No.*',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey,
-                    ),
-                  ),
                   const SizedBox(height: 8),
                   TextFormField(
                     controller: _registrationController,
@@ -1166,24 +1669,27 @@ class _AddTruckBottomSheetState extends State<AddTruckBottomSheet> {
                     ],
                     validator: validateTruckNumber,
                     decoration: InputDecoration(
-                      hintText: 'ex. MH 12 KJ 1212',
-                      hintStyle: TextStyle(color: Colors.grey.shade400),
+                      hintText: 'Truck Registration No.*',
+                      hintStyle: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
                       errorText: _validationError,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(color: Colors.blue, width: 2),
+                        borderSide: const BorderSide(color:AppColors.info, width: 2),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(color: Colors.blue, width: 2),
+                        borderSide: const BorderSide(color:AppColors.info, width: 2),
                       ),
                       errorBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(color: Colors.red, width: 2),
+                        borderSide: const BorderSide(color: AppColors.error, width: 2),
                       ),
                       focusedErrorBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(color: Colors.red, width: 2),
+                        borderSide: const BorderSide(color: AppColors.error, width: 2),
                       ),
                       contentPadding: const EdgeInsets.all(16),
                     ),
@@ -1195,43 +1701,49 @@ class _AddTruckBottomSheetState extends State<AddTruckBottomSheet> {
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Format: 2 letters (state) + 2 digits + alphanumeric\nExample: MH12TY9769, KA01AB1234',
+                    'ex:KA01AB1234',
                     style: TextStyle(
                       fontSize: 11,
-                      color: Colors.grey,
+                      color: AppColors.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 24),
                   // Truck Type Selection
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: RadioListTile<String>(
-                          value: 'My Truck',
-                          groupValue: _selectedType,
-                          onChanged: (value) {
-                            setState(() {
-                              _selectedType = value!;
-                            });
-                          },
-                          title: const Text('My Truck'),
-                          activeColor: Colors.purple,
-                          contentPadding: EdgeInsets.zero,
-                        ),
+                      Row(
+                        children: [
+                          Radio<String>(
+                            value: 'My Truck',
+                            groupValue: _selectedType,
+                            onChanged: (value) {
+                              setState(() {
+                                _selectedType = value!;
+                              });
+                            },
+                            activeColor: Colors.purple,
+                          ),
+                          const Text('My Truck'),
+                        ],
                       ),
-                      Expanded(
-                        child: RadioListTile<String>(
-                          value: 'Market Truck',
-                          groupValue: _selectedType,
-                          onChanged: (value) {
-                            setState(() {
-                              _selectedType = value!;
-                            });
-                          },
-                          title: const Text('Market Truck'),
-                          activeColor: Colors.purple,
-                          contentPadding: EdgeInsets.zero,
-                        ),
+
+                      const SizedBox(width: 20), // adjust spacing as needed
+
+                      Row(
+                        children: [
+                          Radio<String>(
+                            value: 'Market Truck',
+                            groupValue: _selectedType,
+                            onChanged: (value) {
+                              setState(() {
+                                _selectedType = value!;
+                              });
+                            },
+                            activeColor: Colors.purple,
+                          ),
+                          const Text('Market Truck'),
+                        ],
                       ),
                     ],
                   ),
@@ -1242,7 +1754,7 @@ class _AddTruckBottomSheetState extends State<AddTruckBottomSheet> {
                       'Supplier/Truck Owner',
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.grey,
+                        color: AppColors.textSecondary,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -1261,8 +1773,8 @@ class _AddTruckBottomSheetState extends State<AddTruckBottomSheet> {
                               _selectedSupplier ?? 'Select Supplier',
                               style: TextStyle(
                                 color: _selectedSupplier == null
-                                    ? Colors.grey.shade600
-                                    : Colors.black87,
+                                    ? AppColors.textSecondary
+                                    : AppColors.textPrimary,
                                 fontSize: 16,
                               ),
                             ),
@@ -1281,58 +1793,58 @@ class _AddTruckBottomSheetState extends State<AddTruckBottomSheet> {
                     onPressed: _isLoading
                         ? null
                         : () async {
-                            // Validate form
-                            if (!_formKey.currentState!.validate()) {
-                              return;
-                            }
+                      // Validate form
+                      if (!_formKey.currentState!.validate()) {
+                        return;
+                      }
 
-                            if (_selectedType == 'Market Truck' &&
-                                _selectedSupplier == null) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Please select a supplier'),
-                                ),
-                              );
-                              return;
-                            }
+                      if (_selectedType == 'Market Truck' &&
+                          _selectedSupplier == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Please select a supplier'),
+                          ),
+                        );
+                        return;
+                      }
 
-                            setState(() {
-                              _isLoading = true;
-                            });
+                      setState(() {
+                        _isLoading = true;
+                      });
 
-                            // Format truck number before saving
-                            final formattedNumber = Validators.formatTruckNumber(
-                              _registrationController.text,
-                            );
+                      // Format truck number before saving
+                      final formattedNumber = Validators.formatTruckNumber(
+                        _registrationController.text,
+                      );
 
-                            final result = await ApiService.addTruck(
-                              number: formattedNumber,
-                              type: _selectedType == 'My Truck' ? 'Own' : 'Market',
-                              supplier: _selectedSupplier,
-                            );
+                      final result = await ApiService.addTruck(
+                        number: formattedNumber,
+                        type: _selectedType == 'My Truck' ? 'Own' : 'Market',
+                        supplier: _selectedSupplier,
+                      );
 
-                            setState(() {
-                              _isLoading = false;
-                            });
+                      setState(() {
+                        _isLoading = false;
+                      });
 
-                            if (result != null) {
-                              widget.onTruckAdded();
-                              Navigator.pop(context);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Truck added successfully'),
-                                  backgroundColor: Colors.green,
-                                ),
-                              );
-                            } else {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Failed to add truck'),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
-                            }
-                          },
+                      if (result != null) {
+                        widget.onTruckAdded();
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Truck added successfully'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Failed to add truck'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primaryGreen,
                       foregroundColor: Colors.white,
@@ -1345,13 +1857,13 @@ class _AddTruckBottomSheetState extends State<AddTruckBottomSheet> {
                     child: _isLoading
                         ? const CircularProgressIndicator(color: Colors.white)
                         : const Text(
-                            'Confirm',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
+                      'Confirm',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 16),
                 ],
@@ -1367,74 +1879,111 @@ class _AddTruckBottomSheetState extends State<AddTruckBottomSheet> {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(20),
           topRight: Radius.circular(20),
         ),
       ),
-      builder: (context) => Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Select Supplier',
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => Container(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.6,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Select Supplier',
+                      style: TextStyle(
+                        fontSize: 18,
+                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              // Add New Supplier
+              ListTile(
+                leading: Icon(Icons.add_circle, color: AppColors.primaryGreen),
+                title: Text(
+                  'Add New Supplier',
                   style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primaryGreen,
                   ),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.pop(context),
-                ),
-              ],
-            ),
-          ),
-          const Divider(height: 1),
-          // Add New Supplier
-          ListTile(
-            leading: Icon(Icons.add_circle, color: AppColors.primaryGreen),
-            title: Text(
-              'Add New Supplier',
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                color: AppColors.primaryGreen,
-              ),
-            ),
-            onTap: () {
-              Navigator.pop(context);
-              _showAddSupplierSheet(context);
-            },
-          ),
-          // Select from Contacts
-          ListTile(
-            leading: const Icon(Icons.contacts, color: Colors.blue),
-            title: const Text('Select from Contacts'),
-            onTap: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Contact picker feature')),
-              );
-            },
-          ),
-          const Divider(),
-          // Existing Suppliers
-          ...suppliers.map((supplier) => ListTile(
-                title: Text(supplier),
                 onTap: () {
-                  setState(() {
-                    _selectedSupplier = supplier;
-                  });
                   Navigator.pop(context);
+                  _showAddSupplierSheet(context);
                 },
-              )),
-          const SizedBox(height: 16),
-        ],
+              ),
+              // Select from Contacts
+              ListTile(
+                leading: const Icon(Icons.contacts, color: AppColors.info),
+                title: const Text('Select from Contacts'),
+                onTap: () {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Contact picker feature')),
+                  );
+                },
+              ),
+              const Divider(),
+              // Show loading or suppliers list
+              if (_isSuppliersLoading)
+                const Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Center(
+                    child: CircularProgressIndicator(),
+                  ),
+                )
+              else if (suppliers.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Center(
+                    child: Text(
+                      'No suppliers found.\nAdd a new supplier to continue.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  ),
+                )
+              else
+                Flexible(
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: suppliers.length,
+                    itemBuilder: (context, index) {
+                      final supplier = suppliers[index];
+                      return ListTile(
+                        title: Text(supplier),
+                        onTap: () {
+                          setState(() {
+                            _selectedSupplier = supplier;
+                          });
+                          Navigator.pop(context);
+                        },
+                      );
+                    },
+                  ),
+                ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        ),
       ),
     );
   }

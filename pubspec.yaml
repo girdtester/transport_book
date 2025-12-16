@@ -1,5 +1,5 @@
 name: transport_book_app
-description: TMS Prime - Transport Management System
+description: TMS Book - Transport Management System
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -29,5 +29,5 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  assets:
-    - assets/images/
+  # assets:
+  #   - assets/images/

@@ -1,5 +1,11 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:transport_book_app/utils/app_loader.dart';
+import 'package:transport_book_app/utils/appbar.dart';
+import 'package:transport_book_app/utils/currency_formatter.dart';
+import 'package:transport_book_app/utils/custom_dropdown.dart';
+import 'package:transport_book_app/utils/toast_helper.dart';
+
 import '../../../services/api_service.dart';
 import '../../../utils/app_colors.dart';
 import 'add_my_expense_screen.dart';
@@ -82,7 +88,8 @@ class _MyExpensesScreenState extends State<MyExpensesScreen> with SingleTickerPr
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ToastHelper.showSnackBarToast(
+          context,
           SnackBar(content: Text('Error loading expenses: $e')),
         );
       }
@@ -178,11 +185,11 @@ class _MyExpensesScreenState extends State<MyExpensesScreen> with SingleTickerPr
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        backgroundColor: AppColors.appBarColor,
-        foregroundColor: AppColors.appBarTextColor,
-        title: const Text('Expenses'),
-        elevation: 0,
+      appBar: CustomAppBar(
+        title: 'Expenses',
+        onBack: () {
+          Navigator.pop(context);
+        },
       ),
       body: Column(
         children: [
@@ -196,34 +203,79 @@ class _MyExpensesScreenState extends State<MyExpensesScreen> with SingleTickerPr
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    IconButton(
-                      onPressed: () => _changeMonth(-1),
-                      icon: const Icon(Icons.chevron_left, color: Colors.black),
+                    Column(
+                      children: [
+                        Row(
+                          children: [
+                            IconButton(
+                              onPressed: () => _changeMonth(-1),
+                              icon: const Icon(Icons.chevron_left,
+                                  color: Colors.black),
+                            ),
+                            Text(
+                              DateFormat('MMM-yyyy').format(_selectedMonth),
+                              style: const TextStyle(
+                                color: Colors.black,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            IconButton(
+                              onPressed: () => _changeMonth(1),
+                              icon: const Icon(Icons.chevron_right,
+                                  color: Colors.black),
+                            ),
+                          ],
+                        ),
+                        Text(
+
+                          '${CurrencyFormatter.formatIndianAmount(_calculateGrandTotal())}',
+
+                          // '₹${_calculateGrandTotal().toStringAsFixed(0)}',
+                          style: const TextStyle(
+                            color: AppColors.info,
+                            fontSize: 28,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
-                    Text(
-                      DateFormat('MMM-yyyy').format(_selectedMonth),
-                      style: const TextStyle(
-                        color: Colors.black,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
+                    Expanded(
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ExpensesReportScreen(
+                                  selectedMonth: _selectedMonth,
+                                ),
+                              ),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFB3D4FF),
+                            foregroundColor: AppColors.info,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          icon: const Icon(Icons.picture_as_pdf, size: 20),
+                          label: const Text(
+                            'View Report',
+                            style: TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.w600),
+                          ),
+                        ),
                       ),
-                    ),
-                    IconButton(
-                      onPressed: () => _changeMonth(1),
-                      icon: const Icon(Icons.chevron_right, color: Colors.black),
                     ),
                   ],
                 ),
                 const SizedBox(height: 8),
                 // Grand Total amount (all categories)
-                Text(
-                  '₹${_calculateGrandTotal().toStringAsFixed(0)}',
-                  style: const TextStyle(
-                    color: Color(0xFF2196F3),
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+
                 const SizedBox(height: 4),
                 Text(
                   'Total Expenses (All Categories)',
@@ -234,34 +286,6 @@ class _MyExpensesScreenState extends State<MyExpensesScreen> with SingleTickerPr
                 ),
                 const SizedBox(height: 12),
                 // View Report button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => ExpensesReportScreen(
-                            selectedMonth: _selectedMonth,
-                          ),
-                        ),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFB3D4FF),
-                      foregroundColor: const Color(0xFF2196F3),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    icon: const Icon(Icons.picture_as_pdf, size: 20),
-                    label: const Text(
-                      'View Report',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                ),
               ],
             ),
           ),
@@ -271,9 +295,13 @@ class _MyExpensesScreenState extends State<MyExpensesScreen> with SingleTickerPr
             color: Colors.white,
             child: TabBar(
               controller: _tabController,
-              labelColor: const Color(0xFF2196F3),
-              unselectedLabelColor: Colors.grey,
-              indicatorColor: const Color(0xFF2196F3),
+              labelColor: AppColors.info,
+              unselectedLabelColor: Colors.grey.shade600,
+              indicator: RoundedTabIndicator(
+                color: AppColors.info,
+                radius: 3,
+              ),
+              indicatorWeight: 3,
               indicatorSize: TabBarIndicatorSize.tab,
               tabs: const [
                 Tab(text: 'Truck Expense'),
@@ -292,17 +320,18 @@ class _MyExpensesScreenState extends State<MyExpensesScreen> with SingleTickerPr
               onChanged: _filterExpenses,
               decoration: InputDecoration(
                 hintText: 'Search for ${_tabLabels[_tabController.index]}s',
-                prefixIcon: const Icon(Icons.search),
+                suffixIcon: const Icon(Icons.search),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(color: Colors.grey[300]!),
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color:AppColors.info),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(color: Colors.grey[300]!),
+                  borderSide: BorderSide(color:AppColors.info),
                 ),
                 filled: true,
-                fillColor: Colors.grey[100],
+                fillColor: Colors.white
+                ,
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               ),
             ),
@@ -311,7 +340,7 @@ class _MyExpensesScreenState extends State<MyExpensesScreen> with SingleTickerPr
           // Expense list
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? const Center(child: AppLoader())
                 : _filteredExpenses.isEmpty
                     ? Center(
                         child: Column(
@@ -349,14 +378,14 @@ class _MyExpensesScreenState extends State<MyExpensesScreen> with SingleTickerPr
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _showAddExpenseForm,
-        backgroundColor: const Color(0xFF4CAF50),
+        backgroundColor: AppColors.primaryGreen,
         foregroundColor: Colors.white,
-        icon: const Icon(Icons.add_circle_outline, color: Colors.white, size: 22),
+        icon: const Icon(Icons.add_circle_sharp, color: Colors.white, size: 22),
         label: Text(
           _getAddButtonLabel(),
           style: const TextStyle(
             fontSize: 16,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w400,
             color: Colors.white,
           ),
         ),
@@ -399,10 +428,10 @@ class _MyExpensesScreenState extends State<MyExpensesScreen> with SingleTickerPr
         child: ListTile(
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           leading: CircleAvatar(
-            backgroundColor: const Color(0xFF2196F3).withOpacity(0.1),
+            backgroundColor: AppColors.info.withOpacity(0.1),
             child: Icon(
               _getExpenseIcon(category),
-              color: const Color(0xFF2196F3),
+              color: AppColors.info,
             ),
           ),
           title: Row(
@@ -421,7 +450,7 @@ class _MyExpensesScreenState extends State<MyExpensesScreen> with SingleTickerPr
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF2196F3),
+                  color: AppColors.info,
                 ),
               ),
             ],
@@ -477,7 +506,7 @@ class _MyExpensesScreenState extends State<MyExpensesScreen> with SingleTickerPr
             ),
             const SizedBox(height: 20),
             ListTile(
-              leading: const Icon(Icons.visibility, color: Colors.blue),
+              leading: const Icon(Icons.visibility, color: AppColors.info),
               title: const Text('View Details'),
               onTap: () {
                 Navigator.pop(context);
@@ -611,19 +640,22 @@ class _MyExpensesScreenState extends State<MyExpensesScreen> with SingleTickerPr
       final success = await ApiService.deleteMyExpense(expenseId);
       if (mounted) {
         if (success) {
-          ScaffoldMessenger.of(context).showSnackBar(
+          ToastHelper.showSnackBarToast(
+            context,
             const SnackBar(content: Text('Expense deleted successfully')),
           );
           _loadExpenses();
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
+          ToastHelper.showSnackBarToast(
+            context,
             const SnackBar(content: Text('Failed to delete expense')),
           );
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ToastHelper.showSnackBarToast(
+          context,
           SnackBar(content: Text('Error deleting expense: $e')),
         );
       }

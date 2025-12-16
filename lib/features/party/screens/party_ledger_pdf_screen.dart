@@ -1,8 +1,11 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../../utils/app_colors.dart';
+import '../../../utils/appbar.dart';
 import '../../../services/api_service.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../../utils/app_constants.dart';
+import 'package:transport_book_app/utils/toast_helper.dart';
+import 'package:transport_book_app/utils/app_loader.dart';
 
 class PartyLedgerPdfScreen extends StatefulWidget {
   final List<int> partyIds;
@@ -102,7 +105,7 @@ class _PartyLedgerPdfScreenState extends State<PartyLedgerPdfScreen> {
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ToastHelper.showSnackBarToast(context, 
           SnackBar(content: Text('Error loading data: $e')),
         );
       }
@@ -110,7 +113,7 @@ class _PartyLedgerPdfScreenState extends State<PartyLedgerPdfScreen> {
   }
 
   void _downloadPDF() {
-    ScaffoldMessenger.of(context).showSnackBar(
+    ToastHelper.showSnackBarToast(context, 
       const SnackBar(content: Text('PDF Downloaded')),
     );
   }
@@ -123,14 +126,12 @@ class _PartyLedgerPdfScreenState extends State<PartyLedgerPdfScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF2E8B57),
-      appBar: AppBar(
-        backgroundColor: AppColors.appBarColor,
-        foregroundColor: AppColors.appBarTextColor,
-        title: const Text('Party Ledger'),
-        elevation: 0,
+      appBar: CustomAppBar(
+        title: 'Party Ledger',
+        showBackButton: true,
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.appBarTextColor))
+          ? const Center(child: AppLoader(color: AppColors.appBarTextColor))
           : Column(
               children: [
                 Expanded(
@@ -241,7 +242,7 @@ class _PartyLedgerPdfScreenState extends State<PartyLedgerPdfScreen> {
                   ),
                   const SizedBox(width: 8),
                   const Text(
-                    'TMS Prime',
+                    'TMS Book',
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
@@ -484,7 +485,7 @@ class _PartyLedgerPdfScreenState extends State<PartyLedgerPdfScreen> {
           const SizedBox(height: 4),
           const Center(
             child: Text(
-              'Powered by TMS Prime',
+              'Powered by TMS Book',
               style: TextStyle(
                 fontSize: 10,
                 color: Colors.grey,
@@ -536,3 +537,5 @@ class _PartyLedgerPdfScreenState extends State<PartyLedgerPdfScreen> {
     return '${number.toStringAsFixed(0)} Rupees';
   }
 }
+
+

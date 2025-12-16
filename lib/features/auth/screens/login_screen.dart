@@ -1,8 +1,10 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'otp_verification_screen.dart';
 import '../../../utils/app_colors.dart';
 import '../../../services/api_service.dart';
+import 'package:transport_book_app/utils/toast_helper.dart';
+import 'package:transport_book_app/utils/app_loader.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -49,7 +51,7 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       } else {
         // Show error
-        ScaffoldMessenger.of(context).showSnackBar(
+        ToastHelper.showSnackBarToast(context, 
           SnackBar(
             content: Text(response['message'] ?? 'Invalid phone number'),
             backgroundColor: Colors.red,
@@ -58,7 +60,7 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         const SnackBar(
           content: Text('Network error. Please try again.'),
           backgroundColor: Colors.red,
@@ -73,6 +75,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+
     return Scaffold(
       backgroundColor: AppColors.primaryGreen,
       body: SafeArea(
@@ -81,102 +85,92 @@ class _LoginScreenState extends State<LoginScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Column(
               children: [
-                // Logo and Title
-                const SizedBox(height: 40),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      width: 50,
-                      height: 50,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(
-                        Icons.local_shipping,
-                        size: 32,
-                        color: Color(0xFF2E8B57),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    const Text(
-                      'TMS Prime',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 28,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
+                SizedBox(height: size.height * 0.08),
+
+                // ------------------ TOP LOGO + TITLE ------------------
+                Icon(
+                  Icons.local_shipping,
+                  color: Colors.white,
+                  size: 64,
                 ),
-                const SizedBox(height: 60),
-                // Login Card
+                const SizedBox(height: 12),
+                RichText(
+                  text: const TextSpan(
+                    children: [
+                      TextSpan(
+                        text: "Transport",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 28,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      TextSpan(
+                        text: "Book",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 28,
+                          fontWeight: FontWeight.w300,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 40),
+
+                // ------------------ WHITE LOGIN CARD ------------------
                 Container(
-                  padding: const EdgeInsets.all(20),
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 20,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
                   ),
                   child: Column(
-                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Truecaller Login Button
-                      ElevatedButton.icon(
-                        onPressed: () {},
-                        icon: const Icon(Icons.phone, color: Color(0xFF00A9E0)),
-                        label: const Text(
-                          'Login with Truecaller',
-                          style: TextStyle(
-                            color: Colors.black87,
-                            fontSize: 15,
-                          ),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFF0F0F0),
-                          minimumSize: const Size(double.infinity, 50),
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
+                      // Login Title
+                      const Text(
+                        "Login",
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.black87,
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      // OR Divider
-                      const Row(
-                        children: [
-                          Expanded(child: Divider()),
-                          Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 12),
-                            child: Text(
-                              'OR',
-                              style: TextStyle(
-                                color: Colors.grey,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                          Expanded(child: Divider()),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      // Mobile Number Section
-                      const Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          'Enter Your Mobile Number',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
-                          ),
+                      const SizedBox(height: 8),
+                      Text(
+                        "Enter your mobile number to continue",
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey.shade600,
                         ),
                       ),
-                      const SizedBox(height: 12),
+
+                      const SizedBox(height: 24),
+
+                      // Mobile Number Label
+                      const Text(
+                        "Mobile Number",
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+
+                      // ------------------ COUNTRY + MOBILE INPUT ------------------
                       Row(
                         children: [
-                          // Country Code Selector
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 12,
@@ -186,122 +180,125 @@ class _LoginScreenState extends State<LoginScreen> {
                               border: Border.all(color: Colors.grey.shade300),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: const Row(
+                            child: Row(
                               children: [
-                                Text(
-                                  '🇮🇳',
-                                  style: TextStyle(fontSize: 22),
-                                ),
-                                SizedBox(width: 6),
-                                Text(
-                                  '+91',
+                                const Text("🇮🇳", style: TextStyle(fontSize: 20)),
+                                const SizedBox(width: 6),
+                                const Text(
+                                  "+91",
                                   style: TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w500,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                          const SizedBox(width: 10),
-                          // Mobile Number Input
+                          const SizedBox(width: 12),
                           Expanded(
                             child: TextField(
                               controller: _phoneController,
-                              keyboardType: TextInputType.phone,
                               maxLength: 10,
+                              keyboardType: TextInputType.phone,
                               inputFormatters: [
-                                FilteringTextInputFormatter.digitsOnly,
+                                FilteringTextInputFormatter.digitsOnly
                               ],
                               decoration: InputDecoration(
-                                hintText: 'Mobile Number',
-                                counterText: '',
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(
-                                    color: Colors.grey.shade300,
-                                  ),
+                                hintText: "Enter 10 digit number",
+                                hintStyle: TextStyle(color: Colors.grey.shade400),
+                                counterText: "",
+                                contentPadding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                  horizontal: 16,
                                 ),
                                 enabledBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(
-                                    color: Colors.grey.shade300,
+                                  borderSide: BorderSide(color: Colors.grey.shade300),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(
+                                    color: AppColors.primaryGreen,
+                                    width: 1.5,
                                   ),
                                 ),
-                                contentPadding: const EdgeInsets.all(14),
                               ),
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 20),
-                      // Privacy Policy
-                      RichText(
-                        textAlign: TextAlign.center,
-                        text: const TextSpan(
-                          style: TextStyle(
-                            color: Colors.black87,
-                            fontSize: 12,
-                          ),
-                          children: [
-                            TextSpan(text: 'By confirming, you agree to our\n'),
-                            TextSpan(
-                              text: 'Privacy Policy',
-                              style: TextStyle(
-                                color: Colors.blue,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            TextSpan(text: ' and '),
-                            TextSpan(
-                              text: 'Terms & Conditions',
-                              style: TextStyle(
-                                color: Colors.blue,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      // Send OTP Button
+
+                      const SizedBox(height: 24),
+
+                      // ------------------ SEND OTP BUTTON ------------------
                       ElevatedButton(
                         onPressed: _isButtonEnabled && !_isLoading ? _sendOTP : null,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: _isButtonEnabled
-                              ? AppColors.buttonPrimary
-                              : AppColors.buttonDisabled,
-                          minimumSize: const Size(double.infinity, 50),
-                          elevation: 0,
-                          disabledBackgroundColor: AppColors.buttonDisabled,
+                              ? AppColors.primaryGreen
+                              : Colors.grey.shade300,
+                          minimumSize: const Size(double.infinity, 52),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
+                          elevation: 0,
                         ),
                         child: _isLoading
                             ? const SizedBox(
-                                width: 22,
-                                height: 22,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
+                                width: 24,
+                                height: 24,
+                                child: AppLoader(
                                   strokeWidth: 2,
+                                  color: Colors.white,
                                 ),
                               )
-                            : Text(
-                                'Send OTP',
+                            : const Text(
+                                "Send OTP",
                                 style: TextStyle(
-                                  color: _isButtonEnabled
-                                      ? AppColors.textWhite
-                                      : AppColors.textDisabled,
-                                  fontSize: 15,
+                                  fontSize: 16,
                                   fontWeight: FontWeight.w600,
+                                  color: Colors.white,
                                 ),
                               ),
                       ),
-                ],
-              ),
-            ),
-                const SizedBox(height: 24),
+
+                      const SizedBox(height: 20),
+
+                      // ------------------ PRIVACY POLICY ------------------
+                      Center(
+                        child: RichText(
+                          textAlign: TextAlign.center,
+                          text: TextSpan(
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade600,
+                            ),
+                            children: const [
+                              TextSpan(text: "By continuing, you agree to our "),
+                              TextSpan(
+                                text: "Privacy Policy",
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.primaryGreen,
+                                ),
+                              ),
+                              TextSpan(text: "\nand "),
+                              TextSpan(
+                                text: "Terms & Conditions",
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.primaryGreen,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 40),
               ],
             ),
           ),
@@ -316,3 +313,5 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 }
+
+

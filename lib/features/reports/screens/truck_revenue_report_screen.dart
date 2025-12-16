@@ -1,6 +1,8 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../../utils/app_colors.dart';
 import '../../../services/api_service.dart';
+import 'package:transport_book_app/utils/toast_helper.dart';
+import 'package:transport_book_app/utils/app_loader.dart';
 
 class TruckRevenueReportScreen extends StatefulWidget {
   const TruckRevenueReportScreen({super.key});
@@ -85,7 +87,7 @@ class _TruckRevenueReportScreenState extends State<TruckRevenueReportScreen> {
       print('Error loading truck revenue data: $e');
       setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ToastHelper.showSnackBarToast(context, 
           SnackBar(content: Text('Error loading data: $e')),
         );
       }
@@ -97,11 +99,16 @@ class _TruckRevenueReportScreenState extends State<TruckRevenueReportScreen> {
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
-        backgroundColor: AppColors.appBarColor,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            bottom: Radius.circular(20),
+          ),
+        ),
+        backgroundColor: AppColors.info,
         foregroundColor: AppColors.appBarTextColor,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.appBarTextColor),
+          icon: const Icon(Icons.arrow_back, color: AppColors.appBarColor),
           onPressed: () => Navigator.pop(context),
         ),
         title: Row(
@@ -109,18 +116,18 @@ class _TruckRevenueReportScreenState extends State<TruckRevenueReportScreen> {
             const Text(
               'Truck Revenue Report',
               style: TextStyle(
-                color: AppColors.appBarTextColor,
+                color: AppColors.appBarColor,
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(width: 8),
-            Icon(Icons.info_outline, color: Colors.grey.shade600, size: 20),
+            Icon(Icons.info_outline, color: AppColors.appBarColor, size: 20),
           ],
         ),
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: AppLoader())
           : SingleChildScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -133,7 +140,7 @@ class _TruckRevenueReportScreenState extends State<TruckRevenueReportScreen> {
                         Expanded(
                           child: OutlinedButton.icon(
                             onPressed: () {},
-                            icon: const Icon(Icons.download, color: Colors.green),
+                            icon: const Icon(Icons.download, color: AppColors.primaryGreen),
                             label: const Text(
                               'Download Excel',
                               style: TextStyle(color: Colors.black87),
@@ -152,7 +159,7 @@ class _TruckRevenueReportScreenState extends State<TruckRevenueReportScreen> {
                         Expanded(
                           child: OutlinedButton.icon(
                             onPressed: _loadTruckRevenueData,
-                            icon: const Icon(Icons.refresh, color: Colors.blue),
+                            icon: const Icon(Icons.refresh, color:AppColors.info),
                             label: const Text(
                               'Refresh',
                               style: TextStyle(color: Colors.black87),
@@ -544,3 +551,5 @@ class _TruckRevenueReportScreenState extends State<TruckRevenueReportScreen> {
     );
   }
 }
+
+

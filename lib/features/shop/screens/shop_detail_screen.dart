@@ -1,9 +1,11 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../services/api_service.dart';
 import '../../../utils/app_colors.dart';
 import 'shop_report_screen.dart';
+import 'package:transport_book_app/utils/toast_helper.dart';
+import 'package:transport_book_app/utils/app_loader.dart';
 
 class ShopDetailScreen extends StatefulWidget {
   final int shopId;
@@ -50,7 +52,7 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
       print('Error loading shop details: $e');
       setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ToastHelper.showSnackBarToast(context, 
           SnackBar(content: Text('Error loading shop details: $e')),
         );
       }
@@ -227,7 +229,7 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                   onPressed: () async {
                     final amount = amountController.text;
                     if (amount.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      ToastHelper.showSnackBarToast(context, 
                         const SnackBar(content: Text('Please enter amount')),
                       );
                       return;
@@ -247,7 +249,7 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                     if (result != null) {
                       _loadShopDetails();
                       if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        ToastHelper.showSnackBarToast(context, 
                           const SnackBar(
                             content: Text('Transaction added successfully'),
                           ),
@@ -255,7 +257,7 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                       }
                     } else {
                       if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        ToastHelper.showSnackBarToast(context, 
                           const SnackBar(
                             content: Text('Error adding transaction'),
                           ),
@@ -454,7 +456,7 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                   onPressed: () async {
                     final amount = amountController.text;
                     if (amount.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      ToastHelper.showSnackBarToast(context, 
                         const SnackBar(content: Text('Please enter amount')),
                       );
                       return;
@@ -474,7 +476,7 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                     if (result != null) {
                       _loadShopDetails();
                       if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        ToastHelper.showSnackBarToast(context, 
                           const SnackBar(
                             content: Text('Transaction added successfully'),
                           ),
@@ -482,7 +484,7 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                       }
                     } else {
                       if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        ToastHelper.showSnackBarToast(context, 
                           const SnackBar(
                             content: Text('Error adding transaction'),
                           ),
@@ -530,24 +532,24 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
               try {
                 final success = await ApiService.settleShopBalance(shopId: widget.shopId);
                 if (success && mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  ToastHelper.showSnackBarToast(context, 
                     const SnackBar(content: Text('Amount settled successfully')),
                   );
                   _loadShopDetails();
                 } else if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  ToastHelper.showSnackBarToast(context, 
                     const SnackBar(content: Text('Failed to settle amount')),
                   );
                 }
               } catch (e) {
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  ToastHelper.showSnackBarToast(context, 
                     SnackBar(content: Text('Error: $e')),
                   );
                 }
               }
             },
-            child: const Text('Settle', style: TextStyle(color: Colors.blue)),
+            child: const Text('Settle', style: TextStyle(color: AppColors.info)),
           ),
         ],
       ),
@@ -557,7 +559,7 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
   Future<void> _callShop() async {
     final phoneNumber = _shopDetails?['phone']?.toString() ?? '';
     if (phoneNumber.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         const SnackBar(content: Text('Phone number not available')),
       );
       return;
@@ -569,14 +571,14 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
         await launchUrl(phoneUri);
       } else {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
+          ToastHelper.showSnackBarToast(context, 
             const SnackBar(content: Text('Cannot make phone call')),
           );
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ToastHelper.showSnackBarToast(context, 
           const SnackBar(content: Text('Error making phone call')),
         );
       }
@@ -623,7 +625,7 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
             onPressed: () async {
               final name = nameController.text.trim();
               if (name.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
+                ToastHelper.showSnackBarToast(context, 
                   const SnackBar(content: Text('Shop name is required')),
                 );
                 return;
@@ -639,18 +641,18 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                 );
 
                 if (success && mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  ToastHelper.showSnackBarToast(context, 
                     const SnackBar(content: Text('Shop updated successfully')),
                   );
                   _loadShopDetails();
                 } else if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  ToastHelper.showSnackBarToast(context, 
                     const SnackBar(content: Text('Failed to update shop')),
                   );
                 }
               } catch (e) {
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  ToastHelper.showSnackBarToast(context, 
                     SnackBar(content: Text('Error: $e')),
                   );
                 }
@@ -680,18 +682,18 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
               try {
                 final success = await ApiService.deleteShop(shopId: widget.shopId);
                 if (success && mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  ToastHelper.showSnackBarToast(context, 
                     const SnackBar(content: Text('Shop deleted successfully')),
                   );
                   Navigator.pop(context); // Go back to shop list
                 } else if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  ToastHelper.showSnackBarToast(context, 
                     const SnackBar(content: Text('Failed to delete shop')),
                   );
                 }
               } catch (e) {
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  ToastHelper.showSnackBarToast(context, 
                     SnackBar(content: Text('Error: $e')),
                   );
                 }
@@ -914,7 +916,7 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                   onPressed: () async {
                     final amount = amountController.text;
                     if (amount.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      ToastHelper.showSnackBarToast(context, 
                         const SnackBar(content: Text('Please enter amount')),
                       );
                       return;
@@ -934,18 +936,18 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                       );
 
                       if (success && mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        ToastHelper.showSnackBarToast(context, 
                           const SnackBar(content: Text('Transaction updated successfully')),
                         );
                         _loadShopDetails();
                       } else if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        ToastHelper.showSnackBarToast(context, 
                           const SnackBar(content: Text('Failed to update transaction')),
                         );
                       }
                     } catch (e) {
                       if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        ToastHelper.showSnackBarToast(context, 
                           SnackBar(content: Text('Error: $e')),
                         );
                       }
@@ -993,18 +995,18 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                   transactionId: transactionId,
                 );
                 if (success && mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  ToastHelper.showSnackBarToast(context, 
                     const SnackBar(content: Text('Transaction deleted successfully')),
                   );
                   _loadShopDetails();
                 } else if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  ToastHelper.showSnackBarToast(context, 
                     const SnackBar(content: Text('Failed to delete transaction')),
                   );
                 }
               } catch (e) {
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  ToastHelper.showSnackBarToast(context, 
                     SnackBar(content: Text('Error: $e')),
                   );
                 }
@@ -1026,6 +1028,11 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
         foregroundColor: AppColors.appBarTextColor,
         title: Text(widget.shopName),
         elevation: 0,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            bottom: Radius.circular(20),
+          ),
+        ),
         actions: [
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert),
@@ -1092,7 +1099,7 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: AppLoader())
           : NestedScrollView(
               headerSliverBuilder: (context, innerBoxIsScrolled) {
                 return [
@@ -1116,8 +1123,8 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                               OutlinedButton(
                                 onPressed: _showSettleAmountDialog,
                                 style: OutlinedButton.styleFrom(
-                                  foregroundColor: Colors.blue,
-                                  side: const BorderSide(color: Colors.blue, width: 2),
+                                  foregroundColor: AppColors.info,
+                                  side: const BorderSide(color: AppColors.info, width: 2),
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 20,
                                     vertical: 12,
@@ -1162,7 +1169,7 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
                               child: const Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(Icons.picture_as_pdf, color: Colors.blue),
+                                  Icon(Icons.picture_as_pdf, color: AppColors.info),
                                   SizedBox(width: 8),
                                   Text(
                                     'View Report',
@@ -1394,3 +1401,5 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
     );
   }
 }
+
+

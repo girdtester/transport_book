@@ -1,6 +1,8 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../../utils/app_colors.dart';
 import '../../../services/api_service.dart';
+import 'package:transport_book_app/utils/toast_helper.dart';
+import 'package:transport_book_app/utils/app_loader.dart';
 
 class PartyRevenueReportScreen extends StatefulWidget {
   const PartyRevenueReportScreen({super.key});
@@ -52,7 +54,7 @@ class _PartyRevenueReportScreenState extends State<PartyRevenueReportScreen> {
       print('Error loading party revenue data: $e');
       setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ToastHelper.showSnackBarToast(context, 
           SnackBar(content: Text('Error loading data: $e')),
         );
       }
@@ -66,11 +68,18 @@ class _PartyRevenueReportScreenState extends State<PartyRevenueReportScreen> {
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
-        backgroundColor: AppColors.appBarColor,
+        backgroundColor: AppColors.info,
         foregroundColor: AppColors.appBarTextColor,
+        automaticallyImplyLeading: false,
+
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            bottom: Radius.circular(20),
+          ),
+        ),
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.appBarTextColor),
+          icon: const Icon(Icons.arrow_back, color: AppColors.appBarColor),
           onPressed: () => Navigator.pop(context),
         ),
         title: Row(
@@ -78,18 +87,18 @@ class _PartyRevenueReportScreenState extends State<PartyRevenueReportScreen> {
             const Text(
               'Party Revenue Report',
               style: TextStyle(
-                color: AppColors.appBarTextColor,
+                color: AppColors.appBarColor,
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(width: 8),
-            Icon(Icons.info_outline, color: Colors.grey.shade600, size: 20),
+            Icon(Icons.info_outline, color:AppColors.appBarColor, size: 20),
           ],
         ),
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: AppLoader())
           : SingleChildScrollView(
               child: Column(
                 children: [
@@ -101,7 +110,7 @@ class _PartyRevenueReportScreenState extends State<PartyRevenueReportScreen> {
                         Expanded(
                           child: OutlinedButton.icon(
                             onPressed: () {},
-                            icon: const Icon(Icons.download, color: Colors.green),
+                            icon: const Icon(Icons.download, color: AppColors.primaryGreen),
                             label: const Text(
                               'Download Excel',
                               style: TextStyle(color: Colors.black87),
@@ -120,7 +129,7 @@ class _PartyRevenueReportScreenState extends State<PartyRevenueReportScreen> {
                         Expanded(
                           child: OutlinedButton.icon(
                             onPressed: _loadPartyRevenueData,
-                            icon: const Icon(Icons.refresh, color: Colors.blue),
+                            icon: const Icon(Icons.refresh, color: AppColors.info),
                             label: const Text(
                               'Refresh',
                               style: TextStyle(color: Colors.black87),
@@ -346,3 +355,5 @@ class _PartyRevenueReportScreenState extends State<PartyRevenueReportScreen> {
     );
   }
 }
+
+

@@ -1,16 +1,22 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:transport_book_app/utils/app_loader.dart';
+import 'package:transport_book_app/utils/appbar.dart';
+import 'package:transport_book_app/utils/toast_helper.dart';
 import 'package:url_launcher/url_launcher.dart';
+
 import '../../../services/api_service.dart';
 import '../../../utils/app_colors.dart';
 import '../../../utils/currency_formatter.dart';
-import 'party_balance_detail_screen.dart';
-import 'party_balance_report_screen.dart';
+import '../../../utils/custom_button.dart';
+import '../../../utils/custom_dropdown.dart';
+import '../../../utils/custom_textfield.dart';
+import '../../invoices/screens/invoice_details_screen.dart';
+import '../../invoices/widgets/create_invoice_helper.dart';
 import '../../trips/screens/add_trip_from_dashboard_screen.dart';
 import '../../trips/screens/trip_details_screen.dart';
-import '../../invoices/widgets/create_invoice_helper.dart';
-import '../../invoices/screens/invoice_details_screen.dart';
+import 'party_balance_report_screen.dart';
 
 class PartyDetailScreen extends StatefulWidget {
   final int partyId;
@@ -102,7 +108,8 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> with SingleTicker
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ToastHelper.showSnackBarToast(
+          context,
           SnackBar(content: Text('Error loading data: $e')),
         );
       }
@@ -305,7 +312,7 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> with SingleTicker
           color: isSelected ? Colors.white : Colors.transparent,
           border: Border(
             left: BorderSide(
-              color: isSelected ? Colors.blue : Colors.transparent,
+              color: isSelected ? AppColors.info : Colors.transparent,
               width: 3,
             ),
           ),
@@ -360,7 +367,7 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> with SingleTicker
               }
             },
             style: OutlinedButton.styleFrom(
-              side: const BorderSide(color: Colors.blue, width: 2),
+              side: const BorderSide(color: AppColors.info, width: 2),
               padding: const EdgeInsets.symmetric(vertical: 16),
               minimumSize: const Size(double.infinity, 50),
             ),
@@ -369,7 +376,7 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> with SingleTicker
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: Colors.blue,
+                color: AppColors.info,
               ),
             ),
           ),
@@ -514,11 +521,11 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> with SingleTicker
               height: 24,
               decoration: BoxDecoration(
                 border: Border.all(
-                  color: isSelected ? Colors.blue : Colors.grey.shade400,
+                  color: isSelected ? AppColors.info : Colors.grey.shade400,
                   width: 2,
                 ),
                 borderRadius: BorderRadius.circular(4),
-                color: isSelected ? Colors.blue : Colors.transparent,
+                color: isSelected ? AppColors.info : Colors.transparent,
               ),
               child: isSelected
                   ? const Icon(Icons.check, size: 16, color: Colors.white)
@@ -585,6 +592,30 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> with SingleTicker
     }
   }
 
+  PopupMenuItem<String> _popupItem({
+    required String value,
+    required IconData icon,
+    required Color iconColor,
+    required String text,
+  }) {
+    return PopupMenuItem(
+      value: value,
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: iconColor),
+          const SizedBox(width: 12),
+          Text(
+            text,
+            style: TextStyle(
+              color: iconColor == Colors.red ? Colors.red : Colors.black87,
+              fontSize: 15,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return WillPopScope(
@@ -594,104 +625,80 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> with SingleTicker
       },
       child: Scaffold(
         backgroundColor: Colors.grey[100],
-        appBar: AppBar(
-        backgroundColor: AppColors.appBarColor,
-        foregroundColor: AppColors.appBarTextColor,
-        elevation: 1,
-        title: Row(
-          children: [
-            Text(
-              widget.partyName,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
+        appBar: CustomAppBar(
+          title: widget.partyName,
+          onBack: () {
+            Navigator.pop(context);
+          },
+          actions: [
+            PopupMenuButton<String>(
+              icon: const Icon(
+                Icons.more_vert,
+                color: AppColors.appBarColor,
               ),
+              color: Colors.white,
+              elevation: 5,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              onSelected: (value) {
+                switch (value) {
+                  case 'call':
+                    _callParty();
+                    break;
+                  case 'edit':
+                    _showEditPartyDialog();
+                    break;
+                  case 'delete':
+                    _deleteParty();
+                    break;
+                  case 'opening_balance':
+                    _showAddOpeningBalanceDialog();
+                    break;
+                  case 'details':
+                    _showPartyDetailsDialog();
+                    break;
+                }
+              },
+              itemBuilder: (context) => [
+                _popupItem(
+                  value: 'call',
+                  icon: Icons.phone,
+                  iconColor: Colors.black87,
+                  text: "Call Party",
+                ),
+                _popupItem(
+                  value: 'edit',
+                  icon: Icons.edit,
+                  iconColor: Colors.black87,
+                  text: "Edit Party",
+                ),
+                _popupItem(
+                  value: 'delete',
+                  icon: Icons.delete,
+                  iconColor: Colors.red,
+                  text: "Delete Party",
+                ),
+                _popupItem(
+                  value: 'opening_balance',
+                  icon: Icons.account_balance_wallet,
+                  iconColor: Colors.black87,
+                  text: "Add Opening Balance",
+                ),
+                _popupItem(
+                  value: 'details',
+                  icon: Icons.info_outline,
+                  iconColor: Colors.black87,
+                  text: "Party Details",
+                ),
+              ],
             ),
-            const SizedBox(width: 4),
-            const Icon(Icons.arrow_drop_down, size: 24),
           ],
         ),
-        actions: [
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert),
-            onSelected: (value) {
-              switch (value) {
-                case 'call':
-                  _callParty();
-                  break;
-                case 'edit':
-                  _showEditPartyDialog();
-                  break;
-                case 'delete':
-                  _deleteParty();
-                  break;
-                case 'opening_balance':
-                  _showAddOpeningBalanceDialog();
-                  break;
-                case 'details':
-                  _showPartyDetailsDialog();
-                  break;
-              }
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'call',
-                child: Row(
-                  children: [
-                    Icon(Icons.phone, size: 20, color: Colors.black87),
-                    SizedBox(width: 12),
-                    Text('Call Party'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'edit',
-                child: Row(
-                  children: [
-                    Icon(Icons.edit, size: 20, color: Colors.black87),
-                    SizedBox(width: 12),
-                    Text('Edit Party'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'delete',
-                child: Row(
-                  children: [
-                    Icon(Icons.delete, size: 20, color: Colors.red),
-                    SizedBox(width: 12),
-                    Text('Delete Party', style: TextStyle(color: Colors.red)),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'opening_balance',
-                child: Row(
-                  children: [
-                    Icon(Icons.account_balance_wallet, size: 20, color: Colors.black87),
-                    SizedBox(width: 12),
-                    Text('Add Opening Balance'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'details',
-                child: Row(
-                  children: [
-                    Icon(Icons.info_outline, size: 20, color: Colors.black87),
-                    SizedBox(width: 12),
-                    Text('Party Details'),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : NestedScrollView(
-              headerSliverBuilder: (context, innerBoxIsScrolled) {
+        body: _isLoading
+            ? const Center(child: AppLoader())
+            : NestedScrollView(
+                headerSliverBuilder: (context, innerBoxIsScrolled) {
                 return [
                   // Party Balance Section as Sliver
                   SliverToBoxAdapter(
@@ -729,22 +736,23 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> with SingleTicker
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(vertical: 12),
                                     decoration: BoxDecoration(
-                                      color: Colors.blue.shade50,
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
+                                        color: AppColors.info.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
                                     child: Row(
                                       mainAxisAlignment: MainAxisAlignment.center,
                                       children: [
-                                        Icon(Icons.picture_as_pdf, color: Colors.blue.shade700, size: 20),
-                                        const SizedBox(width: 8),
-                                        Text(
+                                          Icon(Icons.picture_as_pdf,
+                                              color: AppColors.info, size: 20),
+                                          const SizedBox(width: 8),
+                                          Text(
                                           'View Report',
                                           style: TextStyle(
                                             fontSize: 14,
                                             fontWeight: FontWeight.w600,
-                                            color: Colors.blue.shade700,
+                                              color: AppColors.info,
+                                            ),
                                           ),
-                                        ),
                                       ],
                                     ),
                                   ),
@@ -792,11 +800,11 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> with SingleTicker
                     delegate: _SliverAppBarDelegate(
                       TabBar(
                         controller: _tabController,
-                        labelColor: Colors.blue,
-                        unselectedLabelColor: Colors.grey,
-                        indicatorColor: Colors.blue,
-                        indicatorWeight: 3,
-                        indicatorSize: TabBarIndicatorSize.tab,
+                          labelColor: AppColors.info,
+                          unselectedLabelColor: Colors.grey,
+                          indicatorColor: AppColors.info,
+                          indicatorWeight: 3,
+                          indicatorSize: TabBarIndicatorSize.tab,
                         tabs: const [
                           Tab(text: 'Trips'),
                           Tab(text: 'Passbook'),
@@ -832,24 +840,16 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> with SingleTicker
               child: Row(
                 children: [
                   Expanded(
-                    child: TextField(
+                    child: CustomTextField(
+                      label: '',
+                      controller: TextEditingController(text: _searchQuery),
+                      hint: 'Search for ',
+                      suffix: const Icon(Icons.search, color: Colors.grey),
                       onChanged: (value) {
                         setState(() {
                           _searchQuery = value;
                         });
                       },
-                      decoration: InputDecoration(
-                        hintText: 'Search for Trips',
-                        hintStyle: TextStyle(color: Colors.grey.shade400),
-                        prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                        filled: true,
-                        fillColor: Colors.grey.shade100,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide.none,
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -927,7 +927,7 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> with SingleTicker
               Expanded(
                 child: FloatingActionButton.extended(
                   onPressed: _showAddPaymentDialog,
-                  backgroundColor: Colors.blue,
+                  backgroundColor: AppColors.info,
                   heroTag: 'addPaymentTrip',
                   icon: const Icon(Icons.payment, color: Colors.white, size: 22),
                   label: const Text(
@@ -998,7 +998,7 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> with SingleTicker
                             style: const TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.bold,
-                              color: Colors.blue,
+                              color: AppColors.info,
                             ),
                           ),
                           if (isMarket) ...[
@@ -1149,10 +1149,14 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> with SingleTicker
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: status == 'Completed' ? Colors.green.shade50 : Colors.blue.shade50,
+                    color: status == 'Completed'
+                        ? AppColors.primaryGreen.withOpacity(0.1)
+                        : AppColors.info.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(4),
                     border: Border.all(
-                      color: status == 'Completed' ? Colors.green.shade200 : Colors.blue.shade200,
+                      color: status == 'Completed'
+                          ? AppColors.primaryGreen.withOpacity(0.25)
+                          : AppColors.info.withOpacity(0.3),
                       width: 1,
                     ),
                   ),
@@ -1160,7 +1164,9 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> with SingleTicker
                     status,
                     style: TextStyle(
                       fontSize: 11,
-                      color: status == 'Completed' ? Colors.green.shade700 : Colors.blue.shade700,
+                      color: status == 'Completed'
+                          ? AppColors.primaryGreen.withOpacity(0.8)
+                          : AppColors.info,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -1169,7 +1175,7 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> with SingleTicker
                 TextButton(
                   onPressed: () => _viewTrip(trip),
                   style: TextButton.styleFrom(
-                    backgroundColor: Colors.blue,
+                    backgroundColor: AppColors.info,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     shape: RoundedRectangleBorder(
@@ -1214,7 +1220,7 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> with SingleTicker
             ),
             const SizedBox(height: 20),
             ListTile(
-              leading: const Icon(Icons.visibility, color: Colors.blue),
+              leading: const Icon(Icons.visibility, color: AppColors.info),
               title: const Text('View Trip'),
               onTap: () {
                 Navigator.pop(context);
@@ -1226,7 +1232,8 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> with SingleTicker
               title: const Text('Edit Trip'),
               onTap: () {
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
+                ToastHelper.showSnackBarToast(
+                  context,
                   const SnackBar(content: Text('Edit Trip - Coming soon')),
                 );
               },
@@ -1262,7 +1269,8 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> with SingleTicker
               Navigator.pop(context);
               // TODO: Implement API call to delete trip
               if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
+                ToastHelper.showSnackBarToast(
+                  context,
                   const SnackBar(content: Text('Trip deleted successfully')),
                 );
                 _loadData();
@@ -1345,7 +1353,7 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> with SingleTicker
                 Navigator.pop(context);
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
+                backgroundColor: AppColors.info,
                 foregroundColor: Colors.white,
                 minimumSize: const Size(double.infinity, 50),
                 shape: RoundedRectangleBorder(
@@ -1455,7 +1463,7 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> with SingleTicker
                 Navigator.pop(context);
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
+                backgroundColor: AppColors.info,
                 foregroundColor: Colors.white,
                 minimumSize: const Size(double.infinity, 50),
                 shape: RoundedRectangleBorder(
@@ -1548,7 +1556,7 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> with SingleTicker
               Expanded(
                 child: FloatingActionButton.extended(
                   onPressed: _showAddPaymentDialog,
-                  backgroundColor: Colors.blue,
+                  backgroundColor: AppColors.info,
                   heroTag: 'addPaymentPassbook',
                   icon: const Icon(Icons.payment, color: Colors.white),
                   label: const Text(
@@ -1583,7 +1591,7 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> with SingleTicker
           'type': 'trip',
           'tripId': tripId,
           'trip': trip, // Store full trip data for editing
-          'title': '$lrNumber - $origin ▸ $destination',
+          'title': '$lrNumber - $origin â–¸ $destination',
           'date': startDate,
           'truckNumber': truckNumber,
           'amount': freightAmount,
@@ -1838,9 +1846,9 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> with SingleTicker
               style: const TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
-                color: Colors.blue,
-              ),
-              textAlign: TextAlign.right,
+                    color: AppColors.info,
+                  ),
+                  textAlign: TextAlign.right,
             ),
           ),
           ],
@@ -1874,7 +1882,7 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> with SingleTicker
             ),
             const SizedBox(height: 20),
             ListTile(
-              leading: const Icon(Icons.visibility, color: Colors.blue),
+              leading: const Icon(Icons.visibility, color: AppColors.info),
               title: Text('View ${entryType == 'trip' ? 'Trip' : 'Payment'}'),
               onTap: () {
                 Navigator.pop(context);
@@ -1927,7 +1935,8 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> with SingleTicker
 
               if (tripId == null) {
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  ToastHelper.showSnackBarToast(
+                    context,
                     const SnackBar(content: Text('Error: Unable to delete entry')),
                   );
                 }
@@ -1943,12 +1952,14 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> with SingleTicker
                 setState(() {
                   _hasChanges = true; // Mark that data was changed
                 });
-                ScaffoldMessenger.of(context).showSnackBar(
+                ToastHelper.showSnackBarToast(
+                  context,
                   SnackBar(content: Text('${entryType == 'trip' ? 'Trip' : 'Payment'} deleted successfully')),
                 );
                 await _loadData(); // Reload data to reflect changes
               } else {
-                ScaffoldMessenger.of(context).showSnackBar(
+                ToastHelper.showSnackBarToast(
+                  context,
                   SnackBar(content: Text('Failed to delete ${entryType == 'trip' ? 'trip' : 'payment'}')),
                 );
               }
@@ -1965,7 +1976,8 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> with SingleTicker
     final tripId = entry['tripId'];
 
     if (tripId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(
+        context,
         const SnackBar(content: Text('Error: Unable to edit entry')),
       );
       return;
@@ -2048,7 +2060,7 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> with SingleTicker
                       preselectedPartyName: widget.partyName,
                     );
                   },
-                  backgroundColor: Colors.blue,
+                  backgroundColor: AppColors.info,
                   heroTag: 'addInvoice',
                   icon: const Icon(Icons.receipt_long, color: Colors.white),
                   label: const Text(
@@ -2175,17 +2187,17 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> with SingleTicker
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.blue.shade50,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
+                        color: AppColors.info.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
                     child: Text(
                       'Balance',
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: Colors.blue.shade700,
+                          color: AppColors.info,
+                        ),
                       ),
-                    ),
                   ),
                 ],
               ],
@@ -2220,7 +2232,7 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> with SingleTicker
             ),
             const SizedBox(height: 20),
             ListTile(
-              leading: const Icon(Icons.visibility, color: Colors.blue),
+              leading: const Icon(Icons.visibility, color: AppColors.info),
               title: const Text('View Invoice'),
               onTap: () {
                 Navigator.pop(context);
@@ -2239,7 +2251,8 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> with SingleTicker
               title: const Text('Edit Invoice'),
               onTap: () {
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
+                ToastHelper.showSnackBarToast(
+                  context,
                   const SnackBar(content: Text('Edit Invoice - Coming soon')),
                 );
               },
@@ -2275,7 +2288,8 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> with SingleTicker
               Navigator.pop(context);
               // TODO: Implement API call to delete invoice
               if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
+                ToastHelper.showSnackBarToast(
+                  context,
                   const SnackBar(content: Text('Invoice deleted successfully')),
                 );
                 _loadData();
@@ -2413,9 +2427,10 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> with SingleTicker
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.blue.shade50,
+                        color: AppColors.info.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.blue.shade200),
+                        border:
+                            Border.all(color: AppColors.info.withOpacity(0.3)),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2478,14 +2493,7 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> with SingleTicker
                   ],
 
                   // Date Field
-                  TextField(
-                    controller: dateController,
-                    decoration: const InputDecoration(
-                      labelText: 'Payment Date',
-                      border: OutlineInputBorder(),
-                      suffixIcon: Icon(Icons.calendar_today),
-                    ),
-                    readOnly: true,
+                  GestureDetector(
                     onTap: () async {
                       final date = await showDatePicker(
                         context: context,
@@ -2499,19 +2507,22 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> with SingleTicker
                         });
                       }
                     },
+                    child: AbsorbPointer(
+                      child: CustomTextField(
+                        label: 'Payment Date',
+                        controller: dateController,
+                        suffix: const Icon(Icons.calendar_today),
+                        readOnly: true,
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 16),
 
                   // Payment Mode Field
-                  DropdownButtonFormField<String>(
+                  CustomDropdown(
+                    label: 'Payment Mode',
                     value: paymentMode,
-                    decoration: const InputDecoration(
-                      labelText: 'Payment Mode',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: ['Cash', 'Online', 'Cheque'].map((mode) {
-                      return DropdownMenuItem(value: mode, child: Text(mode));
-                    }).toList(),
+                    items: ['Cash', 'Online', 'Cheque'],
                     onChanged: (value) {
                       if (value != null) {
                         setModalState(() => paymentMode = value);
@@ -2524,7 +2535,8 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> with SingleTicker
                   ElevatedButton(
                     onPressed: () async {
                       if (selectedTripsWithAmounts.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        ToastHelper.showSnackBarToast(
+                          context,
                           const SnackBar(content: Text('Please select at least one trip')),
                         );
                         return;
@@ -2560,7 +2572,8 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> with SingleTicker
 
                         if (successCount == selectedTripsWithAmounts.length) {
                           try {
-                            ScaffoldMessenger.of(context).showSnackBar(
+                            ToastHelper.showSnackBarToast(
+                              context,
                               SnackBar(
                                 content: Text('Payment added successfully for $successCount trip(s)'),
                                 backgroundColor: Colors.green,
@@ -2571,7 +2584,8 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> with SingleTicker
                           }
                         } else {
                           try {
-                            ScaffoldMessenger.of(context).showSnackBar(
+                            ToastHelper.showSnackBarToast(
+                              context,
                               SnackBar(
                                 content: Text('Payment added for $successCount of ${selectedTripsWithAmounts.length} trips'),
                                 backgroundColor: Colors.orange,
@@ -2584,7 +2598,8 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> with SingleTicker
                       } catch (e) {
                         if (!mounted) return;
                         try {
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          ToastHelper.showSnackBarToast(
+                            context,
                             SnackBar(content: Text('Error adding payment: $e')),
                           );
                         } catch (e) {
@@ -2713,7 +2728,8 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> with SingleTicker
                                           );
                                           workingSelection.add({
                                             'tripId': tripId,
-                                            'label': '$lrNumber - $origin → $destination',
+                                            'label':
+                                                '$lrNumber - $origin â†’ $destination',
                                             'amount': pendingBalance,
                                           });
                                         } else {
@@ -2730,7 +2746,7 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> with SingleTicker
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          '$lrNumber - $origin → $destination',
+                                          '$lrNumber - $origin â†’ $destination',
                                           style: const TextStyle(
                                             fontWeight: FontWeight.w600,
                                             fontSize: 14,
@@ -2752,20 +2768,11 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> with SingleTicker
                               ),
                               if (isSelected) ...[
                                 const SizedBox(height: 8),
-                                TextField(
-                                  controller: amountControllers[tripId],
-                                  keyboardType: TextInputType.number,
+                                CustomTextField(
+                                  label: 'Payment Amount',
+                                  controller: amountControllers[tripId]!,
+                                  keyboard: TextInputType.number,
                                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                                  decoration: InputDecoration(
-                                    labelText: 'Payment Amount',
-                                    prefixText: '₹ ',
-                                    border: const OutlineInputBorder(),
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                    helperText: pendingBalance < double.parse(amountControllers[tripId]!.text.isEmpty ? '0' : amountControllers[tripId]!.text)
-                                        ? 'Overpayment detected'
-                                        : null,
-                                    helperStyle: const TextStyle(color: Colors.orange),
-                                  ),
                                   onChanged: (value) {
                                     setModalState(() {
                                       final amount = double.tryParse(value) ?? 0.0;
@@ -2814,26 +2821,13 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> with SingleTicker
                   ),
                 ),
                 const SizedBox(height: 16),
-                ElevatedButton(
+                CustomButton(
+                  text: 'Confirm Selection (${workingSelection.length} trips)',
+                  color: const Color(0xFF2E8B57),
                   onPressed: () {
                     onUpdate(workingSelection, calculateTotal());
                     Navigator.pop(context);
                   },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2E8B57),
-                    foregroundColor: Colors.white,
-                    minimumSize: const Size(double.infinity, 50),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: Text(
-                    'Confirm Selection (${workingSelection.length} trips)',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
                 ),
               ],
             ),
@@ -2852,7 +2846,8 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> with SingleTicker
   Future<void> _callParty() async {
     final phone = _partyDetails?['phone']?.toString();
     if (phone == null || phone.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(
+        context,
         const SnackBar(content: Text('Phone number not available')),
       );
       return;
@@ -2863,7 +2858,8 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> with SingleTicker
       await launchUrl(uri);
     } else {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(
+        context,
         const SnackBar(content: Text('Could not launch phone dialer')),
       );
     }
@@ -2898,45 +2894,36 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> with SingleTicker
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 20),
-                TextField(
+                CustomTextField(
+                  label: 'Party Name',
                   controller: nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Party Name',
-                    border: OutlineInputBorder(),
-                  ),
                 ),
                 const SizedBox(height: 16),
-                TextField(
+                CustomTextField(
+                  label: 'Phone Number',
                   controller: phoneController,
-                  decoration: const InputDecoration(
-                    labelText: 'Phone Number',
-                    border: OutlineInputBorder(),
-                  ),
-                  keyboardType: TextInputType.phone,
+                  keyboard: TextInputType.phone,
                 ),
                 const SizedBox(height: 16),
-                TextField(
+                CustomTextField(
+                  label: 'Email',
                   controller: emailController,
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
-                    border: OutlineInputBorder(),
-                  ),
-                  keyboardType: TextInputType.emailAddress,
+                  keyboard: TextInputType.emailAddress,
                 ),
                 const SizedBox(height: 16),
-                TextField(
+                CustomTextField(
+                  label: 'Address',
                   controller: addressController,
-                  decoration: const InputDecoration(
-                    labelText: 'Address',
-                    border: OutlineInputBorder(),
-                  ),
                   maxLines: 2,
                 ),
                 const SizedBox(height: 24),
-                ElevatedButton(
+                CustomButton(
+                  text: 'Update Party',
+                  color: const Color(0xFF2196F3),
                   onPressed: () async {
                     if (nameController.text.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      ToastHelper.showSnackBarToast(
+                        context,
                         const SnackBar(content: Text('Please enter party name')),
                       );
                       return;
@@ -2956,23 +2943,18 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> with SingleTicker
 
                     if (success) {
                       _hasChanges = true; // Mark that data was changed
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      ToastHelper.showSnackBarToast(
+                        context,
                         const SnackBar(content: Text('Party updated successfully')),
                       );
                       await _loadData();
                     } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      ToastHelper.showSnackBarToast(
+                        context,
                         const SnackBar(content: Text('Failed to update party')),
                       );
                     }
                   },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2196F3),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                  child: const Text('Update Party', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                 ),
               ],
             ),
@@ -3008,12 +2990,14 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> with SingleTicker
       if (!mounted) return;
 
       if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ToastHelper.showSnackBarToast(
+          context,
           const SnackBar(content: Text('Party deleted successfully')),
         );
         Navigator.pop(context, true); // Go back to party list
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ToastHelper.showSnackBarToast(
+          context,
           const SnackBar(content: Text('Failed to delete party')),
         );
       }
@@ -3050,21 +3034,20 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> with SingleTicker
                 style: const TextStyle(fontSize: 14, color: Colors.grey),
               ),
               const SizedBox(height: 20),
-              TextField(
+              CustomTextField(
+                label: 'Opening Balance Amount',
                 controller: amountController,
-                keyboardType: TextInputType.number,
+                keyboard: TextInputType.number,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                decoration: const InputDecoration(
-                  labelText: 'Opening Balance Amount',
-                  prefixText: '₹ ',
-                  border: OutlineInputBorder(),
-                ),
               ),
               const SizedBox(height: 24),
-              ElevatedButton(
+              CustomButton(
+                text: 'Add Balance',
+                color: const Color(0xFF2196F3),
                 onPressed: () async {
                   if (amountController.text.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
+                    ToastHelper.showSnackBarToast(
+                      context,
                       const SnackBar(content: Text('Please enter amount')),
                     );
                     return;
@@ -3082,23 +3065,18 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> with SingleTicker
 
                   if (success) {
                     _hasChanges = true; // Mark that data was changed
-                    ScaffoldMessenger.of(context).showSnackBar(
+                    ToastHelper.showSnackBarToast(
+                      context,
                       const SnackBar(content: Text('Opening balance added successfully')),
                     );
                     await _loadData();
                   } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
+                    ToastHelper.showSnackBarToast(
+                      context,
                       const SnackBar(content: Text('Failed to add opening balance')),
                     );
                   }
                 },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF2196F3),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                ),
-                child: const Text('Add Balance', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
               ),
             ],
           ),
@@ -3137,15 +3115,10 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> with SingleTicker
             const Divider(),
             _buildDetailRow('Current Balance', CurrencyFormatter.formatWithSymbol(_partyBalance.toInt())),
             const SizedBox(height: 20),
-            ElevatedButton(
+            CustomButton(
+              text: 'Close',
+              color: Colors.grey.shade700,
               onPressed: () => Navigator.pop(context),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.grey.shade200,
-                foregroundColor: Colors.black87,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-              child: const Text('Close'),
             ),
           ],
         ),

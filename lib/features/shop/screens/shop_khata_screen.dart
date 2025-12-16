@@ -1,9 +1,12 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
 import '../../../services/api_service.dart';
 import '../../../utils/app_colors.dart';
+import '../../../utils/appbar.dart';
 import '../../../utils/currency_formatter.dart';
 import 'shop_detail_screen.dart';
+import 'package:transport_book_app/utils/toast_helper.dart';
+import 'package:transport_book_app/utils/app_loader.dart';
 
 class ShopKhataScreen extends StatefulWidget {
   const ShopKhataScreen({super.key});
@@ -58,7 +61,7 @@ class _ShopKhataScreenState extends State<ShopKhataScreen> {
       print('Error loading shops: $e');
       setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ToastHelper.showSnackBarToast(context, 
           SnackBar(content: Text('Error loading shops: $e')),
         );
       }
@@ -93,7 +96,7 @@ class _ShopKhataScreenState extends State<ShopKhataScreen> {
     final colors = [
       const Color(0xFFE53935),
       const Color(0xFF3D5A99),
-      const Color(0xFF4CAF50),
+      AppColors.primaryGreen,
       const Color(0xFFFF8C00),
       const Color(0xFFE91E63),
       const Color(0xFF9C27B0),
@@ -120,7 +123,7 @@ class _ShopKhataScreenState extends State<ShopKhataScreen> {
     } catch (e) {
       print('Error picking contact: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ToastHelper.showSnackBarToast(context, 
           const SnackBar(content: Text('Error accessing contacts')),
         );
       }
@@ -196,8 +199,8 @@ class _ShopKhataScreenState extends State<ShopKhataScreen> {
                       },
                       icon: const Icon(Icons.contacts),
                       style: IconButton.styleFrom(
-                        backgroundColor: Colors.blue.shade50,
-                        foregroundColor: Colors.blue,
+                        backgroundColor: AppColors.info.withOpacity(0.1),
+                        foregroundColor: AppColors.info,
                         padding: const EdgeInsets.all(16),
                       ),
                       tooltip: 'Pick from contacts',
@@ -255,8 +258,8 @@ class _ShopKhataScreenState extends State<ShopKhataScreen> {
                     );
                   },
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.blue,
-                    side: const BorderSide(color: Colors.blue),
+                    foregroundColor: AppColors.info,
+                    side: const BorderSide(color: AppColors.info),
                     padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
                   child: const Text('Add Opening Balance'),
@@ -271,7 +274,7 @@ class _ShopKhataScreenState extends State<ShopKhataScreen> {
                           _enableSMS = value ?? false;
                         });
                       },
-                      activeColor: Colors.blue,
+                      activeColor: AppColors.info,
                     ),
                     const Text('Enable SMS for transactions'),
                   ],
@@ -300,7 +303,7 @@ class _ShopKhataScreenState extends State<ShopKhataScreen> {
                           if (result != null) {
                             _loadShops();
                             if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
+                              ToastHelper.showSnackBarToast(context, 
                                 const SnackBar(
                                   content: Text('Shop added successfully'),
                                 ),
@@ -308,7 +311,7 @@ class _ShopKhataScreenState extends State<ShopKhataScreen> {
                             }
                           } else {
                             if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
+                              ToastHelper.showSnackBarToast(context, 
                                 const SnackBar(
                                   content: Text('Error adding shop'),
                                 ),
@@ -343,11 +346,9 @@ class _ShopKhataScreenState extends State<ShopKhataScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        backgroundColor: AppColors.appBarColor,
-        foregroundColor: AppColors.appBarTextColor,
-        title: const Text('Shops'),
-        elevation: 0,
+      appBar: CustomAppBar(
+        title: 'Shops',
+        showBackButton: true,
       ),
       body: Column(
         children: [
@@ -382,7 +383,7 @@ class _ShopKhataScreenState extends State<ShopKhataScreen> {
                   style: const TextStyle(
                     fontSize: 32,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF4CAF50),
+                    color: AppColors.primaryGreen,
                   ),
                 ),
               ],
@@ -410,7 +411,7 @@ class _ShopKhataScreenState extends State<ShopKhataScreen> {
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: Color(0xFF4CAF50), width: 2),
+                  borderSide: const BorderSide(color: AppColors.primaryGreen, width: 2),
                 ),
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 16,
@@ -456,7 +457,7 @@ class _ShopKhataScreenState extends State<ShopKhataScreen> {
           // Shop List
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? const Center(child: AppLoader())
                 : _filteredShops.isEmpty
                     ? Center(
                         child: Column(
@@ -496,7 +497,7 @@ class _ShopKhataScreenState extends State<ShopKhataScreen> {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _showAddShopDialog,
-        backgroundColor: const Color(0xFF4CAF50),
+        backgroundColor: AppColors.primaryGreen,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add_circle_outline, size: 22),
         label: const Text(
@@ -587,3 +588,5 @@ class _ShopKhataScreenState extends State<ShopKhataScreen> {
     );
   }
 }
+
+

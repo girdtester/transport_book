@@ -1,9 +1,12 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
-import 'dart:io';
+import 'dart:typed_data';
 import '../../../utils/app_colors.dart';
+import '../../../utils/app_constants.dart';
 import '../../../services/api_service.dart';
+import 'package:transport_book_app/utils/toast_helper.dart';
+import 'package:transport_book_app/utils/app_loader.dart';
 
 class DocumentsBookScreen extends StatefulWidget {
   final int truckId;
@@ -49,16 +52,755 @@ class _DocumentsBookScreenState extends State<DocumentsBookScreen> {
     });
   }
 
+  // Show document details dialog
+  void _showDocumentDetailsDialog(Map<String, dynamic> doc) {
+    final nameController = TextEditingController(text: doc['name'] ?? '');
+    final documentNumberController = TextEditingController(text: doc['document_number'] ?? '');
+    DateTime? issueDate;
+    DateTime? expiryDate;
+    String selectedStatus = doc['status'] ?? 'Active';
+    bool isEditing = false;
+
+    // Parse dates
+    if (doc['issue_date'] != null) {
+      try {
+        issueDate = DateTime.parse(doc['issue_date']);
+      } catch (e) {}
+    }
+    if (doc['expiry_date'] != null) {
+      try {
+        expiryDate = DateTime.parse(doc['expiry_date']);
+      } catch (e) {}
+    }
+
+    // Get image URL
+    String? imageUrl;
+    if (doc['image_url'] != null) {
+      imageUrl = '${AppConstants.serverUrl}${doc['image_url']}';
+    } else if (doc['image_path'] != null) {
+      imageUrl = '${AppConstants.serverUrl}/api/v1/documents/file/${doc['image_path']}';
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => Container(
+          height: MediaQuery.of(context).size.height * 0.85,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              // Header
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      isEditing ? 'Edit Document' : 'Document Details',
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        if (!isEditing)
+                          IconButton(
+                            onPressed: () {
+                              setModalState(() => isEditing = true);
+                            },
+                            icon: const Icon(Icons.edit, color: AppColors.info),
+                          ),
+                        IconButton(
+                          onPressed: () => Navigator.pop(context),
+                          icon: const Icon(Icons.close),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+
+              // Content
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Document Image
+                      if (imageUrl != null)
+                        GestureDetector(
+                          onTap: () => _showFullImage(imageUrl!),
+                          child: Container(
+                            width: double.infinity,
+                            height: 200,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.grey.shade300),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Image.network(
+                                imageUrl,
+                                fit: BoxFit.contain,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Center(
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.broken_image, size: 48, color: Colors.grey.shade400),
+                                        const SizedBox(height: 8),
+                                        Text('Image not available', style: TextStyle(color: Colors.grey.shade600)),
+                                      ],
+                                    ),
+                                  );
+                                },
+                                loadingBuilder: (context, child, loadingProgress) {
+                                  if (loadingProgress == null) return child;
+                                  return const Center(child: CircularProgressIndicator());
+                                },
+                              ),
+                            ),
+                          ),
+                        ),
+                      if (imageUrl != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Text(
+                            'Tap image to view full size',
+                            style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                          ),
+                        ),
+
+                      const SizedBox(height: 20),
+
+                      // Document Name
+                      const Text('Document Type', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                      const SizedBox(height: 4),
+                      if (isEditing)
+                        TextField(
+                          controller: nameController,
+                          decoration: InputDecoration(
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          ),
+                        )
+                      else
+                        Text(
+                          doc['name'] ?? 'Unknown',
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                        ),
+
+                      const SizedBox(height: 16),
+
+                      // Document Number
+                      const Text('Document Number', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                      const SizedBox(height: 4),
+                      if (isEditing)
+                        TextField(
+                          controller: documentNumberController,
+                          decoration: InputDecoration(
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          ),
+                        )
+                      else
+                        Text(
+                          doc['document_number'] ?? 'Not provided',
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                        ),
+
+                      const SizedBox(height: 16),
+
+                      // Issue Date
+                      const Text('Issue Date', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                      const SizedBox(height: 4),
+                      if (isEditing)
+                        GestureDetector(
+                          onTap: () async {
+                            final picked = await showDatePicker(
+                              context: context,
+                              initialDate: issueDate ?? DateTime.now(),
+                              firstDate: DateTime(2000),
+                              lastDate: DateTime.now(),
+                            );
+                            if (picked != null) {
+                              setModalState(() => issueDate = picked);
+                            }
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.grey.shade400),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  issueDate != null
+                                      ? DateFormat('dd MMM yyyy').format(issueDate!)
+                                      : 'Select date',
+                                  style: TextStyle(
+                                    color: issueDate != null ? Colors.black : Colors.grey,
+                                  ),
+                                ),
+                                const Icon(Icons.calendar_today, size: 18, color: Colors.grey),
+                              ],
+                            ),
+                          ),
+                        )
+                      else
+                        Text(
+                          issueDate != null
+                              ? DateFormat('dd MMM yyyy').format(issueDate!)
+                              : 'Not provided',
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                        ),
+
+                      const SizedBox(height: 16),
+
+                      // Expiry Date
+                      const Text('Expiry Date', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                      const SizedBox(height: 4),
+                      if (isEditing)
+                        GestureDetector(
+                          onTap: () async {
+                            final picked = await showDatePicker(
+                              context: context,
+                              initialDate: expiryDate ?? DateTime.now().add(const Duration(days: 365)),
+                              firstDate: DateTime.now(),
+                              lastDate: DateTime(2100),
+                            );
+                            if (picked != null) {
+                              setModalState(() => expiryDate = picked);
+                            }
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.grey.shade400),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  expiryDate != null
+                                      ? DateFormat('dd MMM yyyy').format(expiryDate!)
+                                      : 'Select date',
+                                  style: TextStyle(
+                                    color: expiryDate != null ? Colors.black : Colors.grey,
+                                  ),
+                                ),
+                                const Icon(Icons.calendar_today, size: 18, color: Colors.grey),
+                              ],
+                            ),
+                          ),
+                        )
+                      else
+                        Text(
+                          expiryDate != null
+                              ? DateFormat('dd MMM yyyy').format(expiryDate!)
+                              : 'Not provided',
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                        ),
+
+                      const SizedBox(height: 16),
+
+                      // Status
+                      const Text('Status', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                      const SizedBox(height: 4),
+                      if (isEditing)
+                        DropdownButtonFormField<String>(
+                          value: selectedStatus,
+                          decoration: InputDecoration(
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          ),
+                          items: ['Active', 'Expired', 'Expiring Soon'].map((status) {
+                            return DropdownMenuItem(value: status, child: Text(status));
+                          }).toList(),
+                          onChanged: (value) {
+                            if (value != null) {
+                              setModalState(() => selectedStatus = value);
+                            }
+                          },
+                        )
+                      else
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: doc['status'] == 'Active' ? Colors.green : Colors.red,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            doc['status'] ?? 'Unknown',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+
+                      const SizedBox(height: 24),
+
+                      // Save/Delete buttons (when editing)
+                      if (isEditing) ...[
+                        ElevatedButton(
+                          onPressed: () async {
+                            // Save document
+                            final result = await ApiService.updateDocument(
+                              documentId: doc['id'],
+                              name: nameController.text,
+                              documentNumber: documentNumberController.text,
+                              issueDate: issueDate != null
+                                  ? DateFormat('yyyy-MM-dd').format(issueDate!)
+                                  : null,
+                              expiryDate: expiryDate != null
+                                  ? DateFormat('yyyy-MM-dd').format(expiryDate!)
+                                  : null,
+                              status: selectedStatus,
+                            );
+
+                            if (result != null) {
+                              Navigator.pop(context);
+                              await _loadDocuments();
+                              if (mounted) {
+                                ToastHelper.showSnackBarToast(context,
+                                  const SnackBar(
+                                    content: Text('Document updated successfully'),
+                                    backgroundColor: Colors.green,
+                                  ),
+                                );
+                              }
+                            } else {
+                              ToastHelper.showSnackBarToast(context,
+                                const SnackBar(
+                                  content: Text('Failed to update document'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primaryGreen,
+                            foregroundColor: Colors.white,
+                            minimumSize: const Size(double.infinity, 50),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                          child: const Text('Save Changes'),
+                        ),
+                        const SizedBox(height: 12),
+                        OutlinedButton(
+                          onPressed: () async {
+                            // Confirm delete
+                            final confirm = await showDialog<bool>(
+                              context: context,
+                              builder: (ctx) => AlertDialog(
+                                title: const Text('Delete Document'),
+                                content: const Text('Are you sure you want to delete this document?'),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(ctx, false),
+                                    child: const Text('Cancel'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(ctx, true),
+                                    child: const Text('Delete', style: TextStyle(color: Colors.red)),
+                                  ),
+                                ],
+                              ),
+                            );
+
+                            if (confirm == true) {
+                              final result = await ApiService.deleteDocument(doc['id']);
+                              if (result) {
+                                Navigator.pop(context);
+                                await _loadDocuments();
+                                if (mounted) {
+                                  ToastHelper.showSnackBarToast(context,
+                                    const SnackBar(
+                                      content: Text('Document deleted'),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+                                }
+                              } else {
+                                ToastHelper.showSnackBarToast(context,
+                                  const SnackBar(
+                                    content: Text('Failed to delete document'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.red,
+                            side: const BorderSide(color: Colors.red),
+                            minimumSize: const Size(double.infinity, 50),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                          child: const Text('Delete Document'),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Show full screen image
+  void _showFullImage(String imageUrl) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: EdgeInsets.zero,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // Dark background
+            GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Container(color: Colors.black87),
+            ),
+            // Image
+            InteractiveViewer(
+              child: Center(
+                child: Image.network(
+                  imageUrl,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) {
+                    return const Center(
+                      child: Text(
+                        'Failed to load image',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+            // Close button
+            Positioned(
+              top: 40,
+              right: 16,
+              child: IconButton(
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.close, color: Colors.white, size: 32),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Format date string helper
+  String _formatDateString(String dateStr) {
+    try {
+      final date = DateTime.parse(dateStr);
+      return DateFormat('dd MMM yyyy').format(date);
+    } catch (e) {
+      return dateStr;
+    }
+  }
+
+  // Confirm delete document
+  Future<void> _confirmDeleteDocument(Map<String, dynamic> doc) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Document'),
+        content: Text('Are you sure you want to delete "${doc['name']}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      final docId = doc['id'] as int?;
+      if (docId != null) {
+        final success = await ApiService.deleteDocument(docId);
+        if (success) {
+          await _loadDocuments();
+          if (mounted) {
+            ToastHelper.showSnackBarToast(context,
+              const SnackBar(
+                content: Text('Document deleted successfully'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+        } else {
+          if (mounted) {
+            ToastHelper.showSnackBarToast(context,
+              const SnackBar(
+                content: Text('Failed to delete document'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        }
+      }
+    }
+  }
+
+  // Show edit document dialog
+  void _showEditDocumentDialog(Map<String, dynamic> doc) {
+    final nameController = TextEditingController(text: doc['name'] ?? '');
+    final documentNumberController = TextEditingController(text: doc['document_number'] ?? '');
+    DateTime? issueDate;
+    DateTime? expiryDate;
+    String selectedStatus = doc['status'] ?? 'Active';
+
+    // Parse dates
+    if (doc['issue_date'] != null) {
+      try {
+        issueDate = DateTime.parse(doc['issue_date'].toString());
+      } catch (e) {}
+    }
+    if (doc['expiry_date'] != null) {
+      try {
+        expiryDate = DateTime.parse(doc['expiry_date'].toString());
+      } catch (e) {}
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => Container(
+          height: MediaQuery.of(context).size.height * 0.75,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              // Header
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Edit ${doc['name']}',
+                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              // Form
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Truck Info
+                      Text('Truck: ${widget.truckNumber}', style: TextStyle(color: Colors.grey.shade600)),
+                      const SizedBox(height: 16),
+
+                      // Document Type
+                      const Text('Document Type', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                      const SizedBox(height: 4),
+                      TextField(
+                        controller: nameController,
+                        decoration: InputDecoration(
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Document Number
+                      const Text('Document Number', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                      const SizedBox(height: 4),
+                      TextField(
+                        controller: documentNumberController,
+                        decoration: InputDecoration(
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Issue Date
+                      const Text('Issue Date', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                      const SizedBox(height: 4),
+                      GestureDetector(
+                        onTap: () async {
+                          final picked = await showDatePicker(
+                            context: context,
+                            initialDate: issueDate ?? DateTime.now(),
+                            firstDate: DateTime(2000),
+                            lastDate: DateTime.now(),
+                          );
+                          if (picked != null) setModalState(() => issueDate = picked);
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey.shade400),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                issueDate != null ? DateFormat('dd MMM yyyy').format(issueDate!) : 'Select date',
+                                style: TextStyle(color: issueDate != null ? Colors.black : Colors.grey),
+                              ),
+                              const Icon(Icons.calendar_today, size: 18, color: Colors.grey),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Expiry Date
+                      const Text('Expiry Date', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                      const SizedBox(height: 4),
+                      GestureDetector(
+                        onTap: () async {
+                          final picked = await showDatePicker(
+                            context: context,
+                            initialDate: expiryDate ?? DateTime.now().add(const Duration(days: 365)),
+                            firstDate: DateTime.now(),
+                            lastDate: DateTime(2100),
+                          );
+                          if (picked != null) setModalState(() => expiryDate = picked);
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey.shade400),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                expiryDate != null ? DateFormat('dd MMM yyyy').format(expiryDate!) : 'Select date',
+                                style: TextStyle(color: expiryDate != null ? Colors.black : Colors.grey),
+                              ),
+                              const Icon(Icons.calendar_today, size: 18, color: Colors.grey),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Status
+                      const Text('Status', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                      const SizedBox(height: 4),
+                      DropdownButtonFormField<String>(
+                        value: selectedStatus,
+                        decoration: InputDecoration(
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                        ),
+                        items: ['Active', 'Expired', 'Expiring Soon'].map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                        onChanged: (v) { if (v != null) setModalState(() => selectedStatus = v); },
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Save Button
+                      ElevatedButton(
+                        onPressed: () async {
+                          final result = await ApiService.updateDocument(
+                            documentId: doc['id'],
+                            name: nameController.text,
+                            documentNumber: documentNumberController.text,
+                            issueDate: issueDate != null ? DateFormat('yyyy-MM-dd').format(issueDate!) : null,
+                            expiryDate: expiryDate != null ? DateFormat('yyyy-MM-dd').format(expiryDate!) : null,
+                            status: selectedStatus,
+                          );
+
+                          if (result != null) {
+                            Navigator.pop(context);
+                            await _loadDocuments();
+                            if (mounted) {
+                              ToastHelper.showSnackBarToast(context,
+                                const SnackBar(
+                                  content: Text('Document updated successfully'),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            }
+                          } else {
+                            ToastHelper.showSnackBarToast(context,
+                              const SnackBar(
+                                content: Text('Failed to update document'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primaryGreen,
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size(double.infinity, 50),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        child: const Text('Save Changes'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        backgroundColor: AppColors.appBarColor,
-        foregroundColor: AppColors.appBarTextColor,
+        backgroundColor: AppColors.info,
+        foregroundColor: Colors.white,
         elevation: 0,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            bottom: Radius.circular(20),
+          ),
+        ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
         title: Column(
@@ -69,7 +811,7 @@ class _DocumentsBookScreenState extends State<DocumentsBookScreen> {
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 20,
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w700,
               ),
             ),
             Text(
@@ -89,14 +831,14 @@ class _DocumentsBookScreenState extends State<DocumentsBookScreen> {
             margin: const EdgeInsets.all(16),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.blue.shade50,
+              color: AppColors.info.withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
               children: [
                 Icon(
                   Icons.info,
-                  color: Colors.blue.shade700,
+                  color: AppColors.info,
                   size: 24,
                 ),
                 const SizedBox(width: 12),
@@ -116,7 +858,7 @@ class _DocumentsBookScreenState extends State<DocumentsBookScreen> {
           // Documents List
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? const Center(child: AppLoader())
                 : RefreshIndicator(
                     onRefresh: _loadDocuments,
                     child: _documents.isEmpty
@@ -147,8 +889,21 @@ class _DocumentsBookScreenState extends State<DocumentsBookScreen> {
                             itemCount: _documents.length,
                             itemBuilder: (context, index) {
                               final doc = _documents[index];
+                              final status = doc['status']?.toString() ?? 'Active';
+                              final expiryDate = doc['expiry_date'] ?? doc['expiryDate'];
+                              final documentNumber = doc['document_number'] ?? doc['documentNumber'];
+
+                              // Get image URL
+                              String? imageUrl;
+                              if (doc['image_url'] != null) {
+                                imageUrl = '${AppConstants.serverUrl}${doc['image_url']}';
+                              } else if (doc['image_path'] != null) {
+                                imageUrl = '${AppConstants.serverUrl}/api/v1/documents/file/${doc['image_path']}';
+                              }
+
                               return Container(
                                 margin: const EdgeInsets.only(bottom: 12),
+                                padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
                                   color: Colors.white,
                                   borderRadius: BorderRadius.circular(12),
@@ -160,77 +915,127 @@ class _DocumentsBookScreenState extends State<DocumentsBookScreen> {
                                     ),
                                   ],
                                 ),
-                                child: ListTile(
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 8,
-                                  ),
-                                  leading: Container(
-                                    width: 56,
-                                    height: 56,
-                                    decoration: BoxDecoration(
-                                      color: doc['status'] == 'Active'
-                                          ? Colors.green.shade100
-                                          : Colors.red.shade100,
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Icon(
-                                      Icons.description,
-                                      color: doc['status'] == 'Active'
-                                          ? Colors.green.shade700
-                                          : Colors.red.shade700,
-                                      size: 28,
-                                    ),
-                                  ),
-                                  title: Text(
-                                    doc['name'] ?? 'Unknown',
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.black87,
-                                    ),
-                                  ),
-                                  subtitle: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      if (doc['documentNumber'] != null)
-                                        Text(
-                                          'No: ${doc['documentNumber']}',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.grey.shade600,
-                                          ),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // Document Image
+                                    GestureDetector(
+                                      onTap: imageUrl != null ? () => _showFullImage(imageUrl!) : null,
+                                      child: Container(
+                                        width: 70,
+                                        height: 70,
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey.shade100,
+                                          borderRadius: BorderRadius.circular(8),
+                                          border: Border.all(color: Colors.grey.shade300),
                                         ),
-                                      if (doc['expiryDate'] != null)
-                                        Text(
-                                          'Expiry: ${doc['expiryDate']}',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.grey.shade700,
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                  trailing: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: doc['status'] == 'Active'
-                                          ? Colors.green
-                                          : Colors.red,
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: Text(
-                                      doc['status'] ?? 'Unknown',
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
+                                        child: imageUrl != null
+                                            ? ClipRRect(
+                                                borderRadius: BorderRadius.circular(7),
+                                                child: Image.network(
+                                                  imageUrl,
+                                                  fit: BoxFit.cover,
+                                                  errorBuilder: (context, error, stackTrace) => Icon(
+                                                    Icons.description,
+                                                    color: Colors.grey.shade400,
+                                                    size: 32,
+                                                  ),
+                                                  loadingBuilder: (context, child, loadingProgress) {
+                                                    if (loadingProgress == null) return child;
+                                                    return const Center(
+                                                      child: SizedBox(
+                                                        width: 20,
+                                                        height: 20,
+                                                        child: CircularProgressIndicator(strokeWidth: 2),
+                                                      ),
+                                                    );
+                                                  },
+                                                ),
+                                              )
+                                            : Icon(
+                                                Icons.description,
+                                                color: Colors.grey.shade400,
+                                                size: 32,
+                                              ),
                                       ),
                                     ),
-                                  ),
-                                  onTap: () {
-                                    // View document details
-                                  },
+                                    const SizedBox(width: 12),
+                                    // Document Info
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                  doc['name'] ?? 'Unknown',
+                                                  style: const TextStyle(
+                                                    fontSize: 15,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: Colors.black87,
+                                                  ),
+                                                ),
+                                              ),
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  color: status == 'Active' ? Colors.green : Colors.red,
+                                                  borderRadius: BorderRadius.circular(4),
+                                                ),
+                                                child: Text(
+                                                  status,
+                                                  style: const TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 9,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 4),
+                                          if (documentNumber != null)
+                                            Text(
+                                              'No: $documentNumber',
+                                              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                                            ),
+                                          if (expiryDate != null)
+                                            Text(
+                                              'Expiry: ${_formatDateString(expiryDate.toString())}',
+                                              style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                    // Action Buttons
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        IconButton(
+                                          onPressed: () => _showDocumentDetailsDialog(doc),
+                                          icon: const Icon(Icons.visibility, color: AppColors.info, size: 20),
+                                          tooltip: 'View',
+                                          padding: EdgeInsets.zero,
+                                          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                        ),
+                                        IconButton(
+                                          onPressed: () => _showEditDocumentDialog(doc),
+                                          icon: const Icon(Icons.edit, color: Colors.orange, size: 20),
+                                          tooltip: 'Edit',
+                                          padding: EdgeInsets.zero,
+                                          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                        ),
+                                        IconButton(
+                                          onPressed: () => _confirmDeleteDocument(doc),
+                                          icon: const Icon(Icons.delete, color: Colors.red, size: 20),
+                                          tooltip: 'Delete',
+                                          padding: EdgeInsets.zero,
+                                          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
                                 ),
                               );
                             },
@@ -241,7 +1046,7 @@ class _DocumentsBookScreenState extends State<DocumentsBookScreen> {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showAddDocumentBottomSheet(null),
-        backgroundColor: Colors.blue.shade700,
+        backgroundColor: AppColors.info,
         icon: const Icon(Icons.add_circle_outline, color: Colors.white, size: 22),
         label: const Text(
           'Add Document',
@@ -263,7 +1068,8 @@ class _DocumentsBookScreenState extends State<DocumentsBookScreen> {
     String? selectedDocType;
     DateTime? selectedDate;
     DateTime? selectedIssueDate;
-    File? selectedImage;
+    XFile? selectedImage;
+    Uint8List? selectedImageBytes;
     final ImagePicker picker = ImagePicker();
 
     showModalBottomSheet(
@@ -328,7 +1134,7 @@ class _DocumentsBookScreenState extends State<DocumentsBookScreen> {
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: Colors.blue.shade700,
+                          color: AppColors.info,
                         ),
                       ),
                       const SizedBox(height: 24),
@@ -485,18 +1291,20 @@ class _DocumentsBookScreenState extends State<DocumentsBookScreen> {
                             source: ImageSource.gallery,
                           );
                           if (image != null) {
+                            final bytes = await image.readAsBytes();
                             setModalState(() {
-                              selectedImage = File(image.path);
+                              selectedImage = image;
+                              selectedImageBytes = bytes;
                             });
                           }
                         },
-                        icon: Icon(Icons.add_a_photo, color: Colors.blue.shade700),
+                        icon: Icon(Icons.add_a_photo, color: AppColors.info),
                         label: Text(
-                          selectedImage == null ? 'Add Photo' : 'Photo Added',
-                          style: TextStyle(color: Colors.blue.shade700),
+                          selectedImageBytes == null ? 'Add Photo' : 'Photo Added',
+                          style: TextStyle(color: AppColors.info),
                         ),
                         style: OutlinedButton.styleFrom(
-                          side: BorderSide(color: Colors.blue.shade700),
+                          side: BorderSide(color: AppColors.info),
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                         ),
                       ),
@@ -510,7 +1318,7 @@ class _DocumentsBookScreenState extends State<DocumentsBookScreen> {
                           onPressed: () async {
                             // Validate required fields
                             if (selectedDocType == null) {
-                              ScaffoldMessenger.of(context).showSnackBar(
+                              ToastHelper.showSnackBarToast(context, 
                                 const SnackBar(
                                   content: Text('Please select a document type'),
                                   backgroundColor: Colors.red,
@@ -520,7 +1328,7 @@ class _DocumentsBookScreenState extends State<DocumentsBookScreen> {
                             }
 
                             if (expiryController.text.isEmpty) {
-                              ScaffoldMessenger.of(context).showSnackBar(
+                              ToastHelper.showSnackBarToast(context, 
                                 const SnackBar(
                                   content: Text('Please select an expiry date'),
                                   backgroundColor: Colors.red,
@@ -530,7 +1338,7 @@ class _DocumentsBookScreenState extends State<DocumentsBookScreen> {
                             }
 
                             if (policyController.text.isEmpty) {
-                              ScaffoldMessenger.of(context).showSnackBar(
+                              ToastHelper.showSnackBarToast(context, 
                                 const SnackBar(
                                   content: Text('Please enter a policy number'),
                                   backgroundColor: Colors.red,
@@ -555,7 +1363,8 @@ class _DocumentsBookScreenState extends State<DocumentsBookScreen> {
                                 documentNumber: policyController.text,
                                 issueDate: formattedIssueDate,
                                 expiryDate: formattedExpiryDate,
-                                imagePath: selectedImage?.path,
+                                imageBytes: selectedImageBytes,
+                                fileName: selectedImage?.name,
                                 status: 'Active',
                               );
 
@@ -565,7 +1374,7 @@ class _DocumentsBookScreenState extends State<DocumentsBookScreen> {
                                 await _loadDocuments();
 
                                 if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  ToastHelper.showSnackBarToast(context, 
                                     SnackBar(
                                       content: Text('$selectedDocType added successfully'),
                                       backgroundColor: Colors.green,
@@ -575,7 +1384,7 @@ class _DocumentsBookScreenState extends State<DocumentsBookScreen> {
                               } else {
                                 // Error from API
                                 if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  ToastHelper.showSnackBarToast(context, 
                                     const SnackBar(
                                       content: Text('Failed to add document. Please try again.'),
                                       backgroundColor: Colors.red,
@@ -586,7 +1395,7 @@ class _DocumentsBookScreenState extends State<DocumentsBookScreen> {
                             } catch (e) {
                               // Handle exceptions
                               if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
+                                ToastHelper.showSnackBarToast(context, 
                                   SnackBar(
                                     content: Text('Error: $e'),
                                     backgroundColor: Colors.red,
@@ -596,7 +1405,7 @@ class _DocumentsBookScreenState extends State<DocumentsBookScreen> {
                             }
                           },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue.shade700,
+                            backgroundColor: AppColors.info,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
                             ),
@@ -689,7 +1498,7 @@ class _DocumentsBookScreenState extends State<DocumentsBookScreen> {
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: Colors.blue.shade700,
+                          color: AppColors.info,
                         ),
                       ),
                       const SizedBox(height: 24),
@@ -782,7 +1591,7 @@ class _DocumentsBookScreenState extends State<DocumentsBookScreen> {
                             if (expenseDateController.text.isNotEmpty &&
                                 expenseAmountController.text.isNotEmpty) {
                               Navigator.pop(context);
-                              ScaffoldMessenger.of(context).showSnackBar(
+                              ToastHelper.showSnackBarToast(context, 
                                 SnackBar(
                                   content: Text(
                                     '${documentTypes[index]} expense of ₹${expenseAmountController.text} added',
@@ -790,7 +1599,7 @@ class _DocumentsBookScreenState extends State<DocumentsBookScreen> {
                                 ),
                               );
                             } else {
-                              ScaffoldMessenger.of(context).showSnackBar(
+                              ToastHelper.showSnackBarToast(context, 
                                 const SnackBar(
                                   content: Text('Please fill date and amount'),
                                 ),
@@ -798,7 +1607,7 @@ class _DocumentsBookScreenState extends State<DocumentsBookScreen> {
                             }
                           },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue.shade700,
+                            backgroundColor: AppColors.info,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
                             ),
@@ -825,3 +1634,5 @@ class _DocumentsBookScreenState extends State<DocumentsBookScreen> {
     );
   }
 }
+
+

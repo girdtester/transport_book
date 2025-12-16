@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import '../../../services/api_service.dart';
 import '../../../utils/app_colors.dart';
+import 'package:transport_book_app/utils/toast_helper.dart';
+import 'package:transport_book_app/utils/app_loader.dart';
+import '../../../utils/custom_textfield.dart';
 
 class AddExpenseScreen extends StatelessWidget {
   final int truckId;
@@ -28,36 +33,41 @@ class AddExpenseScreen extends StatelessWidget {
         ).then((_) => Navigator.pop(context, true));
       });
       return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+        body: Center(child: AppLoader()),
       );
     }
 
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
-        backgroundColor: AppColors.appBarColor,
-        foregroundColor: AppColors.appBarTextColor,
+        backgroundColor: AppColors.info,
+        foregroundColor: Colors.white,
         elevation: 0,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            bottom: Radius.circular(20),
+          ),
+        ),
         leading: IconButton(
-          icon: Icon(Icons.close, color: AppColors.appBarTextColor),
+          icon: const Icon(Icons.close, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
+            const Text(
               'Add Expense',
               style: TextStyle(
-                color: AppColors.appBarTextColor,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
               ),
             ),
             Text(
               truckNumber,
-              style: TextStyle(
-                color: AppColors.appBarTextColor.withOpacity(0.7),
-                fontSize: 12,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 14,
               ),
             ),
           ],
@@ -98,15 +108,15 @@ class AddExpenseScreen extends StatelessWidget {
                     context,
                     'Driver Payment',
                     Icons.person,
-                    Colors.blue.shade100,
-                    Colors.blue,
+                    AppColors.info.withOpacity(0.2),
+                    AppColors.info,
                   ),
                   _buildExpenseCard(
                     context,
                     'Toll',
                     Icons.toll,
-                    Colors.green.shade100,
-                    Colors.green,
+                    AppColors.primaryGreen.withOpacity(0.15),
+                    AppColors.primaryGreen,
                   ),
                   _buildExpenseCard(
                     context,
@@ -429,7 +439,7 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                       ? const SizedBox(
                           height: 20,
                           width: 20,
-                          child: CircularProgressIndicator(
+                          child: AppLoader(
                             color: Colors.white,
                             strokeWidth: 2,
                           ),
@@ -453,170 +463,331 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
 
   List<Widget> _buildDieselFields() {
     return [
-      _buildTextField('Quantity (Litres)', _quantityController, required: true, keyboardType: TextInputType.number),
+      CustomTextField(
+        label: 'Quantity (Litres)',
+        controller: _quantityController,
+        hint: 'Enter quantity',
+        keyboard: TextInputType.number,
+        inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}'))],
+      ),
       const SizedBox(height: 16),
-      _buildTextField('Price per Litre', _priceController, required: true, keyboardType: TextInputType.number, prefixText: '₹ '),
+      CustomTextField(
+        label: 'Price per Litre',
+        controller: _priceController,
+        hint: '₹ Enter price',
+        keyboard: TextInputType.number,
+        inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}'))],
+      ),
       const SizedBox(height: 16),
-      _buildTextField('Total Amount', _amountController, required: true, keyboardType: TextInputType.number, prefixText: '₹ '),
+      CustomTextField(
+        label: 'Total Amount',
+        controller: _amountController,
+        hint: '₹ Enter amount',
+        keyboard: TextInputType.number,
+        inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}'))],
+      ),
       const SizedBox(height: 16),
-      _buildTextField('Pump Name', _pumpNameController),
+      CustomTextField(
+        label: 'Pump Name',
+        controller: _pumpNameController,
+        hint: 'Enter pump name',
+      ),
       const SizedBox(height: 16),
-      _buildTextField('Receipt No.', _receiptNoController),
+      CustomTextField(
+        label: 'Receipt No.',
+        controller: _receiptNoController,
+        hint: 'Enter receipt number',
+      ),
       const SizedBox(height: 16),
-      _buildDateField(),
+      GestureDetector(
+        onTap: () async {
+          final DateTime? picked = await showDatePicker(
+            context: context,
+            initialDate: _selectedDate,
+            firstDate: DateTime(2020),
+            lastDate: DateTime.now(),
+          );
+          if (picked != null && picked != _selectedDate) {
+            setState(() {
+              _selectedDate = picked;
+            });
+          }
+        },
+        child: AbsorbPointer(
+          child: CustomTextField(
+            label: 'Date',
+            controller: TextEditingController(
+              text: DateFormat('dd MMM yyyy').format(_selectedDate),
+            ),
+            suffix: const Icon(Icons.calendar_today),
+          ),
+        ),
+      ),
       const SizedBox(height: 16),
       _buildPaymentModeField(),
       const SizedBox(height: 16),
-      _buildTextField('Remarks', _remarksController, maxLines: 3),
+      CustomTextField(
+        label: 'Remarks',
+        controller: _remarksController,
+        hint: 'Enter remarks',
+        maxLines: 3,
+      ),
     ];
   }
 
   List<Widget> _buildDriverPaymentFields() {
     return [
-      _buildTextField('Driver Name', _driverNameController, required: true, readOnly: true, onTap: _showDriverPicker),
+      CustomTextField(
+        label: 'Driver Name',
+        controller: _driverNameController,
+        hint: 'Select driver',
+        readOnly: true,
+        onTap: _showDriverPicker,
+      ),
       const SizedBox(height: 16),
-      _buildTextField('Trip No.', _tripNoController),
+      CustomTextField(
+        label: 'Trip No.',
+        controller: _tripNoController,
+        hint: 'Enter trip number',
+      ),
       const SizedBox(height: 16),
-      _buildTextField('Amount', _amountController, required: true, keyboardType: TextInputType.number, prefixText: '₹ '),
+      CustomTextField(
+        label: 'Amount',
+        controller: _amountController,
+        hint: '₹ Enter amount',
+        keyboard: TextInputType.number,
+        inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}'))],
+      ),
       const SizedBox(height: 16),
-      _buildDateField(),
+      GestureDetector(
+        onTap: () async {
+          final DateTime? picked = await showDatePicker(
+            context: context,
+            initialDate: _selectedDate,
+            firstDate: DateTime(2020),
+            lastDate: DateTime.now(),
+          );
+          if (picked != null && picked != _selectedDate) {
+            setState(() {
+              _selectedDate = picked;
+            });
+          }
+        },
+        child: AbsorbPointer(
+          child: CustomTextField(
+            label: 'Date',
+            controller: TextEditingController(
+              text: DateFormat('dd MMM yyyy').format(_selectedDate),
+            ),
+            suffix: const Icon(Icons.calendar_today),
+          ),
+        ),
+      ),
       const SizedBox(height: 16),
       _buildPaymentModeField(),
       const SizedBox(height: 16),
-      _buildTextField('Remarks', _remarksController, maxLines: 3),
+      CustomTextField(
+        label: 'Remarks',
+        controller: _remarksController,
+        hint: 'Enter remarks',
+        maxLines: 3,
+      ),
     ];
   }
 
   List<Widget> _buildTollFields() {
     return [
-      _buildTextField('Amount', _amountController, required: true, keyboardType: TextInputType.number, prefixText: '₹ '),
+      CustomTextField(
+        label: 'Amount',
+        controller: _amountController,
+        hint: '₹ Enter amount',
+        keyboard: TextInputType.number,
+        inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}'))],
+      ),
       const SizedBox(height: 16),
-      _buildTextField('Toll Plaza Name', _pumpNameController),
+      CustomTextField(
+        label: 'Toll Plaza Name',
+        controller: _pumpNameController,
+        hint: 'Enter toll plaza name',
+      ),
       const SizedBox(height: 16),
-      _buildTextField('Receipt No.', _receiptNoController),
+      CustomTextField(
+        label: 'Receipt No.',
+        controller: _receiptNoController,
+        hint: 'Enter receipt number',
+      ),
       const SizedBox(height: 16),
-      _buildDateField(),
+      GestureDetector(
+        onTap: () async {
+          final DateTime? picked = await showDatePicker(
+            context: context,
+            initialDate: _selectedDate,
+            firstDate: DateTime(2020),
+            lastDate: DateTime.now(),
+          );
+          if (picked != null && picked != _selectedDate) {
+            setState(() {
+              _selectedDate = picked;
+            });
+          }
+        },
+        child: AbsorbPointer(
+          child: CustomTextField(
+            label: 'Date',
+            controller: TextEditingController(
+              text: DateFormat('dd MMM yyyy').format(_selectedDate),
+            ),
+            suffix: const Icon(Icons.calendar_today),
+          ),
+        ),
+      ),
       const SizedBox(height: 16),
       _buildPaymentModeField(),
       const SizedBox(height: 16),
-      _buildTextField('Remarks', _remarksController, maxLines: 3),
+      CustomTextField(
+        label: 'Remarks',
+        controller: _remarksController,
+        hint: 'Enter remarks',
+        maxLines: 3,
+      ),
     ];
   }
 
   List<Widget> _buildFastagFields() {
     return [
-      _buildTextField('Recharge Amount', _amountController, required: true, keyboardType: TextInputType.number, prefixText: '₹ '),
+      CustomTextField(
+        label: 'Recharge Amount',
+        controller: _amountController,
+        hint: '₹ Enter amount',
+        keyboard: TextInputType.number,
+        inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}'))],
+      ),
       const SizedBox(height: 16),
-      _buildDateField(),
+      GestureDetector(
+        onTap: () async {
+          final DateTime? picked = await showDatePicker(
+            context: context,
+            initialDate: _selectedDate,
+            firstDate: DateTime(2020),
+            lastDate: DateTime.now(),
+          );
+          if (picked != null && picked != _selectedDate) {
+            setState(() {
+              _selectedDate = picked;
+            });
+          }
+        },
+        child: AbsorbPointer(
+          child: CustomTextField(
+            label: 'Date',
+            controller: TextEditingController(
+              text: DateFormat('dd MMM yyyy').format(_selectedDate),
+            ),
+            suffix: const Icon(Icons.calendar_today),
+          ),
+        ),
+      ),
       const SizedBox(height: 16),
       _buildPaymentModeField(),
       const SizedBox(height: 16),
-      _buildTextField('Transaction ID', _receiptNoController),
+      CustomTextField(
+        label: 'Transaction ID',
+        controller: _receiptNoController,
+        hint: 'Enter transaction ID',
+      ),
       const SizedBox(height: 16),
-      _buildTextField('Remarks', _remarksController, maxLines: 3),
+      CustomTextField(
+        label: 'Remarks',
+        controller: _remarksController,
+        hint: 'Enter remarks',
+        maxLines: 3,
+      ),
     ];
   }
 
   List<Widget> _buildMaintenanceFields() {
     return [
-      _buildTextField('Category', _categoryController, required: true, readOnly: true,
-        hintText: 'Select category',
+      CustomTextField(
+        label: 'Category',
+        controller: _categoryController,
+        hint: 'Select category',
+        readOnly: true,
         onTap: () => _showCategoryPicker(),
       ),
       const SizedBox(height: 16),
-      _buildTextField('Amount', _amountController, required: true, keyboardType: TextInputType.number, prefixText: '₹ '),
+      CustomTextField(
+        label: 'Amount',
+        controller: _amountController,
+        hint: '₹ Enter amount',
+        keyboard: TextInputType.number,
+        inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}'))],
+      ),
       const SizedBox(height: 16),
-      _buildTextField('Service Provider', _pumpNameController),
+      CustomTextField(
+        label: 'Service Provider',
+        controller: _pumpNameController,
+        hint: 'Enter service provider',
+      ),
       const SizedBox(height: 16),
-      _buildTextField('Bill No.', _receiptNoController),
+      CustomTextField(
+        label: 'Bill No.',
+        controller: _receiptNoController,
+        hint: 'Enter bill number',
+      ),
       const SizedBox(height: 16),
-      _buildDateField(),
+      GestureDetector(
+        onTap: () async {
+          final DateTime? picked = await showDatePicker(
+            context: context,
+            initialDate: _selectedDate,
+            firstDate: DateTime(2020),
+            lastDate: DateTime.now(),
+          );
+          if (picked != null && picked != _selectedDate) {
+            setState(() {
+              _selectedDate = picked;
+            });
+          }
+        },
+        child: AbsorbPointer(
+          child: CustomTextField(
+            label: 'Date',
+            controller: TextEditingController(
+              text: DateFormat('dd MMM yyyy').format(_selectedDate),
+            ),
+            suffix: const Icon(Icons.calendar_today),
+          ),
+        ),
+      ),
       const SizedBox(height: 16),
       _buildPaymentModeField(),
       const SizedBox(height: 16),
-      _buildTextField('Description', _remarksController, maxLines: 3),
+      CustomTextField(
+        label: 'Description',
+        controller: _remarksController,
+        hint: 'Enter description',
+        maxLines: 3,
+      ),
     ];
   }
 
   List<Widget> _buildOtherExpenseFields() {
     return [
-      _buildTextField('Expense Name', _categoryController, required: true),
+      CustomTextField(
+        label: 'Expense Name',
+        controller: _categoryController,
+        hint: 'Enter expense name',
+      ),
       const SizedBox(height: 16),
-      _buildTextField('Amount', _amountController, required: true, keyboardType: TextInputType.number, prefixText: '₹ '),
-      const SizedBox(height: 16),
-      _buildDateField(),
-      const SizedBox(height: 16),
-      _buildPaymentModeField(),
-      const SizedBox(height: 16),
-      _buildTextField('Description', _remarksController, maxLines: 3),
-    ];
-  }
-
-  Widget _buildTextField(
-    String label,
-    TextEditingController controller, {
-    bool required = false,
-    bool readOnly = false,
-    VoidCallback? onTap,
-    TextInputType? keyboardType,
-    String? prefixText,
-    String? hintText,
-    int maxLines = 1,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label + (required ? ' *' : ''),
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
+      CustomTextField(
+        label: 'Amount',
+        controller: _amountController,
+        hint: '₹ Enter amount',
+        keyboard: TextInputType.number,
+        inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}'))],
         ),
-        const SizedBox(height: 8),
-        TextFormField(
-          controller: controller,
-          readOnly: readOnly,
-          onTap: onTap,
-          keyboardType: keyboardType,
-          maxLines: maxLines,
-          decoration: InputDecoration(
-            hintText: hintText ?? 'Enter $label',
-            prefixText: prefixText,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 12,
-            ),
-          ),
-          validator: required
-              ? (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter $label';
-                  }
-                  return null;
-                }
-              : null,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDateField() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Date *',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 8),
-        InkWell(
+      const SizedBox(height: 16),
+      GestureDetector(
           onTap: () async {
             final DateTime? picked = await showDatePicker(
               context: context,
@@ -630,27 +801,29 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
               });
             }
           },
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade400),
-              borderRadius: BorderRadius.circular(8),
+        child: AbsorbPointer(
+          child: CustomTextField(
+            label: 'Date',
+            controller: TextEditingController(
+              text: DateFormat('dd MMM yyyy').format(_selectedDate),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
-                  style: const TextStyle(fontSize: 16),
-                ),
-                const Icon(Icons.calendar_today, size: 20),
-              ],
-            ),
+            suffix: const Icon(Icons.calendar_today),
           ),
         ),
-      ],
-    );
+            ),
+      const SizedBox(height: 16),
+      _buildPaymentModeField(),
+      const SizedBox(height: 16),
+      CustomTextField(
+        label: 'Description',
+        controller: _remarksController,
+        hint: 'Enter description',
+        maxLines: 3,
+        ),
+    ];
   }
+
+
 
   Widget _buildPaymentModeField() {
     return Column(
@@ -881,7 +1054,7 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                             _driverNameController.text = nameController.text;
                           });
                           Navigator.pop(context);
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          ToastHelper.showSnackBarToast(context, 
                             const SnackBar(
                               content: Text('Driver added successfully'),
                               backgroundColor: Colors.green,
@@ -889,7 +1062,7 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                           );
                         } else if (mounted) {
                           setDialogState(() => isLoading = false);
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          ToastHelper.showSnackBarToast(context, 
                             const SnackBar(
                               content: Text('Failed to add driver'),
                               backgroundColor: Colors.red,
@@ -902,7 +1075,7 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                   ? const SizedBox(
                       width: 16,
                       height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                      child: AppLoader(strokeWidth: 2),
                     )
                   : Text(widget.expense != null ? 'Update' : 'Add'),
             ),
@@ -975,13 +1148,13 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
       if (mounted) {
         if (result != null) {
           print('Save successful, popping with result=true');
-          ScaffoldMessenger.of(context).showSnackBar(
+          ToastHelper.showSnackBarToast(context, 
             SnackBar(content: Text(widget.expense != null ? 'Expense updated successfully' : 'Expense saved successfully')),
           );
           Navigator.pop(context, true);
         } else {
           print('Save failed, result is null');
-          ScaffoldMessenger.of(context).showSnackBar(
+          ToastHelper.showSnackBarToast(context, 
             SnackBar(content: Text(widget.expense != null ? 'Failed to update expense' : 'Failed to save expense')),
           );
         }
@@ -989,3 +1162,5 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
     }
   }
 }
+
+

@@ -1,13 +1,16 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:transport_book_app/utils/appbar.dart';
 import 'dart:io';
 import '../../../services/api_service.dart';
 import '../../../utils/app_colors.dart';
 import '../../../utils/app_constants.dart';
+import 'package:transport_book_app/utils/toast_helper.dart';
+import 'package:transport_book_app/utils/app_loader.dart';
 
 class SupplierBalanceReportScreen extends StatefulWidget {
   final List<dynamic> suppliers;
@@ -124,7 +127,7 @@ class _SupplierBalanceReportScreenState extends State<SupplierBalanceReportScree
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ToastHelper.showSnackBarToast(context, 
           SnackBar(content: Text('Error loading data: $e')),
         );
       }
@@ -135,24 +138,10 @@ class _SupplierBalanceReportScreenState extends State<SupplierBalanceReportScree
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
-      appBar: AppBar(
-        backgroundColor: AppColors.appBarColor,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.appBarTextColor),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          'Supplier Balance Report',
-          style: TextStyle(
-            color: AppColors.appBarTextColor,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
+
+      appBar: CustomAppBar(title:'Supplier Balance Report' ,onBack: () => Navigator.pop(context),),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: AppLoader())
           : Column(
               children: [
                 // Report Content (Scrollable)
@@ -179,7 +168,7 @@ class _SupplierBalanceReportScreenState extends State<SupplierBalanceReportScree
                                   ),
                                   const SizedBox(width: 8),
                                   Text(
-                                    'TMS Prime',
+                                    'TMS Book',
                                     style: TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
@@ -351,7 +340,7 @@ class _SupplierBalanceReportScreenState extends State<SupplierBalanceReportScree
                                     children: [
                                       const TextSpan(text: 'This is an automatically generated summary. Powered by '),
                                       TextSpan(
-                                        text: 'TMS Prime',
+                                        text: 'TMS Book',
                                         style: TextStyle(
                                           color: AppColors.primaryGreen,
                                           fontWeight: FontWeight.w600,
@@ -562,7 +551,7 @@ class _SupplierBalanceReportScreenState extends State<SupplierBalanceReportScree
                   final destination = trip['destination']?.toString() ?? '';
                   final truckNumber = trip['truckNumber']?.toString() ?? '';
                   if (origin.isNotEmpty && destination.isNotEmpty) {
-                    tripInfo = '$origin → $destination';
+                    tripInfo = '$origin â†’ $destination';
                     if (truckNumber.isNotEmpty) {
                       tripInfo += ' ($truckNumber)';
                     }
@@ -703,7 +692,7 @@ class _SupplierBalanceReportScreenState extends State<SupplierBalanceReportScree
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
                 pw.Text(
-                  'TMS Prime',
+                  'TMS Book',
                   style: pw.TextStyle(
                     fontSize: 18,
                     fontWeight: pw.FontWeight.bold,
@@ -822,7 +811,7 @@ class _SupplierBalanceReportScreenState extends State<SupplierBalanceReportScree
             // Footer
             pw.Center(
               child: pw.Text(
-                'This is an automatically generated summary. Powered by TMS Prime',
+                'This is an automatically generated summary. Powered by TMS Book',
                 style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700),
               ),
             ),
@@ -948,7 +937,7 @@ class _SupplierBalanceReportScreenState extends State<SupplierBalanceReportScree
                   final destination = trip['destination']?.toString() ?? '';
                   final truckNumber = trip['truckNumber']?.toString() ?? '';
                   if (origin.isNotEmpty && destination.isNotEmpty) {
-                    tripInfo = '$origin → $destination';
+                    tripInfo = '$origin â†’ $destination';
                     if (truckNumber.isNotEmpty) {
                       tripInfo += ' ($truckNumber)';
                     }
@@ -1063,7 +1052,7 @@ class _SupplierBalanceReportScreenState extends State<SupplierBalanceReportScree
     try {
       // Show loading indicator
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         const SnackBar(
           content: Text('Generating PDF...'),
           duration: Duration(seconds: 1),
@@ -1100,7 +1089,7 @@ class _SupplierBalanceReportScreenState extends State<SupplierBalanceReportScree
       await file.writeAsBytes(bytes);
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         SnackBar(
           content: Text('Report downloaded to ${file.path}'),
           duration: const Duration(seconds: 3),
@@ -1109,7 +1098,7 @@ class _SupplierBalanceReportScreenState extends State<SupplierBalanceReportScree
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         SnackBar(
           content: Text('Error downloading report: $e'),
           duration: const Duration(seconds: 3),
@@ -1123,7 +1112,7 @@ class _SupplierBalanceReportScreenState extends State<SupplierBalanceReportScree
     try {
       // Show loading indicator
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         const SnackBar(
           content: Text('Preparing to share...'),
           duration: Duration(seconds: 1),
@@ -1151,7 +1140,7 @@ class _SupplierBalanceReportScreenState extends State<SupplierBalanceReportScree
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         SnackBar(
           content: Text('Error sharing report: $e'),
           duration: const Duration(seconds: 3),
@@ -1161,3 +1150,5 @@ class _SupplierBalanceReportScreenState extends State<SupplierBalanceReportScree
     }
   }
 }
+
+

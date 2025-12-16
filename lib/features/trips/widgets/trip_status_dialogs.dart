@@ -1,7 +1,8 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../services/api_service.dart';
 import '../../../utils/app_colors.dart';
+import 'package:transport_book_app/utils/toast_helper.dart';
 
 /// Reusable trip status update dialogs
 class TripStatusDialogs {
@@ -114,19 +115,19 @@ class TripStatusDialogs {
                         Navigator.pop(context);
 
                         if (success) {
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          ToastHelper.showSnackBarToast(context, 
                             const SnackBar(content: Text('Trip started successfully')),
                           );
                           onSuccess();
                         } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          ToastHelper.showSnackBarToast(context, 
                             const SnackBar(content: Text('Failed to start trip')),
                           );
                         }
                       } catch (e) {
                         if (!context.mounted) return;
                         Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        ToastHelper.showSnackBarToast(context, 
                           SnackBar(content: Text('Error: $e')),
                         );
                       }
@@ -263,19 +264,19 @@ class TripStatusDialogs {
                           Navigator.pop(context);
 
                           if (success) {
-                            ScaffoldMessenger.of(context).showSnackBar(
+                            ToastHelper.showSnackBarToast(context, 
                               const SnackBar(content: Text('Trip completed successfully')),
                             );
                             onSuccess();
                           } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
+                            ToastHelper.showSnackBarToast(context, 
                               const SnackBar(content: Text('Failed to complete trip')),
                             );
                           }
                         } catch (e) {
                           if (!context.mounted) return;
                           Navigator.pop(context);
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          ToastHelper.showSnackBarToast(context, 
                             SnackBar(content: Text('Error: $e')),
                           );
                         }
@@ -391,7 +392,7 @@ class TripStatusDialogs {
                         final success = await ApiService.podReceived(
                           tripId: tripId,
                           podReceivedDate: DateFormat('yyyy-MM-dd').format(selectedDate),
-                          podPhotos: [], // Empty list for quick status update without photos
+                          podPhotosBytes: [], // Empty list for quick status update without photos
                         );
 
                         if (!context.mounted) return;
@@ -399,19 +400,19 @@ class TripStatusDialogs {
                         Navigator.pop(context);
 
                         if (success) {
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          ToastHelper.showSnackBarToast(context, 
                             const SnackBar(content: Text('POD marked as received')),
                           );
                           onSuccess();
                         } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          ToastHelper.showSnackBarToast(context, 
                             const SnackBar(content: Text('Failed to mark POD as received')),
                           );
                         }
                       } catch (e) {
                         if (!context.mounted) return;
                         Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        ToastHelper.showSnackBarToast(context, 
                           SnackBar(content: Text('Error: $e')),
                         );
                       }
@@ -533,19 +534,19 @@ class TripStatusDialogs {
                         Navigator.pop(context);
 
                         if (success) {
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          ToastHelper.showSnackBarToast(context, 
                             const SnackBar(content: Text('POD marked as submitted')),
                           );
                           onSuccess();
                         } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          ToastHelper.showSnackBarToast(context, 
                             const SnackBar(content: Text('Failed to mark POD as submitted')),
                           );
                         }
                       } catch (e) {
                         if (!context.mounted) return;
                         Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        ToastHelper.showSnackBarToast(context, 
                           SnackBar(content: Text('Error: $e')),
                         );
                       }
@@ -597,14 +598,15 @@ class TripStatusDialogs {
         break;
       case 'POD Submitted':
         // Show settle dialog (you can add this later)
-        ScaffoldMessenger.of(context).showSnackBar(
+        ToastHelper.showSnackBarToast(context, 
           const SnackBar(content: Text('Go to trip details to settle this trip')),
         );
         break;
       default:
-        ScaffoldMessenger.of(context).showSnackBar(
+        ToastHelper.showSnackBarToast(context, 
           const SnackBar(content: Text('Cannot update status')),
         );
     }
   }
 }
+

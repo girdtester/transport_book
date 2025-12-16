@@ -1,9 +1,12 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:transport_book_app/utils/appbar.dart';
 import '../../../services/api_service.dart';
 import '../../../utils/app_colors.dart';
 import '../../trips/screens/trip_details_screen.dart';
 import 'supplier_balance_report_screen.dart';
+import 'package:transport_book_app/utils/toast_helper.dart';
+import 'package:transport_book_app/utils/app_loader.dart';
 
 class SupplierTripsScreen extends StatefulWidget {
   final int supplierId;
@@ -60,7 +63,7 @@ class _SupplierTripsScreenState extends State<SupplierTripsScreen> {
       print('Error loading trips: $e');
       setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ToastHelper.showSnackBarToast(context, 
           SnackBar(content: Text('Error loading trips: $e')),
         );
       }
@@ -115,7 +118,7 @@ class _SupplierTripsScreenState extends State<SupplierTripsScreen> {
       case 'Load in Progress':
         return Colors.orange;
       case 'POD Pending':
-        return Colors.blue;
+        return AppColors.info;
       case 'POD Received':
         return Colors.green;
       case 'Settled':
@@ -239,7 +242,7 @@ class _SupplierTripsScreenState extends State<SupplierTripsScreen> {
             ElevatedButton(
               onPressed: () => Navigator.pop(context),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
+                backgroundColor: AppColors.info,
                 foregroundColor: Colors.white,
                 minimumSize: const Size(double.infinity, 50),
                 shape: RoundedRectangleBorder(
@@ -274,7 +277,7 @@ class _SupplierTripsScreenState extends State<SupplierTripsScreen> {
           style: TextStyle(
             fontSize: isBold ? 20 : 16,
             fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
-            color: isBold ? Colors.blue : Colors.black87,
+            color: isBold ? AppColors.info : Colors.black87,
           ),
         ),
       ],
@@ -287,12 +290,9 @@ class _SupplierTripsScreenState extends State<SupplierTripsScreen> {
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        backgroundColor: AppColors.appBarColor,
-        foregroundColor: AppColors.appBarTextColor,
-        title: Text(widget.supplierName),
-        elevation: 0,
-      ),
+      appBar:CustomAppBar(title: widget.supplierName,onBack: () {
+        Navigator.pop(context);
+      },),
       body: Column(
         children: [
           // Balance Header
@@ -342,8 +342,8 @@ class _SupplierTripsScreenState extends State<SupplierTripsScreen> {
                     );
                   },
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.blue,
-                    side: const BorderSide(color: Colors.blue, width: 2),
+                    foregroundColor: AppColors.info,
+                    side: const BorderSide(color: AppColors.info, width: 2),
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
@@ -393,7 +393,7 @@ class _SupplierTripsScreenState extends State<SupplierTripsScreen> {
           // Trip List
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? const Center(child: AppLoader())
                 : _filteredTrips.isEmpty
                     ? Center(
                         child: Column(
@@ -545,7 +545,7 @@ class _SupplierTripsScreenState extends State<SupplierTripsScreen> {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: balance == 0 ? Colors.green : Colors.blue,
+                color: balance == 0 ? Colors.green : AppColors.info,
               ),
             ),
           ],
@@ -554,3 +554,5 @@ class _SupplierTripsScreenState extends State<SupplierTripsScreen> {
     );
   }
 }
+
+

@@ -1,7 +1,9 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../../services/api_service.dart';
 import '../../../utils/app_colors.dart';
 import 'add_expense_screen.dart';
+import 'package:transport_book_app/utils/toast_helper.dart';
+import 'package:transport_book_app/utils/app_loader.dart';
 
 class ExpenseListScreen extends StatefulWidget {
   final int truckId;
@@ -61,11 +63,16 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
       child: Scaffold(
         backgroundColor: Colors.grey.shade100,
         appBar: AppBar(
-        backgroundColor: AppColors.appBarColor,
-        foregroundColor: AppColors.appBarTextColor,
+        backgroundColor: AppColors.info,
+        foregroundColor: Colors.white,
         elevation: 0,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            bottom: Radius.circular(20),
+          ),
+        ),
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: AppColors.appBarTextColor),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context, _hasChanges),
         ),
         title: Column(
@@ -73,24 +80,24 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
           children: [
             Text(
               widget.expenseType ?? 'All Expenses',
-              style: TextStyle(
-                color: AppColors.appBarTextColor,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
               ),
             ),
             Text(
               widget.truckNumber,
-              style: TextStyle(
-                color: AppColors.appBarTextColor.withOpacity(0.7),
-                fontSize: 12,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 14,
               ),
             ),
           ],
         ),
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: AppLoader())
           : _expenses.isEmpty
               ? Center(
                   child: Column(
@@ -188,14 +195,14 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                   decoration: BoxDecoration(
-                                    color: Colors.blue.shade50,
+                                    color: AppColors.info.withOpacity(0.1),
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: Text(
                                     expense['paymentMode'] ?? 'Cash',
                                     style: TextStyle(
                                       fontSize: 10,
-                                      color: Colors.blue.shade700,
+                                      color: AppColors.info,
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
@@ -288,7 +295,7 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
             ),
             const SizedBox(height: 20),
             ListTile(
-              leading: const Icon(Icons.visibility, color: Colors.blue),
+              leading: const Icon(Icons.visibility, color: AppColors.info),
               title: const Text('View Details'),
               onTap: () {
                 Navigator.pop(context);
@@ -442,7 +449,7 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
       final success = await ApiService.deleteExpense(expenseId);
       if (mounted) {
         if (success) {
-          ScaffoldMessenger.of(context).showSnackBar(
+          ToastHelper.showSnackBarToast(context, 
             const SnackBar(content: Text('Expense deleted successfully')),
           );
           setState(() {
@@ -450,17 +457,19 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
           });
           _loadExpenses();
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
+          ToastHelper.showSnackBarToast(context, 
             const SnackBar(content: Text('Failed to delete expense')),
           );
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ToastHelper.showSnackBarToast(context, 
           SnackBar(content: Text('Error deleting expense: $e')),
         );
       }
     }
   }
 }
+
+

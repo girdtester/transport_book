@@ -1,11 +1,13 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../services/api_service.dart';
 import '../../../utils/app_colors.dart';
+import '../../../utils/appbar.dart';
 import 'add_trip_screen.dart';
 import 'trip_details_screen.dart';
 import 'add_trip_from_dashboard_screen.dart';
 import '../widgets/trip_status_dialogs.dart';
+import 'package:transport_book_app/utils/app_loader.dart';
 
 class UnpaidTripsScreen extends StatefulWidget {
   const UnpaidTripsScreen({super.key});
@@ -150,31 +152,38 @@ class _UnpaidTripsScreenState extends State<UnpaidTripsScreen> {
       _startDate = null;
       _endDate = null;
       _selectedMonth = null;
+      _searchQuery = '';
       _filteredTrips = _allTrips;
     });
+    _filterTrips();
+  }
+
+  int _getActiveFiltersCount() {
+    int count = 0;
+    if (_selectedTrucks.isNotEmpty) count++;
+    if (_selectedParties.isNotEmpty) count++;
+    if (_selectedRoutes.isNotEmpty) count++;
+    if (_selectedStatuses.isNotEmpty) count++;
+    if (_selectedPODFilter.isNotEmpty) count++;
+    if (_startDate != null && _endDate != null) count++;
+    if (_selectedMonth != null) count++;
+    if (_searchQuery.isNotEmpty) count++;
+    return count;
+  }
+
+  bool _hasActiveFilters() {
+    return _getActiveFiltersCount() > 0;
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
-      appBar: AppBar(
-        backgroundColor: AppColors.appBarColor,
-        foregroundColor: AppColors.appBarTextColor,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: AppColors.appBarTextColor),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          'Unpaid Trips',
-          style: TextStyle(
-            color: AppColors.appBarTextColor,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+      appBar: CustomAppBar(
+        title: 'Unpaid Trips',
+        showBackButton: true,
       ),
+
       body: Column(
         children: [
           // Search and Filter Bar
@@ -233,10 +242,49 @@ class _UnpaidTripsScreenState extends State<UnpaidTripsScreen> {
             ),
           ),
 
+          // Filter Applied Banner
+          if (_hasActiveFilters())
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              color: AppColors.info.withOpacity(0.1),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.check_circle,
+                    color: AppColors.info,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '${_getActiveFiltersCount()} Filter${_getActiveFiltersCount() == 1 ? '' : 's'} has been applied',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppColors.info,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: _clearFilters,
+                    child: Text(
+                      'Clear',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppColors.info,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
           // Trips List
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? const Center(child: AppLoader())
                 : _filteredTrips.isEmpty
                     ? const Center(child: Text('No unpaid trips found'))
                     : ListView.builder(
@@ -330,7 +378,7 @@ class _UnpaidTripsScreenState extends State<UnpaidTripsScreen> {
                             style: const TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.bold,
-                              color: Colors.blue,
+                              color: AppColors.info,
                             ),
                           ),
                           if (isMarket) ...[
@@ -485,7 +533,7 @@ class _UnpaidTripsScreenState extends State<UnpaidTripsScreen> {
                       width: 7,
                       height: 7,
                       decoration: const BoxDecoration(
-                        color: Colors.green,
+                        color: AppColors.primaryGreen,
                         shape: BoxShape.circle,
                       ),
                     ),
@@ -527,7 +575,7 @@ class _UnpaidTripsScreenState extends State<UnpaidTripsScreen> {
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            color: Colors.blue.shade600,
+                            color: AppColors.info.withOpacity(0.8),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
@@ -714,7 +762,7 @@ class _UnpaidTripsScreenState extends State<UnpaidTripsScreen> {
           color: isSelected ? Colors.white : Colors.transparent,
           border: Border(
             left: BorderSide(
-              color: isSelected ? Colors.blue : Colors.transparent,
+              color: isSelected ? AppColors.info : Colors.transparent,
               width: 3,
             ),
           ),
@@ -766,7 +814,7 @@ class _UnpaidTripsScreenState extends State<UnpaidTripsScreen> {
                   return Theme(
                     data: Theme.of(context).copyWith(
                       colorScheme: const ColorScheme.light(
-                        primary: Colors.blue,
+                        primary: AppColors.info,
                         onPrimary: Colors.white,
                         surface: Colors.white,
                         onSurface: Colors.black,
@@ -786,7 +834,7 @@ class _UnpaidTripsScreenState extends State<UnpaidTripsScreen> {
             },
             style: OutlinedButton.styleFrom(
               backgroundColor: Colors.white,
-              side: const BorderSide(color: Colors.blue, width: 2),
+              side: const BorderSide(color: AppColors.info, width: 2),
               padding: const EdgeInsets.symmetric(vertical: 16),
               minimumSize: const Size(double.infinity, 50),
             ),
@@ -795,7 +843,7 @@ class _UnpaidTripsScreenState extends State<UnpaidTripsScreen> {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: Colors.blue,
+                color: AppColors.info,
               ),
             ),
           ),
@@ -1045,11 +1093,11 @@ class _UnpaidTripsScreenState extends State<UnpaidTripsScreen> {
               height: 24,
               decoration: BoxDecoration(
                 border: Border.all(
-                  color: isSelected ? Colors.blue : Colors.grey.shade400,
+                  color: isSelected ? AppColors.info : Colors.grey.shade400,
                   width: 2,
                 ),
                 borderRadius: BorderRadius.circular(4),
-                color: isSelected ? Colors.blue : Colors.transparent,
+                color: isSelected ? AppColors.info : Colors.transparent,
               ),
               child: isSelected
                   ? const Icon(Icons.check, size: 16, color: Colors.white)
@@ -1197,3 +1245,4 @@ class _UnpaidTripsScreenState extends State<UnpaidTripsScreen> {
     return sortedMonths;
   }
 }
+

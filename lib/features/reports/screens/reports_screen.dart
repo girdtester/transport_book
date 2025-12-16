@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:transport_book_app/utils/appbar.dart';
 import '../../../utils/app_colors.dart';
 import 'package:intl/intl.dart';
 import 'truck_revenue_report_screen.dart';
@@ -6,6 +7,8 @@ import 'party_revenue_report_screen.dart';
 import '../../balance_report/screens/balance_report_screen.dart';
 import '../../supplier/screens/supplier_reports_screen.dart';
 import '../../../services/api_service.dart';
+import 'package:transport_book_app/utils/toast_helper.dart';
+import 'package:transport_book_app/utils/app_loader.dart';
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
@@ -47,7 +50,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       print('Error loading profit data: $e');
       setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ToastHelper.showSnackBarToast(context, 
           SnackBar(content: Text('Error loading data: $e')),
         );
       }
@@ -58,22 +61,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
-      appBar: AppBar(
-        backgroundColor: AppColors.appBarColor,
-        foregroundColor: AppColors.appBarTextColor,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.appBarTextColor),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          'Reports',
-          style: TextStyle(
-            color: AppColors.appBarTextColor,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+      appBar: CustomAppBar(
+        onBack: () => Navigator.pop(context),
+        title: 'Reports',
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -179,27 +169,25 @@ class _ReportsScreenState extends State<ReportsScreen> {
         children: [
           // Icon
           Container(
-            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.amber.shade100,
               borderRadius: BorderRadius.circular(12),
             ),
             child: _isLoading
                 ? const SizedBox(
-                    width: 40,
-                    height: 40,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 3,
-                      color: Colors.amber,
-                    ),
-                  )
-                : const Icon(
-                    Icons.balance,
-                    size: 40,
-                    color: Colors.amber,
-                  ),
+              width: 40,
+              height: 40,
+              child: AppLoader(
+                strokeWidth: 3,
+                color: Colors.amber,
+              ),
+            )
+                : Icon(
+              Icons.assessment,
+              size: 60,
+              color: Colors.amber,
+            )
+
           ),
-          const SizedBox(width: 16),
           // Text
           Expanded(
             child: Column(
@@ -292,3 +280,5 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 }
+
+

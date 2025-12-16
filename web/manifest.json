@@ -1,11 +1,11 @@
 {
-    "name": "TMS Prime",
-    "short_name": "TMS Prime",
+    "name": "TMS Book",
+    "short_name": "TMS Book",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "TMS Prime - Transport Management System",
+    "description": "TMS Book - Transport Management System",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

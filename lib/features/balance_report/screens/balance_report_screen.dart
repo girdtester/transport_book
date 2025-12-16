@@ -1,9 +1,13 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:transport_book_app/utils/appbar.dart';
+import 'package:transport_book_app/utils/custom_button.dart';
 import '../../../services/api_service.dart';
 import '../../../utils/app_colors.dart';
 import '../../party/screens/party_balance_detail_screen.dart';
 import '../../party/screens/party_ledger_pdf_screen.dart';
+import 'package:transport_book_app/utils/toast_helper.dart';
+import 'package:transport_book_app/utils/app_loader.dart';
 
 class BalanceReportScreen extends StatefulWidget {
   const BalanceReportScreen({super.key});
@@ -43,7 +47,7 @@ class _BalanceReportScreenState extends State<BalanceReportScreen> {
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ToastHelper.showSnackBarToast(context, 
           SnackBar(content: Text('Error loading parties: $e')),
         );
       }
@@ -211,21 +215,11 @@ class _BalanceReportScreenState extends State<BalanceReportScreen> {
                         ],
                       ),
                     ),
-                    ElevatedButton(
-                      onPressed: () => _applyFilters(),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.grey.shade300,
-                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      child: const Text(
-                        'APPLY FILTERS',
-                        style: TextStyle(
-                          color: Colors.black54,
-                          fontWeight: FontWeight.bold,
-                        ),
+
+                    Expanded(
+                      child: CustomButton(
+                        text:                         'APPLY FILTERS',
+                        onPressed: () => _applyFilters(),
                       ),
                     ),
                   ],
@@ -247,7 +241,7 @@ class _BalanceReportScreenState extends State<BalanceReportScreen> {
           color: isSelected ? Colors.white : Colors.transparent,
           border: Border(
             left: BorderSide(
-              color: isSelected ? Colors.blue : Colors.transparent,
+              color: isSelected ? AppColors.info : Colors.transparent,
               width: 3,
             ),
           ),
@@ -296,7 +290,7 @@ class _BalanceReportScreenState extends State<BalanceReportScreen> {
               }
             },
             style: OutlinedButton.styleFrom(
-              side: const BorderSide(color: Colors.blue, width: 2),
+              side: const BorderSide(color: AppColors.info, width: 2),
               padding: const EdgeInsets.symmetric(vertical: 16),
               minimumSize: const Size(double.infinity, 50),
             ),
@@ -305,7 +299,7 @@ class _BalanceReportScreenState extends State<BalanceReportScreen> {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: Colors.blue,
+                color: AppColors.info,
               ),
             ),
           ),
@@ -392,11 +386,11 @@ class _BalanceReportScreenState extends State<BalanceReportScreen> {
               height: 24,
               decoration: BoxDecoration(
                 border: Border.all(
-                  color: isSelected ? Colors.blue : Colors.grey.shade400,
+                  color: isSelected ? AppColors.info : Colors.grey.shade400,
                   width: 2,
                 ),
                 borderRadius: BorderRadius.circular(4),
-                color: isSelected ? Colors.blue : Colors.transparent,
+                color: isSelected ? AppColors.info : Colors.transparent,
               ),
               child: isSelected
                   ? const Icon(Icons.check, size: 16, color: Colors.white)
@@ -425,7 +419,7 @@ class _BalanceReportScreenState extends State<BalanceReportScreen> {
 
   void _viewPDF() {
     if (_selectedParties.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         const SnackBar(content: Text('Please select at least one party')),
       );
       return;
@@ -456,12 +450,8 @@ class _BalanceReportScreenState extends State<BalanceReportScreen> {
 
     return Scaffold(
       backgroundColor: Colors.grey[100],
-      appBar: AppBar(
-        backgroundColor: AppColors.appBarColor,
-        foregroundColor: AppColors.appBarTextColor,
-        title: const Text('Party Balance Report'),
-        elevation: 0,
-      ),
+      appBar: CustomAppBar(title:'Party Balance Report' ,onBack: () => Navigator.pop(context),),
+
       body: Column(
         children: [
           // Search and Filter Bar
@@ -537,7 +527,7 @@ class _BalanceReportScreenState extends State<BalanceReportScreen> {
           // Party List
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? const Center(child: AppLoader())
                 : _filteredParties.isEmpty
                     ? Center(
                         child: Column(
@@ -639,11 +629,11 @@ class _BalanceReportScreenState extends State<BalanceReportScreen> {
                 height: 24,
                 decoration: BoxDecoration(
                   border: Border.all(
-                    color: isSelected ? Colors.blue : Colors.grey.shade400,
+                    color: isSelected ? AppColors.info : Colors.grey.shade400,
                     width: 2,
                   ),
                   borderRadius: BorderRadius.circular(4),
-                  color: isSelected ? Colors.blue : Colors.transparent,
+                  color: isSelected ? AppColors.info : Colors.transparent,
                 ),
                 child: isSelected
                     ? const Icon(Icons.check, size: 16, color: Colors.white)
@@ -683,3 +673,5 @@ class _BalanceReportScreenState extends State<BalanceReportScreen> {
     );
   }
 }
+
+

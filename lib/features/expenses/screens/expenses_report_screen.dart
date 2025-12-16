@@ -1,13 +1,17 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:transport_book_app/utils/appbar.dart';
+import 'package:transport_book_app/utils/currency_formatter.dart';
 import 'dart:io';
 import '../../../services/api_service.dart';
 import '../../../utils/app_colors.dart';
+import 'package:transport_book_app/utils/toast_helper.dart';
+import 'package:transport_book_app/utils/app_loader.dart';
 
 class ExpensesReportScreen extends StatefulWidget {
   final DateTime? selectedMonth;
@@ -86,7 +90,7 @@ class _ExpensesReportScreenState extends State<ExpensesReportScreen> {
       print('Error loading expenses data: $e');
       setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ToastHelper.showSnackBarToast(context, 
           SnackBar(content: Text('Error loading data: $e')),
         );
       }
@@ -118,9 +122,9 @@ class _ExpensesReportScreenState extends State<ExpensesReportScreen> {
 
           // Overall Summary
           pw.Container(
-            padding: const pw.EdgeInsets.all(16),
+            padding:  pw.EdgeInsets.all(16),
             decoration: pw.BoxDecoration(
-              color: PdfColors.blue50,
+              color: PdfColor.fromInt(AppColors.info.value),
               borderRadius: pw.BorderRadius.circular(8),
             ),
             child: pw.Column(
@@ -143,7 +147,7 @@ class _ExpensesReportScreenState extends State<ExpensesReportScreen> {
                       style: pw.TextStyle(
                         fontSize: 18,
                         fontWeight: pw.FontWeight.bold,
-                        color: PdfColors.blue800,
+                        color: PdfColor.fromInt(AppColors.info.value),
                       ),
                     ),
                   ],
@@ -236,7 +240,7 @@ class _ExpensesReportScreenState extends State<ExpensesReportScreen> {
               ),
               // Total
               pw.TableRow(
-                decoration: const pw.BoxDecoration(color: PdfColors.blue100),
+                decoration: pw.BoxDecoration(color: PdfColor.fromInt(AppColors.info.value).shade(0.1)),
                 children: [
                   pw.Padding(
                     padding: const pw.EdgeInsets.all(8),
@@ -377,7 +381,7 @@ class _ExpensesReportScreenState extends State<ExpensesReportScreen> {
           pw.Divider(),
           pw.SizedBox(height: 8),
           pw.Text(
-            'This report is auto-generated from TMS Prime - Transport Management System',
+            'This report is auto-generated from TMS Book - Transport Management System',
             style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey600),
             textAlign: pw.TextAlign.center,
           ),
@@ -391,7 +395,7 @@ class _ExpensesReportScreenState extends State<ExpensesReportScreen> {
   Future<void> _downloadReport() async {
     try {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         const SnackBar(content: Text('Generating PDF...'), duration: Duration(seconds: 1)),
       );
 
@@ -418,7 +422,7 @@ class _ExpensesReportScreenState extends State<ExpensesReportScreen> {
       await file.writeAsBytes(bytes);
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         SnackBar(
           content: Text('Report downloaded to ${file.path}'),
           duration: const Duration(seconds: 3),
@@ -427,7 +431,7 @@ class _ExpensesReportScreenState extends State<ExpensesReportScreen> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         SnackBar(content: Text('Error downloading report: $e'), duration: const Duration(seconds: 3), backgroundColor: Colors.red),
       );
     }
@@ -436,7 +440,7 @@ class _ExpensesReportScreenState extends State<ExpensesReportScreen> {
   Future<void> _shareReport() async {
     try {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         const SnackBar(content: Text('Preparing to share...'), duration: Duration(seconds: 1)),
       );
 
@@ -456,7 +460,7 @@ class _ExpensesReportScreenState extends State<ExpensesReportScreen> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         SnackBar(content: Text('Error sharing report: $e'), duration: const Duration(seconds: 3), backgroundColor: Colors.red),
       );
     }
@@ -466,21 +470,10 @@ class _ExpensesReportScreenState extends State<ExpensesReportScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        backgroundColor: AppColors.appBarColor,
-        foregroundColor: AppColors.appBarTextColor,
-        title: const Text('Expenses Report'),
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadExpensesData,
-            tooltip: 'Refresh',
-          ),
-        ],
-      ),
+
+      appBar: CustomAppBar(title: 'Expenses Report', onBack: () { Navigator.pop(context); },),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: AppLoader())
           : Column(
               children: [
                 // Report Content (Scrollable)
@@ -504,7 +497,7 @@ class _ExpensesReportScreenState extends State<ExpensesReportScreen> {
                               borderRadius: BorderRadius.circular(12),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.blue.withOpacity(0.3),
+                                  color: AppColors.info.withOpacity(0.3),
                                   blurRadius: 8,
                                   offset: const Offset(0, 4),
                                 ),
@@ -522,7 +515,7 @@ class _ExpensesReportScreenState extends State<ExpensesReportScreen> {
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
-                                  '₹${_totalExpenses.toStringAsFixed(0)}',
+                                  '${CurrencyFormatter.formatIndianAmount(_totalExpenses)}',
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 36,
@@ -546,7 +539,7 @@ class _ExpensesReportScreenState extends State<ExpensesReportScreen> {
                           const SizedBox(height: 12),
                           _buildCategoryCard('Truck Expenses', _truckExpenses, Icons.local_shipping, Colors.green),
                           const SizedBox(height: 8),
-                          _buildCategoryCard('Trip Expenses', _tripExpenses, Icons.route, Colors.blue),
+                          _buildCategoryCard('Trip Expenses', _tripExpenses, Icons.route, AppColors.info),
                           const SizedBox(height: 8),
                           _buildCategoryCard('Office Expenses', _officeExpenses, Icons.business, Colors.orange),
                           const SizedBox(height: 24),
@@ -749,7 +742,7 @@ class _ExpensesReportScreenState extends State<ExpensesReportScreen> {
             ),
           ),
           Text(
-            '₹${amount.toStringAsFixed(0)}',
+    '${CurrencyFormatter.formatIndianAmount(amount)}',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -761,3 +754,5 @@ class _ExpensesReportScreenState extends State<ExpensesReportScreen> {
     );
   }
 }
+
+

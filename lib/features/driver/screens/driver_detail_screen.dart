@@ -1,10 +1,15 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:transport_book_app/utils/custom_button.dart';
+import 'package:transport_book_app/utils/custom_dropdown.dart';
+import 'package:transport_book_app/utils/custom_textfield.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../services/api_service.dart';
 import '../../../utils/app_colors.dart';
 import 'driver_report_screen.dart';
+import 'package:transport_book_app/utils/toast_helper.dart';
+import 'package:transport_book_app/utils/app_loader.dart';
 
 class DriverDetailScreen extends StatefulWidget {
   final int driverId;
@@ -53,7 +58,7 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
       print('Error loading driver details: $e');
       setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ToastHelper.showSnackBarToast(context, 
           SnackBar(content: Text('Error loading driver details: $e')),
         );
       }
@@ -97,6 +102,7 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // HEADER
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -113,142 +119,97 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
                     ),
                   ],
                 ),
+
                 const SizedBox(height: 20),
-                TextField(
+
+                // AMOUNT
+                CustomTextField(
+                  label: "Amount",
                   controller: amountController,
-                  keyboardType: TextInputType.number,
-                  onChanged: (value) {
+                  hint: "Enter amount",
+                  keyboard: TextInputType.number,
+                  suffix: const Icon(Icons.currency_rupee),
+                  onChanged: (_) {
                     setModalState(() {
                       checkFormValidity();
                     });
                   },
-                  decoration: const InputDecoration(
-                    hintText: 'Amount',
-                    prefixText: '₹',
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(8)),
+                ),
+
+                const SizedBox(height: 16),
+
+                // REASON DROPDOWN
+                CustomDropdown(
+                  label: "Reason",
+                  value: selectedReason,
+                  items: reasons,
+                  onChanged: (value) {
+                    setModalState(() {
+                      selectedReason = value!;
+                    });
+                  },
+                ),
+
+                const SizedBox(height: 16),
+
+                // DATE PICKER FIELD (with CustomTextField)
+                GestureDetector(
+                  onTap: () async {
+                    final date = await showDatePicker(
+                      context: context,
+                      initialDate: selectedDate,
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime(2030),
+                    );
+                    if (date != null) {
+                      setModalState(() {
+                        selectedDate = date;
+                      });
+                    }
+                  },
+                  child: AbsorbPointer(
+                    child: CustomTextField(
+                      label: "Date",
+                      controller: TextEditingController(
+                        text: DateFormat('dd MMM yyyy').format(selectedDate),
+                      ),
+                      suffix: const Icon(Icons.calendar_today),
                     ),
                   ),
                 ),
+
                 const SizedBox(height: 16),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Reason',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[700],
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    DropdownButtonFormField<String>(
-                      value: selectedReason,
-                      decoration: const InputDecoration(
-                        hintText: 'Eg: Fuel Expense, Loading charge, Toll Expense',
-                        filled: true,
-                        fillColor: Colors.white,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(8)),
-                        ),
-                      ),
-                      items: reasons.map((reason) {
-                        return DropdownMenuItem(
-                          value: reason,
-                          child: Text(reason),
-                        );
-                      }).toList(),
-                      onChanged: (value) {
-                        setModalState(() {
-                          selectedReason = value ?? reasons[0];
-                        });
-                      },
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Date',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[700],
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    InkWell(
-                      onTap: () async {
-                        final date = await showDatePicker(
-                          context: context,
-                          initialDate: selectedDate,
-                          firstDate: DateTime(2020),
-                          lastDate: DateTime(2030),
-                        );
-                        if (date != null) {
-                          setModalState(() {
-                            selectedDate = date;
-                          });
-                        }
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              DateFormat('dd MMM yyyy').format(selectedDate),
-                              style: const TextStyle(fontSize: 16),
-                            ),
-                            const Icon(Icons.calendar_today, color: Colors.grey),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                TextField(
+
+                // NOTE FIELD
+                CustomTextField(
+                  label: "Note",
                   controller: noteController,
+                  hint: "Optional",
                   maxLines: 3,
-                  decoration: const InputDecoration(
-                    hintText: 'Note',
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(8)),
-                    ),
-                  ),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  'Optional',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
-                ),
+
                 const SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: isFormValid ? () async {
+
+                // CONFIRM BUTTON
+                CustomButton(
+                  text: "Confirm",
+                  color: isFormValid ? Colors.red : Colors.grey.shade400,
+                  onPressed: isFormValid
+                      ? () async {
                     final amount = amountController.text;
+
                     if (amount.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Please enter amount')),
+                      ToastHelper.showSnackBarToast(context, 
+                        const SnackBar(
+                            content: Text('Please enter amount')),
                       );
                       return;
                     }
 
                     Navigator.pop(context);
 
-                    final result = await ApiService.addDriverBalanceTransaction(
+                    final result =
+                    await ApiService.addDriverBalanceTransaction(
                       driverId: widget.driverId,
                       type: 'gave',
                       amount: amount,
@@ -258,18 +219,18 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
                     );
 
                     if (result != null) {
-                      await _loadDriverDetails(); // Reload instantly with await
+                      await _loadDriverDetails();
                       if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        ToastHelper.showSnackBarToast(context, 
                           const SnackBar(
                             content: Text('Transaction added successfully'),
-                            backgroundColor: Colors.green,
+                            backgroundColor: AppColors.primaryGreen,
                           ),
                         );
                       }
                     } else {
                       if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        ToastHelper.showSnackBarToast(context, 
                           const SnackBar(
                             content: Text('Error adding transaction'),
                             backgroundColor: Colors.red,
@@ -277,19 +238,8 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
                         );
                       }
                     }
-                  } : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: isFormValid ? Colors.red : Colors.grey.shade400,
-                    foregroundColor: Colors.white,
-                    minimumSize: const Size(double.infinity, 50),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: const Text(
-                    'Confirm',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                  ),
+                  }
+                      : () {},
                 ),
               ],
             ),
@@ -303,33 +253,63 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Settle Amount'),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+
+        title: const Text(
+          'Settle Amount',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+
         content: Text(
           'Are you sure you want to settle the driver balance of ₹${_balance.toStringAsFixed(0)}?\n\nThis will clear the current balance.',
+          style: const TextStyle(
+            fontSize: 14,
+            height: 1.4,
+          ),
         ),
+
+        actionsPadding: const EdgeInsets.only(bottom: 12, right: 12, left: 12),
+
         actions: [
+          // âŒ CANCEL BUTTON
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(
+                color: Colors.grey,
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
-          TextButton(
+
+          // âœ” SETTLE BUTTON (THEME COLORED)
+          ElevatedButton(
             onPressed: () async {
               Navigator.pop(context);
 
-              final success = await ApiService.settleDriverBalance(driverId: widget.driverId);
+              final success = await ApiService.settleDriverBalance(
+                driverId: widget.driverId,
+              );
 
               if (!mounted) return;
 
               if (success) {
-                await _loadDriverDetails(); // Reload instantly to show updated balance
-                ScaffoldMessenger.of(context).showSnackBar(
+                await _loadDriverDetails();
+                ToastHelper.showSnackBarToast(context, 
                   const SnackBar(
                     content: Text('Amount settled successfully'),
-                    backgroundColor: Colors.green,
+                    backgroundColor: AppColors.primaryGreen,
                   ),
                 );
               } else {
-                ScaffoldMessenger.of(context).showSnackBar(
+                ToastHelper.showSnackBarToast(context, 
                   const SnackBar(
                     content: Text('Failed to settle amount'),
                     backgroundColor: Colors.red,
@@ -337,7 +317,24 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
                 );
               }
             },
-            child: const Text('Settle', style: TextStyle(color: Colors.blue)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.info,    // ðŸ”µ theme color
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(
+                horizontal: 18,
+                vertical: 12,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: const Text(
+              'Settle',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ),
         ],
       ),
@@ -381,6 +378,7 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // ---------------- HEADER ----------------
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -397,134 +395,86 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
                     ),
                   ],
                 ),
+
                 const SizedBox(height: 20),
-                TextField(
+
+                // ---------------- AMOUNT FIELD ----------------
+                CustomTextField(
+                  label: "Amount",
                   controller: amountController,
-                  keyboardType: TextInputType.number,
+                  hint: "Enter amount",
+                  keyboard: TextInputType.number,
+                  suffix: const Icon(Icons.currency_rupee),
                   onChanged: (value) {
                     setModalState(() {
                       checkFormValidity();
                     });
                   },
-                  decoration: const InputDecoration(
-                    hintText: 'Amount',
-                    prefixText: '₹',
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(8)),
+                ),
+
+                const SizedBox(height: 16),
+
+                // ---------------- REASON DROPDOWN ----------------
+                CustomDropdown(
+                  label: "Reason",
+                  value: selectedReason,
+                  items: reasons,
+                  onChanged: (val) {
+                    setModalState(() {
+                      selectedReason = val ?? reasons[0];
+                    });
+                  },
+                ),
+
+                const SizedBox(height: 16),
+
+                // ---------------- DATE PICKER ----------------
+                GestureDetector(
+                  onTap: () async {
+                    final date = await showDatePicker(
+                      context: context,
+                      initialDate: selectedDate,
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime(2030),
+                    );
+                    if (date != null) {
+                      setModalState(() {
+                        selectedDate = date;
+                      });
+                    }
+                  },
+                  child: AbsorbPointer(
+                    child: CustomTextField(
+                      label: "Date",
+                      controller: TextEditingController(
+                        text: DateFormat('dd MMM yyyy').format(selectedDate),
+                      ),
+                      suffix: const Icon(Icons.calendar_today),
                     ),
                   ),
                 ),
+
                 const SizedBox(height: 16),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Reason',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[700],
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    DropdownButtonFormField<String>(
-                      value: selectedReason,
-                      decoration: const InputDecoration(
-                        hintText: 'Eg: Trip Advance, Driver Payment, Party Payment',
-                        filled: true,
-                        fillColor: Colors.white,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(8)),
-                        ),
-                      ),
-                      items: reasons.map((reason) {
-                        return DropdownMenuItem(
-                          value: reason,
-                          child: Text(reason),
-                        );
-                      }).toList(),
-                      onChanged: (value) {
-                        setModalState(() {
-                          selectedReason = value ?? reasons[0];
-                        });
-                      },
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Date',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[700],
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    InkWell(
-                      onTap: () async {
-                        final date = await showDatePicker(
-                          context: context,
-                          initialDate: selectedDate,
-                          firstDate: DateTime(2020),
-                          lastDate: DateTime(2030),
-                        );
-                        if (date != null) {
-                          setModalState(() {
-                            selectedDate = date;
-                          });
-                        }
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              DateFormat('dd MMM yyyy').format(selectedDate),
-                              style: const TextStyle(fontSize: 16),
-                            ),
-                            const Icon(Icons.calendar_today, color: Colors.grey),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                TextField(
+
+                // ---------------- NOTE FIELD ----------------
+                CustomTextField(
+                  label: "Note",
                   controller: noteController,
+                  hint: "Optional",
                   maxLines: 3,
-                  decoration: const InputDecoration(
-                    hintText: 'Note',
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(8)),
-                    ),
-                  ),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  'Optional',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
-                ),
+
                 const SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: isFormValid ? () async {
+
+                // ---------------- CONFIRM BUTTON ----------------
+                CustomButton(
+                  text: "Confirm",
+                  color: isFormValid ? Colors.green : Colors.grey.shade400,
+                  onPressed: isFormValid
+                      ? () async {
                     final amount = amountController.text;
                     if (amount.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      ToastHelper.showSnackBarToast(context, 
                         const SnackBar(content: Text('Please enter amount')),
                       );
                       return;
@@ -532,7 +482,8 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
 
                     Navigator.pop(context);
 
-                    final result = await ApiService.addDriverBalanceTransaction(
+                    final result =
+                    await ApiService.addDriverBalanceTransaction(
                       driverId: widget.driverId,
                       type: 'got',
                       amount: amount,
@@ -542,18 +493,18 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
                     );
 
                     if (result != null) {
-                      await _loadDriverDetails(); // Reload instantly with await
+                      await _loadDriverDetails(); // Reload instantly
                       if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        ToastHelper.showSnackBarToast(context, 
                           const SnackBar(
                             content: Text('Transaction added successfully'),
-                            backgroundColor: Colors.green,
+                            backgroundColor: AppColors.primaryGreen,
                           ),
                         );
                       }
                     } else {
                       if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        ToastHelper.showSnackBarToast(context, 
                           const SnackBar(
                             content: Text('Error adding transaction'),
                             backgroundColor: Colors.red,
@@ -561,19 +512,8 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
                         );
                       }
                     }
-                  } : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: isFormValid ? Colors.green : Colors.grey.shade400,
-                    foregroundColor: Colors.white,
-                    minimumSize: const Size(double.infinity, 50),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: const Text(
-                    'Confirm',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                  ),
+                  }
+                      : () {},
                 ),
               ],
             ),
@@ -585,14 +525,17 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
 
   void _showEditDriverDialog() {
     final nameController = TextEditingController(text: widget.driverName);
-    final phoneController = TextEditingController(text: _driverDetails?['phone']?.toString() ?? '');
+    final phoneController =
+    TextEditingController(text: _driverDetails?['phone']?.toString() ?? '');
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
         child: Container(
           decoration: const BoxDecoration(
             color: Colors.white,
@@ -603,12 +546,16 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // HEADER
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text(
                     'Edit Driver',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   IconButton(
                     icon: const Icon(Icons.close),
@@ -616,29 +563,38 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
                   ),
                 ],
               ),
+
               const SizedBox(height: 20),
-              TextField(
+
+              // DRIVER NAME
+              CustomTextField(
+                label: "Driver Name",
                 controller: nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Driver Name',
-                  border: OutlineInputBorder(),
-                ),
+                hint: "Enter driver name",
               ),
+
               const SizedBox(height: 16),
-              TextField(
+
+              // PHONE NUMBER
+              CustomTextField(
+                label: "Phone Number",
                 controller: phoneController,
-                keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(
-                  labelText: 'Phone Number',
-                  border: OutlineInputBorder(),
-                ),
+                keyboard: TextInputType.phone,
+                hint: "Enter phone number",
               ),
+
               const SizedBox(height: 24),
-              ElevatedButton(
+
+              // UPDATE BUTTON
+              CustomButton(
+                text: "Update",
+                color: const Color(0xFF2196F3),
                 onPressed: () async {
                   if (nameController.text.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Please enter driver name')),
+                    ToastHelper.showSnackBarToast(context, 
+                      const SnackBar(
+                        content: Text('Please enter driver name'),
+                      ),
                     );
                     return;
                   }
@@ -648,29 +604,28 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
                   final success = await ApiService.updateDriver(
                     driverId: widget.driverId,
                     name: nameController.text,
-                    phone: phoneController.text.isNotEmpty ? phoneController.text : null,
+                    phone: phoneController.text.isNotEmpty
+                        ? phoneController.text
+                        : null,
                   );
 
                   if (!mounted) return;
 
                   if (success) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Driver updated successfully')),
+                    ToastHelper.showSnackBarToast(context, 
+                      const SnackBar(
+                        content: Text('Driver updated successfully'),
+                      ),
                     );
                     await _loadDriverDetails();
                   } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Failed to update driver')),
+                    ToastHelper.showSnackBarToast(context, 
+                      const SnackBar(
+                        content: Text('Failed to update driver'),
+                      ),
                     );
                   }
                 },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF2196F3),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                ),
-                child: const Text('Update', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
               ),
             ],
           ),
@@ -686,6 +641,7 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
     final amountController = TextEditingController(
       text: transaction['amount']?.toString() ?? '0',
     );
+
     final type = transaction['type']?.toString() ?? 'got';
     final reason = transaction['reason']?.toString() ?? '';
     final note = transaction['note']?.toString() ?? '';
@@ -694,9 +650,7 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
     DateTime selectedDate = DateTime.now();
     try {
       selectedDate = DateTime.parse(dateStr);
-    } catch (e) {
-      // Use current date if parsing fails
-    }
+    } catch (_) {}
 
     showModalBottomSheet(
       context: context,
@@ -704,7 +658,9 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
       backgroundColor: Colors.transparent,
       builder: (context) => StatefulBuilder(
         builder: (context, setModalState) => Padding(
-          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
           child: Container(
             decoration: const BoxDecoration(
               color: Colors.white,
@@ -715,12 +671,16 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // ---------------- HEADER ----------------
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text(
                       'Edit Transaction',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     IconButton(
                       icon: const Icon(Icons.close),
@@ -728,19 +688,22 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
                     ),
                   ],
                 ),
+
                 const SizedBox(height: 20),
-                TextField(
+
+                // ---------------- AMOUNT ----------------
+                CustomTextField(
+                  label: "Amount",
                   controller: amountController,
-                  keyboardType: TextInputType.number,
+                  keyboard: TextInputType.number,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  decoration: const InputDecoration(
-                    labelText: 'Amount',
-                    prefixText: '₹ ',
-                    border: OutlineInputBorder(),
-                  ),
+                  suffix: const Icon(Icons.currency_rupee),
                 ),
+
                 const SizedBox(height: 16),
-                InkWell(
+
+                // ---------------- DATE ----------------
+                GestureDetector(
                   onTap: () async {
                     final date = await showDatePicker(
                       context: context,
@@ -749,34 +712,28 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
                       lastDate: DateTime(2030),
                     );
                     if (date != null) {
-                      setModalState(() {
-                        selectedDate = date;
-                      });
+                      setModalState(() => selectedDate = date);
                     }
                   },
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          DateFormat('dd MMM yyyy').format(selectedDate),
-                          style: const TextStyle(fontSize: 16),
-                        ),
-                        const Icon(Icons.calendar_today, color: Colors.grey),
-                      ],
+                  child: AbsorbPointer(
+                    child: CustomTextField(
+                      label: "Date",
+                      controller: TextEditingController(
+                        text: DateFormat('dd MMM yyyy').format(selectedDate),
+                      ),
+                      suffix: const Icon(Icons.calendar_today),
                     ),
                   ),
                 ),
+
                 const SizedBox(height: 24),
-                ElevatedButton(
+
+                // ---------------- UPDATE BUTTON ----------------
+                CustomButton(
+                  text: "Update",
                   onPressed: () async {
                     if (amountController.text.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      ToastHelper.showSnackBarToast(context, 
                         const SnackBar(content: Text('Please enter amount')),
                       );
                       return;
@@ -797,23 +754,20 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
                     if (!mounted) return;
 
                     if (success) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Transaction updated successfully')),
+                      ToastHelper.showSnackBarToast(context, 
+                        const SnackBar(
+                          content: Text('Transaction updated successfully'),
+                        ),
                       );
                       await _loadDriverDetails();
                     } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Failed to update transaction')),
+                      ToastHelper.showSnackBarToast(context, 
+                        const SnackBar(
+                          content: Text('Failed to update transaction'),
+                        ),
                       );
                     }
                   },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2196F3),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                  child: const Text('Update', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                 ),
               ],
             ),
@@ -828,39 +782,98 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        backgroundColor: AppColors.appBarColor,
-        foregroundColor: AppColors.appBarTextColor,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        backgroundColor: AppColors.info,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: false,
+        automaticallyImplyLeading: false,
+
+        // ðŸ”¥ Rounded Bottom Shape like CustomAppBar
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            bottom: Radius.circular(20),
+          ),
+        ),
+
+        titleSpacing: 0,
+
+        title: Row(
           children: [
-            Text(widget.driverName),
-            Row(
+            // Back button
+            IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.white, size: 26),
+              onPressed: () => Navigator.pop(context),
+            ),
+
+            // Avatar
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.person,
+                size: 24,
+                color: Colors.white,
+              ),
+            ),
+
+            const SizedBox(width: 12),
+
+            // Name + Status
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: const BoxDecoration(
-                    color: Colors.blue,
-                    shape: BoxShape.circle,
+                Text(
+                  widget.driverName,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
                   ),
                 ),
-                const SizedBox(width: 6),
-                Text(
-                  _status,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Colors.blue,
-                    fontWeight: FontWeight.normal,
+
+                const SizedBox(height: 4),
+
+                // Status pill
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.20),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        _status,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
           ],
         ),
-        elevation: 0,
+
         actions: [
           PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert),
+            color: Colors.white,
+            icon: const Icon(Icons.more_vert, color: Colors.white),
             onSelected: (value) {
               switch (value) {
                 case 'call':
@@ -883,9 +896,22 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
                 enabled: _driverDetails?['phone']?.toString().isNotEmpty ?? false,
                 child: Row(
                   children: [
-                    Icon(Icons.phone, size: 20, color: (_driverDetails?['phone']?.toString().isNotEmpty ?? false) ? Colors.black87 : Colors.grey),
+                    Icon(Icons.phone,
+                        size: 20,
+                        color: (_driverDetails?['phone']?.toString().isNotEmpty ??
+                            false)
+                            ? Colors.black87
+                            : Colors.grey),
                     const SizedBox(width: 12),
-                    Text('Call Driver', style: TextStyle(color: (_driverDetails?['phone']?.toString().isNotEmpty ?? false) ? Colors.black87 : Colors.grey)),
+                    Text(
+                      'Call Driver',
+                      style: TextStyle(
+                        color:
+                        (_driverDetails?['phone']?.toString().isNotEmpty ?? false)
+                            ? Colors.black87
+                            : Colors.grey,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -924,7 +950,7 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: AppLoader())
           : NestedScrollView(
               headerSliverBuilder: (context, innerBoxIsScrolled) {
                 return [
@@ -938,18 +964,31 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(
-                                'Collect from driver  ₹${_balance.toStringAsFixed(0)}',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.grey[700],
+                              RichText(
+                                text: TextSpan(
+                                  text: 'Collect from driver  ',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey[700],
+                                  ),
+                                  children: [
+                                    TextSpan(
+                                      text: '₹${_balance.toStringAsFixed(0)}',
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: AppColors.primaryGreen,        // ðŸ”¥ green amount
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
+
                               OutlinedButton(
                                 onPressed: _showSettleAmountDialog,
                                 style: OutlinedButton.styleFrom(
-                                  foregroundColor: Colors.blue,
-                                  side: const BorderSide(color: Colors.blue, width: 2),
+                                  foregroundColor: AppColors.info,
+                                  side: const BorderSide(color: AppColors.textDisabled, width: 1),
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 20,
                                     vertical: 12,
@@ -994,7 +1033,7 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
                               child: const Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(Icons.picture_as_pdf, color: Colors.blue),
+                                  Icon(Icons.picture_as_pdf, color: AppColors.info),
                                   SizedBox(width: 8),
                                   Text(
                                     'View Report',
@@ -1120,7 +1159,7 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
             Expanded(
               child: FloatingActionButton.extended(
                 onPressed: _showDriverGotDialog,
-                backgroundColor: Colors.green,
+                backgroundColor: AppColors.primaryGreen,
                 foregroundColor: Colors.white,
                 heroTag: 'driverGot',
                 icon: const Icon(Icons.add_circle_outline, color: Colors.white, size: 22),
@@ -1139,7 +1178,7 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
   Future<void> _callDriver() async {
     final phoneNumber = _driverDetails?['phone']?.toString() ?? '';
     if (phoneNumber.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         const SnackBar(content: Text('Phone number not available')),
       );
       return;
@@ -1151,14 +1190,14 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
         await launchUrl(phoneUri);
       } else {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
+          ToastHelper.showSnackBarToast(context, 
             const SnackBar(content: Text('Cannot make phone call')),
           );
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ToastHelper.showSnackBarToast(context, 
           const SnackBar(content: Text('Error making phone call')),
         );
       }
@@ -1169,33 +1208,85 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Driver'),
-        content: const Text('Are you sure you want to delete this driver? This action marks the driver as deleted but preserves their transaction history.'),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+
+        title: const Text(
+          'Delete Driver',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+
+        content: const Text(
+          'Are you sure you want to delete this driver? This action marks the driver as deleted but preserves their transaction history.',
+          style: TextStyle(
+            fontSize: 14,
+            height: 1.4,
+          ),
+        ),
+
+        actionsPadding: const EdgeInsets.only(bottom: 12, right: 12, left: 12),
+
         actions: [
+          // CANCEL BUTTON
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(
+                color: Colors.grey,
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
-          TextButton(
+
+          // DELETE BUTTON
+          ElevatedButton(
             onPressed: () async {
               Navigator.pop(context);
 
-              final success = await ApiService.deleteDriver(driverId: widget.driverId);
+              final success = await ApiService.deleteDriver(
+                driverId: widget.driverId,
+              );
 
               if (!mounted) return;
 
               if (success) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Driver deleted successfully')),
+                ToastHelper.showSnackBarToast(context, 
+                  const SnackBar(
+                    content: Text('Driver deleted successfully'),
+                    backgroundColor: AppColors.primaryGreen,
+                  ),
                 );
-                Navigator.pop(context, true); // Go back to driver list with refresh indicator
+                Navigator.pop(context, true);
               } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Failed to delete driver')),
+                ToastHelper.showSnackBarToast(context, 
+                  const SnackBar(
+                    content: Text('Failed to delete driver'),
+                    backgroundColor: Colors.red,
+                  ),
                 );
               }
             },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: const Text(
+              'Delete',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ),
         ],
       ),
@@ -1216,30 +1307,77 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
+            const Text(
               'Transaction Options',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 20,
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w700,
               ),
             ),
             const SizedBox(height: 20),
-            ListTile(
-              leading: const Icon(Icons.edit, color: Colors.orange),
-              title: const Text('Edit Transaction'),
+
+            // ---- EDIT ----
+            InkWell(
               onTap: () {
                 Navigator.pop(context);
                 _showEditTransactionDialog(transaction);
               },
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  color: Colors.orange.shade50,
+                ),
+                child: Row(
+                  children: const [
+                    Icon(Icons.edit, color: Colors.orange, size: 22),
+                    SizedBox(width: 12),
+                    Text(
+                      "Edit Transaction",
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.orange,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
-            ListTile(
-              leading: const Icon(Icons.delete, color: Colors.red),
-              title: const Text('Delete Transaction'),
+
+            const SizedBox(height: 12),
+
+            // ---- DELETE ----
+            InkWell(
               onTap: () {
                 Navigator.pop(context);
                 _confirmDeleteTransaction(transaction);
               },
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  color: Colors.red.shade50,
+                ),
+                child: Row(
+                  children: const [
+                    Icon(Icons.delete, color: Colors.red, size: 22),
+                    SizedBox(width: 12),
+                    Text(
+                      "Delete Transaction",
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.red,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
+
             const SizedBox(height: 8),
           ],
         ),
@@ -1254,14 +1392,41 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Transaction'),
-        content: const Text('Are you sure you want to delete this transaction? The driver balance will be recalculated.'),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+
+        title: const Text(
+          'Delete Transaction',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+
+        content: const Text(
+          'Are you sure you want to delete this transaction? The driver balance will be recalculated.',
+          style: TextStyle(fontSize: 14),
+        ),
+
+        actionsPadding: const EdgeInsets.only(bottom: 12, right: 12, left: 12),
+
         actions: [
+          // CANCEL
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(
+                color: Colors.grey,
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
-          TextButton(
+
+          // DELETE BUTTON (custom button style)
+          ElevatedButton(
             onPressed: () async {
               Navigator.pop(context);
 
@@ -1273,17 +1438,31 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
               if (!mounted) return;
 
               if (success) {
-                ScaffoldMessenger.of(context).showSnackBar(
+                ToastHelper.showSnackBarToast(context, 
                   const SnackBar(content: Text('Transaction deleted successfully')),
                 );
-                await _loadDriverDetails(); // Reload to update balance
+                await _loadDriverDetails();
               } else {
-                ScaffoldMessenger.of(context).showSnackBar(
+                ToastHelper.showSnackBarToast(context, 
                   const SnackBar(content: Text('Failed to delete transaction')),
                 );
               }
             },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+            ),
+            child: const Text(
+              'Delete',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ),
         ],
       ),
@@ -1332,7 +1511,7 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
                 Text(
                   reason,
                   style: const TextStyle(
-                    fontSize: 16,
+                    fontSize: 12,
                     fontWeight: FontWeight.w600,
                     color: Colors.black87,
                   ),
@@ -1369,7 +1548,7 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: Colors.green,
+                color:  AppColors.primaryGreen,
               ),
             ),
           ),
@@ -1380,3 +1559,5 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
     );
   }
 }
+
+

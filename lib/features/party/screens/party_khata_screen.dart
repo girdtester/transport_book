@@ -1,4 +1,8 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:transport_book_app/utils/appbar.dart';
+import 'package:transport_book_app/utils/custom_button.dart';
+import 'package:transport_book_app/utils/custom_textfield.dart';
 import '../../../utils/app_colors.dart';
 import '../../../utils/currency_formatter.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
@@ -6,6 +10,8 @@ import '../../../services/api_service.dart';
 import 'party_detail_screen.dart';
 import 'party_balance_report_screen.dart';
 import '../../invoices/widgets/create_invoice_helper.dart';
+import 'package:transport_book_app/utils/toast_helper.dart';
+import 'package:transport_book_app/utils/app_loader.dart';
 
 class PartyKhataScreen extends StatefulWidget {
   const PartyKhataScreen({super.key});
@@ -50,7 +56,7 @@ class _PartyKhataScreenState extends State<PartyKhataScreen> {
       print('Error loading parties: $e');
       setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ToastHelper.showSnackBarToast(context, 
           SnackBar(content: Text('Error loading parties: $e')),
         );
       }
@@ -149,101 +155,126 @@ class _PartyKhataScreenState extends State<PartyKhataScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-        ),
-        child: Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
           ),
-          padding: const EdgeInsets.all(24),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Text(
-                  'Add Party Details',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                TextField(
-                  controller: nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Party Name *',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: phoneController,
-                  decoration: const InputDecoration(
-                    labelText: 'Phone Number *',
-                    border: OutlineInputBorder(),
-                    prefixText: '+91 ',
-                  ),
-                  keyboardType: TextInputType.phone,
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: emailController,
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
-                    border: OutlineInputBorder(),
-                  ),
-                  keyboardType: TextInputType.emailAddress,
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: addressController,
-                  decoration: const InputDecoration(
-                    labelText: 'Address',
-                    border: OutlineInputBorder(),
-                  ),
-                  maxLines: 2,
-                ),
-                const SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: () async {
-                    if (nameController.text.isEmpty || phoneController.text.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Name and Phone are required')),
-                      );
-                      return;
-                    }
+          child: Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
+                children: [
 
-                    final result = await ApiService.addParty(
-                      name: nameController.text,
-                      phone: '+91 ${phoneController.text}',
-                      email: emailController.text.isEmpty ? null : emailController.text,
-                      address: addressController.text.isEmpty ? null : addressController.text,
-                    );
-
-                    if (result != null && mounted) {
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Party added successfully')),
-                      );
-                      _loadParties();
-                    } else if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Failed to add party')),
-                      );
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2E8B57),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  // ---------------- HEADER ----------------
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: const [
+                      Text(
+                        "Add Party Details",
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      Icon(Icons.close, size: 24, color: Colors.black54),
+                    ],
                   ),
-                  child: const Text('Add Party'),
-                ),
-              ],
+
+                  const SizedBox(height: 20),
+
+                  // ---------------- PARTY NAME ----------------
+                  CustomTextField(
+                    label: "Party Name *",
+                    controller: nameController,
+                    hint: "Enter party name",
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // ---------------- PHONE NUMBER ----------------
+                  CustomTextField(
+                    label: "Phone Number *",
+                    controller: phoneController,
+                    hint: "10-digit number",
+                    keyboard: TextInputType.phone,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // ---------------- EMAIL ----------------
+                  CustomTextField(
+                    label: "Email",
+                    controller: emailController,
+                    hint: "Optional",
+                    keyboard: TextInputType.emailAddress,
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // ---------------- ADDRESS ----------------
+                  CustomTextField(
+                    label: "Address",
+                    controller: addressController,
+                    hint: "Optional",
+                    maxLines: 2,
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // ---------------- SUBMIT BUTTON ----------------
+                  CustomButton(
+                    text: "Add Party",
+                    onPressed: () async {
+                      if (nameController.text.isEmpty ||
+                          phoneController.text.isEmpty) {
+                        ToastHelper.showSnackBarToast(context, 
+                          const SnackBar(
+                            content: Text("Name and Phone are required"),
+                          ),
+                        );
+                        return;
+                      }
+
+                      final result = await ApiService.addParty(
+                        name: nameController.text,
+                        phone: "+91 ${phoneController.text}",
+                        email: emailController.text.isEmpty
+                            ? null
+                            : emailController.text,
+                        address: addressController.text.isEmpty
+                            ? null
+                            : addressController.text,
+                      );
+
+                      if (result != null && mounted) {
+                        Navigator.pop(context);
+                        ToastHelper.showSnackBarToast(context, 
+                          const SnackBar(
+                            content: Text("Party added successfully"),
+                          ),
+                        );
+                        _loadParties();
+                      } else if (mounted) {
+                        ToastHelper.showSnackBarToast(context, 
+                          const SnackBar(
+                            content: Text("Failed to add party"),
+                          ),
+                        );
+                      }
+                    },
+                  ),
+
+                  const SizedBox(height: 12),
+                ],
+              ),
             ),
           ),
         ),
@@ -307,14 +338,14 @@ class _PartyKhataScreenState extends State<PartyKhataScreen> {
         }
       } else {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
+          ToastHelper.showSnackBarToast(context, 
             const SnackBar(content: Text('Contact permission denied')),
           );
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ToastHelper.showSnackBarToast(context, 
           SnackBar(content: Text('Error accessing contacts: $e')),
         );
       }
@@ -334,12 +365,12 @@ class _PartyKhataScreenState extends State<PartyKhataScreen> {
     );
 
     if (result != null && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         const SnackBar(content: Text('Party added from contact')),
       );
       _loadParties();
     } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         const SnackBar(content: Text('Failed to add party')),
       );
     }
@@ -456,12 +487,11 @@ class _PartyKhataScreenState extends State<PartyKhataScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        backgroundColor: AppColors.appBarColor,
-        foregroundColor: AppColors.appBarTextColor,
-        title: const Text('Parties'),
-        elevation: 0,
+      appBar: CustomAppBar(
+        title: 'Parties',
+        onBack: () => Navigator.pop(context),
       ),
+
       body: Column(
         children: [
           // Total Balance Card
@@ -595,7 +625,7 @@ class _PartyKhataScreenState extends State<PartyKhataScreen> {
           // Party List
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? const Center(child: AppLoader())
                 : _filteredParties.isEmpty
                     ? Center(
                         child: Column(
@@ -650,3 +680,5 @@ class _PartyKhataScreenState extends State<PartyKhataScreen> {
     );
   }
 }
+
+

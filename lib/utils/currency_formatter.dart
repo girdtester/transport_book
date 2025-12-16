@@ -116,4 +116,25 @@ class CurrencyFormatter {
 
     return isNegative ? '-$result' : result;
   }
+
+  static String formatIndianAmount(num amount) {
+    if (amount >= 10000000) {
+      // 1 Crore = 1,00,00,000
+      double crore = amount / 10000000;
+      return "₹ ${crore.toStringAsFixed(crore % 1 == 0 ? 0 : 1)} Cr";
+    } else if (amount >= 100000) {
+      // 1 Lakh = 1,00,000
+      double lakh = amount / 100000;
+      return "₹ ${lakh.toStringAsFixed(lakh % 1 == 0 ? 0 : 1)} L";
+    } else if (amount >= 1000) {
+      // 1 Thousand = 1,000
+      double thousand = amount / 1000;
+      return "₹ ${thousand.toStringAsFixed(thousand % 1 == 0 ? 0 : 1)} K";
+    } else {
+      return "₹ ${amount.toStringAsFixed(0)}";
+    }
+  }
+
 }
+
+

@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:transport_book_app/utils/appbar.dart';
 import '../../../utils/app_colors.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
@@ -6,6 +7,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'dart:io';
+import 'package:transport_book_app/utils/toast_helper.dart';
 
 class TruckProfitLossPdfScreen extends StatefulWidget {
   final int truckId;
@@ -326,7 +328,7 @@ class _TruckProfitLossPdfScreenState extends State<TruckProfitLossPdfScreen> {
   Future<void> _downloadReport() async {
     try {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         const SnackBar(
           content: Text('Generating PDF...'),
           duration: Duration(seconds: 1),
@@ -360,7 +362,7 @@ class _TruckProfitLossPdfScreenState extends State<TruckProfitLossPdfScreen> {
       await file.writeAsBytes(bytes);
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         SnackBar(
           content: Text('Report downloaded to ${file.path}'),
           duration: const Duration(seconds: 3),
@@ -369,7 +371,7 @@ class _TruckProfitLossPdfScreenState extends State<TruckProfitLossPdfScreen> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         SnackBar(
           content: Text('Error downloading report: $e'),
           duration: const Duration(seconds: 3),
@@ -382,7 +384,7 @@ class _TruckProfitLossPdfScreenState extends State<TruckProfitLossPdfScreen> {
   Future<void> _shareReport() async {
     try {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         const SnackBar(
           content: Text('Preparing to share...'),
           duration: Duration(seconds: 1),
@@ -410,7 +412,7 @@ class _TruckProfitLossPdfScreenState extends State<TruckProfitLossPdfScreen> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         SnackBar(
           content: Text('Error sharing report: $e'),
           duration: const Duration(seconds: 3),
@@ -436,12 +438,7 @@ class _TruckProfitLossPdfScreenState extends State<TruckProfitLossPdfScreen> {
 
     return Scaffold(
       backgroundColor: Colors.grey[200],
-      appBar: AppBar(
-        backgroundColor: AppColors.appBarColor,
-        foregroundColor: AppColors.appBarTextColor,
-        elevation: 0,
-        title: Text('Truck Monthly Profit & Loss - ${widget.truckNumber}'),
-      ),
+      appBar: CustomAppBar(title: 'Truck Monthly Profit & Loss - ${widget.truckNumber}'),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
         child: Container(
@@ -559,10 +556,10 @@ class _TruckProfitLossPdfScreenState extends State<TruckProfitLossPdfScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Image.asset(
-                      'assets/google_play.png',
-                      height: 32,
-                      errorBuilder: (context, error, stackTrace) => const SizedBox(),
+                    Icon(
+                      Icons.android,
+                      size: 32,
+                      color: Colors.grey[700],
                     ),
                     const SizedBox(width: 16),
                     RichText(
@@ -619,7 +616,7 @@ class _TruckProfitLossPdfScreenState extends State<TruckProfitLossPdfScreen> {
                 icon: const Icon(Icons.download, color: Colors.white),
                 label: const Text('Download', style: TextStyle(color: Colors.white, fontSize: 16)),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
+                  backgroundColor: AppColors.info,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
@@ -756,3 +753,4 @@ class _TruckProfitLossPdfScreenState extends State<TruckProfitLossPdfScreen> {
     );
   }
 }
+

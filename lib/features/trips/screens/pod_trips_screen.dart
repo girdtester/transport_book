@@ -1,10 +1,11 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../services/api_service.dart';
 import '../../../utils/app_colors.dart';
 import 'add_trip_screen.dart';
 import 'trip_details_screen.dart';
 import 'add_trip_from_dashboard_screen.dart';
+import 'package:transport_book_app/utils/app_loader.dart';
 
 class PodTripsScreen extends StatefulWidget {
   const PodTripsScreen({super.key});
@@ -151,8 +152,27 @@ class _PodTripsScreenState extends State<PodTripsScreen> {
       _startDate = null;
       _endDate = null;
       _selectedMonth = null;
+      _searchQuery = '';
       _filteredTrips = _allTrips;
     });
+    _filterTrips();
+  }
+
+  int _getActiveFiltersCount() {
+    int count = 0;
+    if (_selectedTrucks.isNotEmpty) count++;
+    if (_selectedParties.isNotEmpty) count++;
+    if (_selectedRoutes.isNotEmpty) count++;
+    if (_selectedStatuses.isNotEmpty) count++;
+    if (_selectedPODFilter.isNotEmpty) count++;
+    if (_startDate != null && _endDate != null) count++;
+    if (_selectedMonth != null) count++;
+    if (_searchQuery.isNotEmpty) count++;
+    return count;
+  }
+
+  bool _hasActiveFilters() {
+    return _getActiveFiltersCount() > 0;
   }
 
   @override
@@ -233,10 +253,49 @@ class _PodTripsScreenState extends State<PodTripsScreen> {
             ),
           ),
 
+          // Filter Applied Banner
+          if (_hasActiveFilters())
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              color: AppColors.info.withOpacity(0.1),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.check_circle,
+                    color: AppColors.info,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '${_getActiveFiltersCount()} Filter${_getActiveFiltersCount() == 1 ? '' : 's'} has been applied',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppColors.info,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: _clearFilters,
+                    child: Text(
+                      'Clear',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppColors.info,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
           // Trips List
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? const Center(child: AppLoader())
                 : _filteredTrips.isEmpty
                     ? const Center(child: Text('No POD trips found'))
                     : ListView.builder(
@@ -355,7 +414,7 @@ class _PodTripsScreenState extends State<PodTripsScreen> {
                 Row(
                   children: [
                     Text(
-                      '₹${trip['freightAmount']?.toString() ?? '0'}',
+                      'â‚¹${trip['freightAmount']?.toString() ?? '0'}',
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
@@ -1157,3 +1216,4 @@ class _PodTripsScreenState extends State<PodTripsScreen> {
     return sortedMonths;
   }
 }
+

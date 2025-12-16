@@ -1,6 +1,9 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../utils/app_colors.dart';
+import '../../../utils/app_constants.dart';
+import '../../../utils/appbar.dart';
 import '../../../utils/currency_formatter.dart';
 import '../../../services/api_service.dart';
 import '../../trucks/screens/my_trucks_screen.dart';
@@ -14,6 +17,8 @@ import '../../reports/screens/reports_screen.dart';
 import '../../profile/screens/profile_screen.dart';
 import '../../help/screens/help_screen.dart';
 import 'dashboard_menu_screen.dart';
+import 'package:transport_book_app/utils/app_loader.dart';
+import 'package:transport_book_app/utils/toast_helper.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -46,7 +51,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Future<void> _loadUserData() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final userName = prefs.getString('user_name') ?? 'TMS Prime';
+      final userName = prefs.getString('user_name') ?? 'TMS Book';
       setState(() {
         _firmName = userName;
       });
@@ -164,6 +169,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _activeTripsCount = activeTrips;
         _inactiveTrucksCount = inactiveTrucks;
         _partyBalance = totalPartyBalance;
+        print('_partyBalance_partyBalance $_partyBalance');
         _supplierBalance = totalSupplierBalance;
         _recentActivity = activity;
         _isLoading = false;
@@ -177,7 +183,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String _formatCurrency(double amount) {
     // Use Indian currency format with commas
     // For dashboard cards, show compact format for large amounts
-    return CurrencyFormatter.formatCompact(amount.toInt());
+    print('double amountdouble amount ${ amount}');
+    return CurrencyFormatter.formatIndianAmount(amount.toInt());
   }
 
   Widget _getSelectedScreen() {
@@ -185,7 +192,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       case 0:
         return _buildDashboardContent();
       case 1:
-        return const MyTripsScreen();
+        return const MyTripsScreen(hideBackButton: true);
       case 2:
         return const DashboardMenuScreen();
       case 3:
@@ -204,28 +211,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Stats Cards (Full width vertical stack)
+            // ------------------- ROW 1 -------------------
             _buildStatCard(
-              icon: Icons.local_shipping_outlined,
-              iconColor: const Color(0xFF4CAF50),
+              icon: Icons.local_shipping,
               iconBgColor: const Color(0xFFE8F5E9),
               title: 'Active Trips',
               value: _isLoading ? '...' : _activeTripsCount.toString(),
-              valueColor: const Color(0xFF4CAF50),
+              valueColor: AppColors.primaryGreen,
               onTap: () async {
                 await Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => const MyTripsScreen(),
-                  ),
+                  MaterialPageRoute(builder: (context) => const MyTripsScreen()),
                 );
                 _loadDashboardData();
               },
             ),
             const SizedBox(height: 12),
             _buildStatCard(
-              icon: Icons.local_shipping_outlined,
-              iconColor: const Color(0xFFF44336),
+              icon: Icons.airport_shuttle_outlined,
               iconBgColor: const Color(0xFFFFEBEE),
               title: 'Inactive Trucks',
               value: _isLoading ? '...' : _inactiveTrucksCount.toString(),
@@ -233,17 +236,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
               onTap: () async {
                 await Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => const MyTrucksScreen(),
-                  ),
+                  MaterialPageRoute(builder: (context) => const MyTrucksScreen()),
                 );
                 _loadDashboardData();
               },
             ),
+
             const SizedBox(height: 12),
+
+// ------------------- ROW 2 -------------------
             _buildStatCard(
-              icon: Icons.people_outline,
-              iconColor: const Color(0xFF2196F3),
+              icon: Icons.account_balance_wallet,
               iconBgColor: const Color(0xFFE3F2FD),
               title: 'Party Balance',
               value: _isLoading ? '...' : _formatCurrency(_partyBalance),
@@ -251,17 +254,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
               onTap: () async {
                 await Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => const PartyKhataScreen(),
-                  ),
+                  MaterialPageRoute(builder: (context) => const PartyKhataScreen()),
                 );
                 _loadDashboardData();
               },
             ),
             const SizedBox(height: 12),
             _buildStatCard(
-              icon: Icons.business,
-              iconColor: const Color(0xFF9C27B0),
+              icon: Icons.inventory_2,
               iconBgColor: const Color(0xFFF3E5F5),
               title: 'Truck Suppliers',
               value: _isLoading ? '...' : _formatCurrency(_supplierBalance),
@@ -269,13 +269,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
               onTap: () async {
                 await Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => const SupplierKhataScreen(),
-                  ),
+                  MaterialPageRoute(builder: (context) => const SupplierKhataScreen()),
                 );
                 _loadDashboardData();
               },
             ),
+
 
             const SizedBox(height: 24),
 
@@ -295,11 +294,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
               children: [
                 Expanded(
                   child: _buildQuickActionButton(
-                    icon: Icons.local_shipping_outlined,
+                    icon: Icons.add_circle_outline,
                     label: 'Add Trip',
-                    bgColor: Colors.white,
-                    textColor: Colors.black87,
-                    borderColor: const Color(0xFF4CAF50),
+                    bgColor: AppColors.info,
+                    textColor: Colors.white,
+                    borderColor: AppColors.info,
                     onTap: () async {
                       await Navigator.push(
                         context,
@@ -314,7 +313,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: _buildQuickActionButton(
-                    icon: Icons.receipt_long_outlined,
+                    icon: Icons.receipt_long,
                     label: 'My Expenses',
                     bgColor: Colors.white,
                     textColor: Colors.black87,
@@ -332,12 +331,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ],
             ),
+
             const SizedBox(height: 12),
+            // Quick Action Buttons (2x2 grid)
+            // ---------- ROW 2 ----------
             Row(
               children: [
                 Expanded(
                   child: _buildQuickActionButton(
-                    icon: Icons.book_outlined,
+                    icon: Icons.person_outline,
                     label: 'Driver Khata',
                     bgColor: Colors.white,
                     textColor: Colors.black87,
@@ -356,7 +358,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: _buildQuickActionButton(
-                    icon: Icons.trending_up,
+                    icon: Icons.assessment,
                     label: 'Reports',
                     bgColor: Colors.white,
                     textColor: Colors.black87,
@@ -393,7 +395,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               const Center(
                 child: Padding(
                   padding: EdgeInsets.all(32.0),
-                  child: CircularProgressIndicator(),
+                  child: AppLoader(),
                 ),
               )
             else if (_recentActivity.isEmpty)
@@ -421,83 +423,86 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 if (status.contains('complete') || status == 'settled') {
                   statusColor = const Color(0xFF4CAF50); // Green
                 } else if (status.contains('active') || status.contains('transit') || status == 'started') {
-                  statusColor = const Color(0xFF2196F3); // Blue
+                  statusColor = AppColors.info; // Blue
                 } else if (status.contains('loading')) {
                   statusColor = const Color(0xFFFF9800); // Orange
                 }
 
                 return Container(
-                  margin: const EdgeInsets.only(bottom: 12),
+                  margin: const EdgeInsets.only(bottom: 14),
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey.shade200),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: Colors.grey.shade300, width: 1),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.grey.shade100,
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
+                        color: Colors.black.withOpacity(0.04),
+                        blurRadius: 6,
+                        offset: const Offset(0, 3),
                       ),
                     ],
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Trip number and status
+                      // ======= TOP ROW : Trip Number + Status Badge =======
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Row(
                             children: [
                               Container(
-                                width: 8,
-                                height: 8,
+                                width: 10,
+                                height: 10,
                                 decoration: BoxDecoration(
-                                  color: statusColor,
                                   shape: BoxShape.circle,
+                                  color: statusColor,
                                 ),
                               ),
                               const SizedBox(width: 8),
                               Text(
                                 'Trip ${activity['tripNumber']}',
                                 style: const TextStyle(
-                                  fontSize: 15,
-                                  color: Colors.black87,
+                                  fontSize: 13,        // smaller
                                   fontWeight: FontWeight.w600,
+                                  color: Colors.black87,
                                 ),
                               ),
                             ],
                           ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                             decoration: BoxDecoration(
-                              color: statusColor.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12),
+                              color: statusColor.withOpacity(0.12),
+                              borderRadius: BorderRadius.circular(20),
                             ),
                             child: Text(
                               activity['status'] ?? 'Unknown',
                               style: TextStyle(
-                                fontSize: 11,
-                                color: statusColor,
+                                fontSize: 10,       // smaller
                                 fontWeight: FontWeight.w600,
+                                color: statusColor,
                               ),
                             ),
                           ),
                         ],
                       ),
+
                       const SizedBox(height: 10),
-                      // Party name
+
+                      // ======= PARTY NAME =======
                       Row(
                         children: [
-                          const Icon(Icons.person_outline, size: 16, color: Colors.grey),
+                          const Icon(Icons.person_outline, size: 14, color: Colors.grey),
                           const SizedBox(width: 6),
                           Expanded(
                             child: Text(
                               activity['partyName'] ?? 'Unknown Party',
                               style: const TextStyle(
-                                fontSize: 13,
+                                fontSize: 12,        // smaller
                                 color: Colors.black87,
+                                fontWeight: FontWeight.w500,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -505,19 +510,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                         ],
                       ),
+
                       const SizedBox(height: 6),
-                      // Route
-                      if (activity['origin'] != null && activity['origin'] != '' &&
-                          activity['destination'] != null && activity['destination'] != '')
+
+                      // ======= ROUTE ROW =======
+                      if (activity['origin'] != null &&
+                          activity['origin'] != '' &&
+                          activity['destination'] != null &&
+                          activity['destination'] != '')
                         Row(
                           children: [
-                            const Icon(Icons.location_on_outlined, size: 16, color: Colors.grey),
+                            const Icon(Icons.location_on_outlined, size: 14, color: Colors.grey),
                             const SizedBox(width: 6),
                             Expanded(
                               child: Text(
-                                '${activity['origin']} → ${activity['destination']}',
+                                '${activity['origin']} â†’ ${activity['destination']}',
                                 style: const TextStyle(
-                                  fontSize: 13,
+                                  fontSize: 11,      // smaller
                                   color: Colors.grey,
                                 ),
                                 maxLines: 1,
@@ -526,20 +535,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             ),
                           ],
                         ),
-                      const SizedBox(height: 6),
-                      // Truck number and date
+
+                      const SizedBox(height: 8),
+
+                      // ======= TRUCK NUMBER + DATE =======
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Row(
                             children: [
-                              const Icon(Icons.local_shipping_outlined, size: 16, color: Colors.grey),
+                              const Icon(Icons.local_shipping_outlined, size: 14, color: Colors.grey),
                               const SizedBox(width: 6),
                               Text(
                                 activity['truckNumber'] ?? 'N/A',
                                 style: const TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey,
+                                  fontSize: 11,     // smaller
+                                  color: Colors.black54,
                                 ),
                               ),
                             ],
@@ -548,8 +559,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             Text(
                               activity['date'],
                               style: const TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey,
+                                fontSize: 11,       // smaller
+                                color: Colors.black45,
                               ),
                             ),
                         ],
@@ -557,9 +568,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ],
                   ),
                 );
-              }).toList(),
 
-            const SizedBox(height: 100),
+              }).toList(),
           ],
         ),
       ),
@@ -587,45 +597,106 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey.shade50,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0.5,
-        leading: const Padding(
-          padding: EdgeInsets.all(12.0),
-          child: Icon(Icons.local_shipping_outlined, color: Colors.black87, size: 28),
+  Future<bool> _onWillPop() async {
+    // Only handle back press when on dashboard tab (index 0)
+    if (_selectedBottomNavIndex != 0) {
+      // Switch to dashboard tab instead of exiting
+      setState(() {
+        _selectedBottomNavIndex = 0;
+      });
+      return false;
+    }
+
+    // Show exit confirmation dialog
+    final shouldExit = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
         ),
-        title: Text(
-          _firmName,
-          style: const TextStyle(
-            color: Colors.black87,
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
+        title: Row(
+          children: [
+            Icon(Icons.exit_to_app, color: AppColors.error, size: 28),
+            const SizedBox(width: 12),
+            const Text(
+              'Exit App',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        content: const Text(
+          'Are you sure you want to exit the application?',
+          style: TextStyle(fontSize: 16),
         ),
         actions: [
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.notifications_outlined, color: Colors.black87),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(
+              'Cancel',
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ),
-          IconButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const ProfileScreen(),
-                ),
-              );
-            },
-            icon: const Icon(Icons.account_circle_outlined, color: Colors.black87),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            ),
+            child: const Text(
+              'Exit',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
-          const SizedBox(width: 8),
         ],
       ),
-      body: _getSelectedScreen(),
+    );
+
+    if (shouldExit == true) {
+      SystemNavigator.pop();
+    }
+    return false; // Prevent default back behavior
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return WillPopScope(
+      onWillPop: _onWillPop,
+      child: Scaffold(
+        backgroundColor: Colors.grey.shade50,
+        appBar: _selectedBottomNavIndex == 0
+            ? CustomAppBar(
+                title: _firmName,
+                showBackButton: false,
+                showDashboardLayout: true,
+                showHelpIcons: true,
+                helpPhoneNumber: AppConstants.helpPhoneNumber,
+                // onNotificationTap: () {}, // TODO: Add notification functionality later
+                onProfileTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ProfileScreen(),
+                    ),
+                  );
+                },
+              )
+            : null,
+        body: _getSelectedScreen(),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -649,7 +720,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           child: BottomNavigationBar(
             currentIndex: _selectedBottomNavIndex,
-            selectedItemColor: const Color(0xFF2196F3),
+            selectedItemColor: AppColors.info,
             unselectedItemColor: Colors.grey.shade600,
             backgroundColor: Colors.transparent,
             elevation: 0,
@@ -685,7 +756,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 activeIcon: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF2196F3).withOpacity(0.1),
+                    color: AppColors.info.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Icon(
@@ -707,7 +778,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 activeIcon: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF2196F3).withOpacity(0.1),
+                    color: AppColors.info.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Icon(
@@ -729,7 +800,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 activeIcon: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF2196F3).withOpacity(0.1),
+                    color: AppColors.info.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Icon(
@@ -751,7 +822,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 activeIcon: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF2196F3).withOpacity(0.1),
+                    color:AppColors.info.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Icon(
@@ -765,12 +836,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ),
       ),
-    );
+    ));
   }
 
   Widget _buildStatCard({
     required IconData icon,
-    required Color iconColor,
     required Color iconBgColor,
     required String title,
     required String value,
@@ -781,45 +851,61 @@ class _DashboardScreenState extends State<DashboardScreen> {
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: Container(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.shade200,
-              blurRadius: 8,
-              offset: const Offset(0, 2),
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
             ),
           ],
         ),
         child: Row(
           children: [
-            // Icon WITHOUT background - just colored icon
-            Icon(icon, color: iconColor, size: 40),
+            // ICON IN ROUNDED BACKGROUND
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: iconBgColor,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                icon,
+                size: 26,
+                color: valueColor,
+              ),
+            ),
+
             const SizedBox(width: 16),
-            // Title and value
+
+            // TEXT SECTION
             Expanded(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     title,
                     style: const TextStyle(
                       fontSize: 16,
-                      color: Colors.black87,
                       fontWeight: FontWeight.w600,
+                      color: Color(0xFF3D3D3D),
                     ),
                   ),
-                  Text(
-                    value,
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: valueColor,
-                    ),
-                  ),
+
                 ],
+              ),
+            ),
+
+            const SizedBox(height: 6),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: valueColor,
               ),
             ),
           ],
@@ -827,6 +913,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
     );
   }
+
+
+
 
   Widget _buildQuickActionButton({
     required IconData icon,
@@ -838,21 +927,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(10),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+        height: 70, //  <-- FIXED HEIGHT YOU WANT
+        padding: const EdgeInsets.symmetric(horizontal: 8),
         decoration: BoxDecoration(
           color: bgColor,
-          borderRadius: BorderRadius.circular(12),
-          border: borderColor != null ? Border.all(color: borderColor) : null,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: borderColor ?? Colors.grey.shade300,
+            width: 1,
+          ),
         ),
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: textColor, size: 32),
-            const SizedBox(height: 8),
+            Icon(
+              icon,
+              size: 24,
+              color: textColor,
+            ),
+            const SizedBox(width: 6),
             Text(
               label,
-              textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
@@ -864,4 +961,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
     );
   }
+
+
+
+
 }
+

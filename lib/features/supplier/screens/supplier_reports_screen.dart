@@ -1,8 +1,10 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../../services/api_service.dart';
 import '../../../utils/app_colors.dart';
 import 'supplier_trips_screen.dart';
 import 'supplier_balance_report_screen.dart';
+import 'package:transport_book_app/utils/toast_helper.dart';
+import 'package:transport_book_app/utils/app_loader.dart';
 
 class SupplierReportsScreen extends StatefulWidget {
   const SupplierReportsScreen({super.key});
@@ -36,7 +38,7 @@ class _SupplierReportsScreenState extends State<SupplierReportsScreen> {
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ToastHelper.showSnackBarToast(context, 
           SnackBar(content: Text('Error loading suppliers: $e')),
         );
       }
@@ -97,16 +99,25 @@ class _SupplierReportsScreenState extends State<SupplierReportsScreen> {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        backgroundColor: AppColors.appBarColor,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            bottom: Radius.circular(20),
+          ),
+        ),
+        backgroundColor: AppColors.info,
         foregroundColor: AppColors.appBarTextColor,
         title: Row(
           children: [
-            const Text('Supplier Balance Report'),
+            const Text('Supplier Balance Report', style: const TextStyle(
+              color: AppColors.textWhite,
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+            ),),
             const SizedBox(width: 8),
             Icon(
               Icons.info_outline,
               size: 20,
-              color: Colors.grey[600],
+              color: AppColors.appBarColor,
             ),
           ],
         ),
@@ -181,7 +192,7 @@ class _SupplierReportsScreenState extends State<SupplierReportsScreen> {
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: Colors.blue,
+                      color: AppColors.info,
                     ),
                   ),
                 ),
@@ -192,7 +203,7 @@ class _SupplierReportsScreenState extends State<SupplierReportsScreen> {
           // Supplier List
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? const Center(child: AppLoader())
                 : _filteredSuppliers.isEmpty
                     ? Center(
                         child: Column(
@@ -326,7 +337,7 @@ class _SupplierReportsScreenState extends State<SupplierReportsScreen> {
                   }
                 });
               },
-              activeColor: Colors.blue,
+              activeColor: AppColors.info,
             ),
             const SizedBox(width: 12),
             // Supplier Info
@@ -360,3 +371,5 @@ class _SupplierReportsScreenState extends State<SupplierReportsScreen> {
     );
   }
 }
+
+

@@ -1,7 +1,10 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:transport_book_app/utils/app_colors.dart';
 import '../../../services/api_service.dart';
 import '../screens/invoice_details_screen.dart';
+import 'package:transport_book_app/utils/toast_helper.dart';
+import 'package:transport_book_app/utils/app_loader.dart';
 
 /// Helper function to show the create invoice bottom sheet
 void showCreateInvoiceSheet(
@@ -146,14 +149,14 @@ class _CreateInvoiceSheetState extends State<CreateInvoiceSheet> {
 
   Future<void> _createInvoice() async {
     if (_selectedParty == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         const SnackBar(content: Text('Please select a party')),
       );
       return;
     }
 
     if (_selectedTrips.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         const SnackBar(content: Text('Please select at least one trip')),
       );
       return;
@@ -198,7 +201,7 @@ class _CreateInvoiceSheetState extends State<CreateInvoiceSheet> {
         ),
       );
 
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         const SnackBar(content: Text('Invoice created successfully')),
       );
     }
@@ -254,7 +257,7 @@ class _CreateInvoiceSheetState extends State<CreateInvoiceSheet> {
             if (_isLoading)
               const Padding(
                 padding: EdgeInsets.all(32),
-                child: Center(child: CircularProgressIndicator()),
+                child: Center(child: AppLoader()),
               )
             else
               Padding(
@@ -487,7 +490,7 @@ class _CreateInvoiceSheetState extends State<CreateInvoiceSheet> {
                                       });
                                     },
                                     title: Text(
-                                      '${trip['origin']} → ${trip['destination']}',
+                                      '${trip['origin']} â†’ ${trip['destination']}',
                                       style: const TextStyle(
                                         fontSize: 14,
                                         fontWeight: FontWeight.w600,
@@ -511,7 +514,7 @@ class _CreateInvoiceSheetState extends State<CreateInvoiceSheet> {
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: Colors.green.shade50,
+                            color: AppColors.primaryGreen.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Row(
@@ -568,3 +571,5 @@ class _CreateInvoiceSheetState extends State<CreateInvoiceSheet> {
     );
   }
 }
+
+

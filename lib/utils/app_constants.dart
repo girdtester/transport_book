@@ -1,9 +1,17 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AppConstants {
-  static const String appName = 'TMS Prime';
-  static const String defaultBusinessName = 'TMS Prime';
+  static const String appName = 'TMS Book';
+  static const String defaultBusinessName = 'TMS Book';
   static const String defaultPhone = '+91 0000000000';
+
+  // Server base URL (without /api/v1)
+  static const String serverUrl = 'http://localhost:8000';
+  // static const String serverUrl = 'http://mb-app.tms-support.in';
+  // static const String serverUrl = 'https://mb-app.tms-support.in';
+
+  // Help desk phone number for call and WhatsApp support
+  static const String helpPhoneNumber = '+918888890073';
 
   /// Get business name from SharedPreferences, fallback to app name
   static Future<String> getBusinessName() async {

@@ -13,12 +13,13 @@ class AppColors {
   // Status Colors
   static const Color success = Color(0xFF2E8B57);
   static const Color error = Color(0xFFDC3545);
-  static const Color warning = Color(0xFFFFA500);
-  static const Color info = Color(0xFF0066CC);
+  static const Color warning = Color(0xFFABE0F0);
+  static const Color info = Color(0xFF0D5AE5);
 
   // Button Colors
   static const Color buttonPrimary = Color(0xFF7FD8BE);
   static const Color buttonDisabled = Color(0xFFE0E0E0);
+  static const Color navy = Color(0xFF0E0E55);
 
   // Text Colors
   static const Color textPrimary = Color(0xFF000000);

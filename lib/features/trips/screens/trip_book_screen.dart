@@ -1,10 +1,12 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../services/api_service.dart';
 import '../../../utils/app_colors.dart';
 import 'add_trip_screen.dart';
 import 'trip_details_screen.dart';
 import 'trip_book_report_screen.dart';
+import 'package:transport_book_app/utils/toast_helper.dart';
+import 'package:transport_book_app/utils/app_loader.dart';
 
 class TripBookScreen extends StatefulWidget {
   final int truckId;
@@ -39,7 +41,7 @@ class _TripBookScreenState extends State<TripBookScreen> {
   Color _getStatusColor(String status) {
     switch (status) {
       case 'Load in Progress':
-        return Colors.blue;
+        return AppColors.info;
       case 'In Progress':
         return Colors.orange;
       case 'Completed':
@@ -180,28 +182,33 @@ class _TripBookScreenState extends State<TripBookScreen> {
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        backgroundColor: AppColors.appBarColor,
-        foregroundColor: AppColors.appBarTextColor,
+        backgroundColor: AppColors.info,
+        foregroundColor: Colors.white,
         elevation: 0,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            bottom: Radius.circular(20),
+          ),
+        ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
+            const Text(
               'Trip Book',
               style: TextStyle(
-                color: AppColors.appBarTextColor,
+                color: Colors.white,
                 fontSize: 20,
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w700,
               ),
             ),
             Text(
               widget.truckNumber,
-              style: TextStyle(
-                color: AppColors.appBarTextColor,
+              style: const TextStyle(
+                color: Colors.white,
                 fontSize: 14,
               ),
             ),
@@ -209,7 +216,7 @@ class _TripBookScreenState extends State<TripBookScreen> {
         ),
         actions: [
           IconButton(
-            icon: Icon(Icons.picture_as_pdf, color: Colors.green.shade700, size: 28),
+            icon: const Icon(Icons.picture_as_pdf, color: Colors.white, size: 28),
             onPressed: () {
               Navigator.push(
                 context,
@@ -320,7 +327,7 @@ class _TripBookScreenState extends State<TripBookScreen> {
           // Trips List
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? const Center(child: AppLoader())
                 : _trips.isEmpty
                     ? Center(
                         child: Column(
@@ -567,7 +574,7 @@ class _TripBookScreenState extends State<TripBookScreen> {
             _loadTrips();
           }
         },
-        backgroundColor: Colors.blue.shade700,
+        backgroundColor: AppColors.info,
         icon: const Icon(Icons.add_circle_outline, color: Colors.white, size: 22),
         label: const Text(
           'Add Trip',
@@ -604,7 +611,7 @@ class _TripBookScreenState extends State<TripBookScreen> {
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: label.contains('Profit') ? Colors.green.shade700 : Colors.blue.shade700,
+            color: label.contains('Profit') ? AppColors.primaryGreen.withOpacity(0.8) : AppColors.info,
           ),
         ),
       ],
@@ -771,7 +778,7 @@ class _TripBookScreenState extends State<TripBookScreen> {
                   onPressed: () {
                     // Validate custom dates if selected
                     if (tempSelected == 'Custom' && (tempStartDate == null || tempEndDate == null)) {
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      ToastHelper.showSnackBarToast(context, 
                         const SnackBar(content: Text('Please select both start and end dates')),
                       );
                       return;
@@ -786,7 +793,7 @@ class _TripBookScreenState extends State<TripBookScreen> {
                     _loadTrips(); // Trigger API call with filters
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue.shade700,
+                    backgroundColor: AppColors.info,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -900,7 +907,7 @@ class _TripBookScreenState extends State<TripBookScreen> {
                     _loadTrips(); // Trigger API call with filters
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue.shade700,
+                    backgroundColor: AppColors.info,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -949,7 +956,7 @@ class _TripBookScreenState extends State<TripBookScreen> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: isSelected ? Colors.blue.shade700 : Colors.grey.shade400,
+                  color: isSelected ? AppColors.info : Colors.grey.shade400,
                   width: 2,
                 ),
               ),
@@ -960,7 +967,7 @@ class _TripBookScreenState extends State<TripBookScreen> {
                         height: 12,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: Colors.blue.shade700,
+                          color: AppColors.info,
                         ),
                       ),
                     )
@@ -972,3 +979,5 @@ class _TripBookScreenState extends State<TripBookScreen> {
     );
   }
 }
+
+

@@ -1,8 +1,10 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../services/api_service.dart';
 import '../../../utils/app_colors.dart';
 import 'package:intl/intl.dart';
+import 'package:transport_book_app/utils/toast_helper.dart';
+import 'package:transport_book_app/utils/app_loader.dart';
 
 class EmiBookScreen extends StatefulWidget {
   final int truckId;
@@ -74,7 +76,7 @@ class _EmiBookScreenState extends State<EmiBookScreen> {
         ),
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: AppLoader())
           : _emis.isEmpty
               ? Center(
                   child: Column(
@@ -341,7 +343,7 @@ class _EmiBookScreenState extends State<EmiBookScreen> {
                                 loanAmountController.text.isEmpty ||
                                 emiAmountController.text.isEmpty ||
                                 totalEmisController.text.isEmpty) {
-                              ScaffoldMessenger.of(context).showSnackBar(
+                              ToastHelper.showSnackBarToast(context, 
                                 const SnackBar(content: Text('Please fill all fields')),
                               );
                               return;
@@ -365,14 +367,14 @@ class _EmiBookScreenState extends State<EmiBookScreen> {
                             if (result != null) {
                               Navigator.pop(context);
                               _loadEmis();
-                              ScaffoldMessenger.of(context).showSnackBar(
+                              ToastHelper.showSnackBarToast(context, 
                                 const SnackBar(
                                   content: Text('EMI added successfully'),
                                   backgroundColor: Colors.green,
                                 ),
                               );
                             } else {
-                              ScaffoldMessenger.of(context).showSnackBar(
+                              ToastHelper.showSnackBarToast(context, 
                                 const SnackBar(
                                   content: Text('Failed to add EMI'),
                                   backgroundColor: Colors.red,
@@ -392,7 +394,7 @@ class _EmiBookScreenState extends State<EmiBookScreen> {
                         ? const SizedBox(
                             width: 20,
                             height: 20,
-                            child: CircularProgressIndicator(
+                            child: AppLoader(
                               color: Colors.white,
                               strokeWidth: 2,
                             ),
@@ -414,3 +416,5 @@ class _EmiBookScreenState extends State<EmiBookScreen> {
     );
   }
 }
+
+

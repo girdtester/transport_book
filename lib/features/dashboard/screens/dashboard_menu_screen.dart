@@ -13,6 +13,8 @@ import '../../expenses/screens/my_expenses_screen.dart';
 import '../../trips/screens/unpaid_trips_screen.dart';
 import '../../trips/screens/pod_trips_screen.dart';
 import '../../reports/screens/reports_screen.dart';
+import '../../../utils/appbar.dart';
+import '../../../utils/app_colors.dart';
 
 class DashboardMenuScreen extends StatefulWidget {
   const DashboardMenuScreen({super.key});
@@ -33,48 +35,26 @@ class _DashboardMenuScreenState extends State<DashboardMenuScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: Colors.grey[50],
-      child: SingleChildScrollView(
+    return Scaffold(
+      backgroundColor: Colors.grey[50],
+      appBar: CustomAppBar(
+        title: 'Menu',
+        showBackButton: false,
+        showDashboardLayout: false,
+      ),
+      body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              color: Colors.white,
-              child: const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Menu',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    'Quick access to all features',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey,
-                    ),
-                  ),
-                ],
-              ),
-            ),
 
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
 
             // Party Section
             _buildCollapsibleSection(
               context,
               title: 'Party',
               icon: Icons.people_outline,
-              color: const Color(0xFF2196F3),
+              color: AppColors.info,
               isExpanded: _partyExpanded,
               onExpansionChanged: (expanded) => setState(() => _partyExpanded = expanded),
               items: [
@@ -106,7 +86,7 @@ class _DashboardMenuScreenState extends State<DashboardMenuScreen> {
               ],
             ),
 
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
 
             // Truck Supplier Section
             _buildCollapsibleSection(
@@ -135,7 +115,7 @@ class _DashboardMenuScreenState extends State<DashboardMenuScreen> {
               ],
             ),
 
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
 
             // Shop Section
             _buildCollapsibleSection(
@@ -154,7 +134,7 @@ class _DashboardMenuScreenState extends State<DashboardMenuScreen> {
               ],
             ),
 
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
 
             // My Trucks Section
             _buildCollapsibleSection(
@@ -178,7 +158,7 @@ class _DashboardMenuScreenState extends State<DashboardMenuScreen> {
               ],
             ),
 
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
 
             // Driver Section
             _buildCollapsibleSection(
@@ -197,7 +177,7 @@ class _DashboardMenuScreenState extends State<DashboardMenuScreen> {
               ],
             ),
 
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
 
             // Expenses Section
             _buildCollapsibleSection(
@@ -216,7 +196,7 @@ class _DashboardMenuScreenState extends State<DashboardMenuScreen> {
               ],
             ),
 
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
 
             // Reports Section
             _buildCollapsibleSection(
@@ -243,16 +223,16 @@ class _DashboardMenuScreenState extends State<DashboardMenuScreen> {
   }
 
   Widget _buildCollapsibleSection(
-    BuildContext context, {
-    required String title,
-    required IconData icon,
-    required Color color,
-    required bool isExpanded,
-    required Function(bool) onExpansionChanged,
-    required List<_MenuItem> items,
-  }) {
+      BuildContext context, {
+        required String title,
+        required IconData icon,
+        required Color color,
+        required bool isExpanded,
+        required Function(bool) onExpansionChanged,
+        required List<_MenuItem> items,
+      }) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 12),
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -269,8 +249,8 @@ class _DashboardMenuScreenState extends State<DashboardMenuScreen> {
         child: ExpansionTile(
           initiallyExpanded: isExpanded,
           onExpansionChanged: onExpansionChanged,
-          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          childrenPadding: const EdgeInsets.only(bottom: 12, left: 12, right: 12),
+          tilePadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          childrenPadding: const EdgeInsets.only(bottom: 12, left: 12, right: 12, top: 4),
           backgroundColor: Colors.white,
           collapsedBackgroundColor: Colors.white,
           shape: RoundedRectangleBorder(
@@ -285,12 +265,12 @@ class _DashboardMenuScreenState extends State<DashboardMenuScreen> {
               color: color.withOpacity(0.1),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(icon, color: color, size: 24),
+            child: Icon(icon, color: color, size: 20),
           ),
           title: Text(
             title,
             style: const TextStyle(
-              fontSize: 16,
+              fontSize: 15,
               fontWeight: FontWeight.w600,
               color: Colors.black87,
             ),
@@ -298,6 +278,7 @@ class _DashboardMenuScreenState extends State<DashboardMenuScreen> {
           trailing: Icon(
             isExpanded ? Icons.expand_less : Icons.expand_more,
             color: Colors.grey.shade600,
+            size: 20,
           ),
           children: [
             Align(
@@ -320,13 +301,16 @@ class _DashboardMenuScreenState extends State<DashboardMenuScreen> {
                       decoration: BoxDecoration(
                         color: Colors.grey[50],
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.grey.shade200),
+                        border: Border.all(
+                          color: Colors.grey.shade200,
+                          width: 1,
+                        ),
                       ),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(item.icon, color: color, size: 28),
-                          const SizedBox(height: 8),
+                          Icon(item.icon, color: color, size: 24),
+                          const SizedBox(height: 6),
                           Text(
                             item.label,
                             textAlign: TextAlign.center,
@@ -364,3 +348,4 @@ class _MenuItem {
     required this.onTap,
   });
 }
+

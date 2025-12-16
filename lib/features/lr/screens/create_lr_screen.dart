@@ -1,16 +1,32 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:transport_book_app/utils/app_colors.dart';
+import 'package:transport_book_app/utils/custom_button.dart';
+import 'package:transport_book_app/utils/custom_dropdown.dart';
+import 'package:transport_book_app/utils/custom_textfield.dart';
 import '../../../services/api_service.dart';
+import 'package:transport_book_app/utils/toast_helper.dart';
+import 'package:transport_book_app/utils/app_loader.dart';
 
 class CreateLRScreen extends StatefulWidget {
   final int tripId;
   final String? truckNumber;
+  final String? lrNumber; // LR number from trip
+  final String? partyName; // Party name for consignor
+  final String? origin; // Origin city
+  final String? destination; // Destination city
+  final double? freightAmount; // Freight amount
 
   const CreateLRScreen({
     super.key,
     required this.tripId,
     this.truckNumber,
+    this.lrNumber,
+    this.partyName,
+    this.origin,
+    this.destination,
+    this.freightAmount,
   });
 
   @override
@@ -71,11 +87,43 @@ class _CreateLRScreenState extends State<CreateLRScreen> {
   void initState() {
     super.initState();
     _loadCompanyDetails();
+    _autoPopulateTripData();
   }
 
   Future<void> _loadCompanyDetails() async {
     // TODO: Load company details from settings/profile
     // For now, leave empty for user to fill
+  }
+
+  void _autoPopulateTripData() {
+    // Auto-populate LR number from trip
+    if (widget.lrNumber != null && widget.lrNumber!.isNotEmpty) {
+      _lrNumberController.text = widget.lrNumber!;
+    } else {
+      // Generate LR number based on trip ID and date
+      final now = DateTime.now();
+      _lrNumberController.text = 'LR${now.year}${now.month.toString().padLeft(2, '0')}${widget.tripId.toString().padLeft(4, '0')}';
+    }
+
+    // Auto-populate consignor name from party name
+    if (widget.partyName != null && widget.partyName!.isNotEmpty) {
+      _consignorNameController.text = widget.partyName!;
+    }
+
+    // Auto-populate consignor address from origin
+    if (widget.origin != null && widget.origin!.isNotEmpty) {
+      _consignorAddress1Controller.text = widget.origin!;
+    }
+
+    // Auto-populate consignee address from destination
+    if (widget.destination != null && widget.destination!.isNotEmpty) {
+      _consigneeAddress1Controller.text = widget.destination!;
+    }
+
+    // Auto-populate freight amount
+    if (widget.freightAmount != null && widget.freightAmount! > 0) {
+      _freightAmountController.text = widget.freightAmount!.toStringAsFixed(0);
+    }
   }
 
   @override
@@ -127,19 +175,29 @@ class _CreateLRScreenState extends State<CreateLRScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Logo placeholder
+
+          // ----------------------- LOGO BOX -----------------------
           Center(
-            child: Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade200,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(
-                Icons.camera_alt,
-                size: 40,
-                color: Colors.grey.shade600,
+            child: InkWell(
+              onTap: () {
+                // pick image logic later
+              },
+              child: Container(
+                width: 110,
+                height: 110,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Colors.grey.shade300,
+                    width: 1,
+                  ),
+                ),
+                child: Icon(
+                  Icons.camera_alt,
+                  size: 40,
+                  color: Colors.grey.shade600,
+                ),
               ),
             ),
           ),
@@ -147,111 +205,93 @@ class _CreateLRScreenState extends State<CreateLRScreen> {
           const Center(
             child: Text(
               'Logo',
-              style: TextStyle(color: Colors.grey),
+              style: TextStyle(color: Colors.grey, fontSize: 13),
             ),
           ),
+
           const SizedBox(height: 24),
 
-          // Company Name
-          TextField(
+          // ----------------------- COMPANY NAME -----------------------
+          CustomTextField(
+            label: "Company Name",
             controller: _companyNameController,
-            decoration: const InputDecoration(
-              labelText: 'Company Name',
-              border: OutlineInputBorder(),
-            ),
+            hint: "Enter company name",
           ),
           const SizedBox(height: 16),
 
-          // GST Number
-          TextField(
+          // ----------------------- GST NUMBER -----------------------
+          CustomTextField(
+            label: "GST Number",
             controller: _companyGstController,
-            decoration: const InputDecoration(
-              labelText: 'GST Number',
-              border: OutlineInputBorder(),
-            ),
+            hint: "Enter GST number",
           ),
           const SizedBox(height: 16),
 
-          // PAN Number
-          TextField(
+          // ----------------------- PAN NUMBER -----------------------
+          CustomTextField(
+            label: "PAN Number",
             controller: _companyPanController,
-            decoration: const InputDecoration(
-              labelText: 'PAN Number',
-              border: OutlineInputBorder(),
-            ),
+            hint: "Enter PAN",
           ),
           const SizedBox(height: 16),
 
-          // Address Line 1
-          TextField(
+          // ----------------------- ADDRESS LINE 1 -----------------------
+          CustomTextField(
+            label: "Address Line 1",
             controller: _companyAddress1Controller,
-            decoration: const InputDecoration(
-              labelText: 'Address Line 1',
-              border: OutlineInputBorder(),
-            ),
+            hint: "Street / Road / Area",
           ),
           const SizedBox(height: 16),
 
-          // Address Line 2
-          TextField(
+          // ----------------------- ADDRESS LINE 2 -----------------------
+          CustomTextField(
+            label: "Address Line 2",
             controller: _companyAddress2Controller,
-            decoration: const InputDecoration(
-              labelText: 'Address Line 2',
-              border: OutlineInputBorder(),
-            ),
+            hint: "Apartment / Landmark",
           ),
           const SizedBox(height: 16),
 
-          // Pincode and State
+          // ----------------------- PINCODE + STATE -----------------------
           Row(
             children: [
               Expanded(
-                child: TextField(
+                child: CustomTextField(
+                  label: "Pincode",
                   controller: _companyPincodeController,
-                  keyboardType: TextInputType.number,
+                  keyboard: TextInputType.number,
+                  hint: "Pincode",
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  decoration: const InputDecoration(
-                    labelText: 'Pincode',
-                    border: OutlineInputBorder(),
-                  ),
                 ),
               ),
               const SizedBox(width: 16),
               Expanded(
-                child: TextField(
+                child: CustomTextField(
+                  label: "State",
                   controller: _companyStateController,
-                  decoration: const InputDecoration(
-                    labelText: 'State',
-                    border: OutlineInputBorder(),
-                  ),
+                  hint: "State",
                 ),
               ),
             ],
           ),
+
           const SizedBox(height: 16),
 
-          // Mobile Number
-          TextField(
+          // ----------------------- MOBILE NUMBER -----------------------
+          CustomTextField(
+            label: "Mobile Number",
             controller: _companyMobileController,
-            keyboardType: TextInputType.phone,
+            keyboard: TextInputType.phone,
+            hint: "10-digit number",
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            maxLength: 10,
-            decoration: const InputDecoration(
-              labelText: 'Mobile Number',
-              border: OutlineInputBorder(),
-              counterText: '',
-            ),
           ),
           const SizedBox(height: 16),
 
-          // E-mail
-          TextField(
+          // ----------------------- EMAIL -----------------------
+          CustomTextField(
+            label: "E-mail",
             controller: _companyEmailController,
-            keyboardType: TextInputType.emailAddress,
-            decoration: const InputDecoration(
-              labelText: 'E-mail',
-              border: OutlineInputBorder(),
-            ),
+            keyboard: TextInputType.emailAddress,
+            hint: "Enter email",
           ),
         ],
       ),
@@ -268,7 +308,7 @@ class _CreateLRScreenState extends State<CreateLRScreen> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xFF2196F3),
+              color: AppColors.info,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Column(
@@ -349,11 +389,11 @@ class _CreateLRScreenState extends State<CreateLRScreen> {
           // Add Consignor Button
           OutlinedButton.icon(
             onPressed: () => _showAddConsignorDialog(),
-            icon: const Icon(Icons.add, color: Color(0xFF2196F3)),
+            icon: const Icon(Icons.add, color: AppColors.info),
             label: const Text(
               'Add Consignor',
               style: TextStyle(
-                color: Color(0xFF2196F3),
+                color: AppColors.info,
                 fontSize: 15,
                 fontWeight: FontWeight.w500,
               ),
@@ -390,11 +430,11 @@ class _CreateLRScreenState extends State<CreateLRScreen> {
           // Add Consignee Button
           OutlinedButton.icon(
             onPressed: () => _showAddConsigneeDialog(),
-            icon: const Icon(Icons.add, color: Color(0xFF2196F3)),
+            icon: const Icon(Icons.add, color: AppColors.info),
             label: const Text(
               'Add Consignee',
               style: TextStyle(
-                color: Color(0xFF2196F3),
+                color: AppColors.info,
                 fontSize: 15,
                 fontWeight: FontWeight.w500,
               ),
@@ -520,147 +560,159 @@ class _CreateLRScreenState extends State<CreateLRScreen> {
           color: Colors.white,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
-        padding: const EdgeInsets.all(24),
         child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Add Consignor',
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+
+                // ---------- HEADER ----------
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children:  [
+                    Text(
+                      "Add Consignor",
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black,
+                      ),
+                    ),
+                    InkWell(
+                      onTap: () => Navigator.pop(context),
+                      child: Icon(
+                        Icons.close,
+                        color: Colors.black54,
+                        size: 22,
+                      ),
+                    )
+                  ],
+                ),
+
+                const SizedBox(height: 12),
+
+                Divider(
+                  color: Colors.grey.shade300,
+                  thickness: 1,
+                  height: 1,
+                ),
+
+                const SizedBox(height: 12),
+
+                // ---------- COMPACT SMALL TEXT ----------
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 4),
+                  child: Text(
+                    "We will fetch consignor name and address from GST Number",
                     style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 11.5,
+                      height: 1.2,
+                      color: Colors.grey,
                     ),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'We will fetch consignor name and address from GST Number',
-                style: TextStyle(fontSize: 12, color: Colors.grey),
-              ),
-              const SizedBox(height: 16),
-
-              TextField(
-                controller: _consignorGstController,
-                decoration: const InputDecoration(
-                  labelText: 'GST Number',
-                  hintText: 'Eg: 33AAGCK5803C1Z5',
-                  border: OutlineInputBorder(),
                 ),
-              ),
-              const SizedBox(height: 16),
 
-              TextField(
-                controller: _consignorNameController,
-                decoration: const InputDecoration(
-                  labelText: 'Consignor Name *',
-                  hintText: 'Consignor Name',
-                  border: OutlineInputBorder(),
+                const SizedBox(height: 18),
+
+                // ---------- FIELDS ----------
+                CustomTextField(
+                  label: "GST Number",
+                  hint: "Eg: 33AAGCK5803C1Z5",
+                  controller: _consignorGstController,
                 ),
-              ),
-              const SizedBox(height: 16),
 
-              TextField(
-                controller: _consignorAddress1Controller,
-                decoration: const InputDecoration(
-                  labelText: 'Address Line 1',
-                  border: OutlineInputBorder(),
+                const SizedBox(height: 16),
+
+                CustomTextField(
+                  label: "Consignor Name *",
+                  hint: "Consignor Name",
+                  controller: _consignorNameController,
                 ),
-              ),
-              const SizedBox(height: 16),
 
-              TextField(
-                controller: _consignorAddress2Controller,
-                decoration: const InputDecoration(
-                  labelText: 'Address Line 2',
-                  border: OutlineInputBorder(),
+                const SizedBox(height: 16),
+
+                CustomTextField(
+                  label: "Address Line 1",
+                  controller: _consignorAddress1Controller,
                 ),
-              ),
-              const SizedBox(height: 16),
 
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _consignorStateController,
-                      decoration: const InputDecoration(
-                        labelText: 'State',
-                        border: OutlineInputBorder(),
+                const SizedBox(height: 16),
+
+                CustomTextField(
+                  label: "Address Line 2",
+                  controller: _consignorAddress2Controller,
+                ),
+
+                const SizedBox(height: 16),
+
+                Row(
+                  children: [
+                    Expanded(
+                      child: CustomTextField(
+                        label: "State",
+                        controller: _consignorStateController,
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: TextField(
-                      controller: _consignorPincodeController,
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                      decoration: const InputDecoration(
-                        labelText: 'Pincode',
-                        border: OutlineInputBorder(),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: CustomTextField(
+                        label: "Pincode",
+                        controller: _consignorPincodeController,
+                        keyboard: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly
+                        ],
                       ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
+                  ],
+                ),
 
-              TextField(
-                controller: _consignorMobileController,
-                keyboardType: TextInputType.phone,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                decoration: const InputDecoration(
-                  labelText: 'Mobile Number',
-                  hintText: 'Eg: 99914-54627',
-                  border: OutlineInputBorder(),
-                  suffixIcon: Icon(Icons.phone),
-                ),
-              ),
-              const SizedBox(height: 24),
+                const SizedBox(height: 16),
 
-              ElevatedButton(
-                onPressed: () {
-                  if (_consignorNameController.text.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Please enter consignor name')),
-                    );
-                    return;
-                  }
-                  setState(() {});
-                  Navigator.pop(context);
-                },
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  backgroundColor: const Color(0xFF2196F3),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  elevation: 0,
+                CustomTextField(
+                  label: "Mobile Number",
+                  hint: "Eg: 99914-54627",
+                  controller: _consignorMobileController,
+                  keyboard: TextInputType.phone,
+                  suffix: const Icon(Icons.phone, color: Colors.grey),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                  ],
                 ),
-                child: const Text(
-                  'Confirm',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
+
+                const SizedBox(height: 26),
+
+                // ---------- CONFIRM BUTTON ----------
+
+                CustomButton(
+                  text: "Confirm",
+                  onPressed: () {
+                    if (_consignorNameController.text.isEmpty) {
+                      ToastHelper.showSnackBarToast(context, 
+                        const SnackBar(
+                          content: Text("Please enter consignor name"),
+                        ),
+                      );
+                      return;
+                    }
+
+                    Navigator.pop(context);
+                  },
                 ),
-              ),
-            ],
+
+
+                const SizedBox(height: 10),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
+
+
+
 
   Widget _buildConsigneeDialog() {
     return Padding(
@@ -672,262 +724,253 @@ class _CreateLRScreenState extends State<CreateLRScreen> {
           color: Colors.white,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
-        padding: const EdgeInsets.all(24),
         child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Add Consignee',
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+
+                // ---------- HEADER ----------
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      "Add Consignee",
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black,
+                      ),
+                    ),
+                    InkWell(
+                      onTap: () => Navigator.pop(context),
+                      child: const Icon(
+                        Icons.close,
+                        color: Colors.black54,
+                        size: 22,
+                      ),
+                    )
+                  ],
+                ),
+
+                const SizedBox(height: 12),
+
+                Divider(
+                  color: Colors.grey.shade300,
+                  thickness: 1,
+                  height: 1,
+                ),
+
+                const SizedBox(height: 12),
+
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 4),
+                  child: Text(
+                    "We will fetch consignee name and address from GST Number",
                     style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 11.5,
+                      height: 1.2,
+                      color: Colors.grey,
                     ),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'We will fetch consignee name and address from GST Number',
-                style: TextStyle(fontSize: 12, color: Colors.grey),
-              ),
-              const SizedBox(height: 16),
-
-              TextField(
-                controller: _consigneeGstController,
-                decoration: const InputDecoration(
-                  labelText: 'GST Number',
-                  hintText: 'Eg: 33AAGCK5803C1Z5',
-                  border: OutlineInputBorder(),
                 ),
-              ),
-              const SizedBox(height: 16),
 
-              TextField(
-                controller: _consigneeNameController,
-                decoration: const InputDecoration(
-                  labelText: 'Consignee Name *',
-                  hintText: 'Consignee Name',
-                  border: OutlineInputBorder(),
+                const SizedBox(height: 18),
+
+                // ---------- FIELDS ----------
+                CustomTextField(
+                  label: "GST Number",
+                  hint: "Eg: 33AAGCK5803C1Z5",
+                  controller: _consigneeGstController,
                 ),
-              ),
-              const SizedBox(height: 16),
 
-              TextField(
-                controller: _consigneeAddress1Controller,
-                decoration: const InputDecoration(
-                  labelText: 'Address Line 1',
-                  border: OutlineInputBorder(),
+                const SizedBox(height: 16),
+
+                CustomTextField(
+                  label: "Consignee Name *",
+                  hint: "Consignee Name",
+                  controller: _consigneeNameController,
                 ),
-              ),
-              const SizedBox(height: 16),
 
-              TextField(
-                controller: _consigneeAddress2Controller,
-                decoration: const InputDecoration(
-                  labelText: 'Address Line 2',
-                  border: OutlineInputBorder(),
+                const SizedBox(height: 16),
+
+                CustomTextField(
+                  label: "Address Line 1",
+                  controller: _consigneeAddress1Controller,
                 ),
-              ),
-              const SizedBox(height: 16),
 
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _consigneeStateController,
-                      decoration: const InputDecoration(
-                        labelText: 'State',
-                        border: OutlineInputBorder(),
+                const SizedBox(height: 16),
+
+                CustomTextField(
+                  label: "Address Line 2",
+                  controller: _consigneeAddress2Controller,
+                ),
+
+                const SizedBox(height: 16),
+
+                Row(
+                  children: [
+                    Expanded(
+                      child: CustomTextField(
+                        label: "State",
+                        controller: _consigneeStateController,
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: TextField(
-                      controller: _consigneePincodeController,
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                      decoration: const InputDecoration(
-                        labelText: 'Pincode',
-                        border: OutlineInputBorder(),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: CustomTextField(
+                        label: "Pincode",
+                        controller: _consigneePincodeController,
+                        keyboard: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly
+                        ],
                       ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
+                  ],
+                ),
 
-              TextField(
-                controller: _consigneeMobileController,
-                keyboardType: TextInputType.phone,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                decoration: const InputDecoration(
-                  labelText: 'Mobile Number',
-                  hintText: 'Eg: 99914-54627',
-                  border: OutlineInputBorder(),
-                  suffixIcon: Icon(Icons.phone),
-                ),
-              ),
-              const SizedBox(height: 24),
+                const SizedBox(height: 16),
 
-              ElevatedButton(
-                onPressed: () {
-                  if (_consigneeNameController.text.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Please enter consignee name')),
-                    );
-                    return;
-                  }
-                  setState(() {});
-                  Navigator.pop(context);
-                },
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  backgroundColor: const Color(0xFF2196F3),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  elevation: 0,
+                CustomTextField(
+                  label: "Mobile Number",
+                  hint: "Eg: 99914-54627",
+                  controller: _consigneeMobileController,
+                  keyboard: TextInputType.phone,
+                  suffix: const Icon(Icons.phone, color: Colors.grey),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                  ],
                 ),
-                child: const Text(
-                  'Confirm',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
+
+                const SizedBox(height: 26),
+
+                // ---------- CONFIRM BUTTON ----------
+                CustomButton(
+                  text: "Confirm",
+                  onPressed: () {
+                    if (_consigneeNameController.text.isEmpty) {
+                      ToastHelper.showSnackBarToast(context, 
+                        const SnackBar(
+                          content: Text("Please enter consignee name"),
+                        ),
+                      );
+                      return;
+                    }
+                    setState(() {});
+                    Navigator.pop(context);
+                  },
                 ),
-              ),
-            ],
+
+                const SizedBox(height: 10),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
-
   Widget _buildStep3GoodsDetails() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          TextField(
+
+          // ---------- MATERIAL DESCRIPTION ----------
+          CustomTextField(
+            label: "Material Description",
+            hint: "Enter material description",
             controller: _materialDescController,
-            maxLines: 3,
-            decoration: const InputDecoration(
-              labelText: 'Material Description',
-              border: OutlineInputBorder(),
-            ),
           ),
           const SizedBox(height: 16),
 
-          TextField(
+          CustomTextField(
+            label: "Total Packages",
+            hint: "Number of packages",
             controller: _totalPackagesController,
-            keyboardType: TextInputType.number,
+            keyboard: TextInputType.number,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            decoration: const InputDecoration(
-              labelText: 'Total Packages',
-              border: OutlineInputBorder(),
-            ),
           ),
           const SizedBox(height: 16),
 
-          TextField(
+          CustomTextField(
+            label: "Actual Weight (kg)",
+            hint: "Eg: 25.50",
             controller: _actualWeightController,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(
-              labelText: 'Actual Weight (kg)',
-              border: OutlineInputBorder(),
-            ),
+            keyboard: const TextInputType.numberWithOptions(decimal: true),
           ),
           const SizedBox(height: 16),
 
-          TextField(
+          CustomTextField(
+            label: "Charged Weight (kg)",
+            hint: "Eg: 30.00",
             controller: _chargedWeightController,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(
-              labelText: 'Charged Weight (kg)',
-              border: OutlineInputBorder(),
-            ),
+            keyboard: const TextInputType.numberWithOptions(decimal: true),
           ),
           const SizedBox(height: 16),
 
-          TextField(
+          CustomTextField(
+            label: "Declared Value (₹)",
+            hint: "Eg: 50000",
             controller: _declaredValueController,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(
-              labelText: 'Declared Value (₹)',
-              border: OutlineInputBorder(),
-            ),
+            keyboard: const TextInputType.numberWithOptions(decimal: true),
           ),
           const SizedBox(height: 24),
 
+          // ---------------- TITLE: FREIGHT & CHARGES ----------------
           const Text(
-            'Freight & Charges',
+            "Freight & Charges",
             style: TextStyle(
               fontSize: 16,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w600,
+              color: Colors.black,
             ),
           ),
           const SizedBox(height: 16),
 
-          TextField(
+          CustomTextField(
+            label: "Freight Amount (₹)",
+            hint: "Eg: 1500",
             controller: _freightAmountController,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(
-              labelText: 'Freight Amount (₹)',
-              border: OutlineInputBorder(),
-            ),
+            keyboard: const TextInputType.numberWithOptions(decimal: true),
           ),
           const SizedBox(height: 16),
 
-          TextField(
+          CustomTextField(
+            label: "GST Amount (₹)",
+            hint: "Eg: 270",
             controller: _gstAmountController,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(
-              labelText: 'GST Amount (₹)',
-              border: OutlineInputBorder(),
-            ),
+            keyboard: const TextInputType.numberWithOptions(decimal: true),
           ),
           const SizedBox(height: 16),
 
-          TextField(
+          CustomTextField(
+            label: "Other Charges (₹)",
+            hint: "Eg: 100",
             controller: _otherChargesController,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(
-              labelText: 'Other Charges (₹)',
-              border: OutlineInputBorder(),
-            ),
+            keyboard: const TextInputType.numberWithOptions(decimal: true),
           ),
           const SizedBox(height: 24),
 
+          // ---------------- TITLE: PAYMENT TERMS ----------------
           const Text(
-            'Payment Terms',
+            "Payment Terms",
             style: TextStyle(
               fontSize: 16,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w600,
+              color: Colors.black,
             ),
           ),
           const SizedBox(height: 16),
 
-          DropdownButtonFormField<String>(
+          // ---------------- PAYMENT TERMS DROPDOWN ----------------
+          CustomDropdown(
+            label: "Payment Terms",
+            hint: "Select payment terms",
             value: _paymentTerms,
-            decoration: const InputDecoration(
-              labelText: 'Payment Terms',
-              border: OutlineInputBorder(),
-            ),
-            items: ['To Pay', 'Paid', 'To Be Billed'].map((term) {
-              return DropdownMenuItem(value: term, child: Text(term));
-            }).toList(),
+            items: ["To Pay", "Paid", "To Be Billed"],
             onChanged: (value) {
               setState(() {
                 _paymentTerms = value!;
@@ -936,25 +979,165 @@ class _CreateLRScreenState extends State<CreateLRScreen> {
           ),
           const SizedBox(height: 16),
 
-          DropdownButtonFormField<String>(
+          // ---------------- PAID BY DROPDOWN ----------------
+          CustomDropdown(
+            label: "Paid By",
+            hint: "Select payer",
             value: _paidBy,
-            decoration: const InputDecoration(
-              labelText: 'Paid By',
-              border: OutlineInputBorder(),
-            ),
-            items: ['Consignor', 'Consignee'].map((payer) {
-              return DropdownMenuItem(value: payer, child: Text(payer));
-            }).toList(),
+            items: ["Consignor", "Consignee"],
             onChanged: (value) {
               setState(() {
                 _paidBy = value;
               });
             },
           ),
+
         ],
       ),
     );
   }
+
+  // Widget _buildStep3GoodsDetails() {
+  //   return SingleChildScrollView(
+  //     padding: const EdgeInsets.all(16),
+  //     child: Column(
+  //       crossAxisAlignment: CrossAxisAlignment.stretch,
+  //       children: [
+  //         TextField(
+  //           controller: _materialDescController,
+  //           maxLines: 3,
+  //           decoration: const InputDecoration(
+  //             labelText: 'Material Description',
+  //             border: OutlineInputBorder(),
+  //           ),
+  //         ),
+  //         const SizedBox(height: 16),
+  //
+  //         TextField(
+  //           controller: _totalPackagesController,
+  //           keyboardType: TextInputType.number,
+  //           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+  //           decoration: const InputDecoration(
+  //             labelText: 'Total Packages',
+  //             border: OutlineInputBorder(),
+  //           ),
+  //         ),
+  //         const SizedBox(height: 16),
+  //
+  //         TextField(
+  //           controller: _actualWeightController,
+  //           keyboardType: const TextInputType.numberWithOptions(decimal: true),
+  //           decoration: const InputDecoration(
+  //             labelText: 'Actual Weight (kg)',
+  //             border: OutlineInputBorder(),
+  //           ),
+  //         ),
+  //         const SizedBox(height: 16),
+  //
+  //         TextField(
+  //           controller: _chargedWeightController,
+  //           keyboardType: const TextInputType.numberWithOptions(decimal: true),
+  //           decoration: const InputDecoration(
+  //             labelText: 'Charged Weight (kg)',
+  //             border: OutlineInputBorder(),
+  //           ),
+  //         ),
+  //         const SizedBox(height: 16),
+  //
+  //         TextField(
+  //           controller: _declaredValueController,
+  //           keyboardType: const TextInputType.numberWithOptions(decimal: true),
+  //           decoration: const InputDecoration(
+  //             labelText: 'Declared Value (₹)',
+  //             border: OutlineInputBorder(),
+  //           ),
+  //         ),
+  //         const SizedBox(height: 24),
+  //
+  //         const Text(
+  //           'Freight & Charges',
+  //           style: TextStyle(
+  //             fontSize: 16,
+  //             fontWeight: FontWeight.bold,
+  //           ),
+  //         ),
+  //         const SizedBox(height: 16),
+  //
+  //         TextField(
+  //           controller: _freightAmountController,
+  //           keyboardType: const TextInputType.numberWithOptions(decimal: true),
+  //           decoration: const InputDecoration(
+  //             labelText: 'Freight Amount (₹)',
+  //             border: OutlineInputBorder(),
+  //           ),
+  //         ),
+  //         const SizedBox(height: 16),
+  //
+  //         TextField(
+  //           controller: _gstAmountController,
+  //           keyboardType: const TextInputType.numberWithOptions(decimal: true),
+  //           decoration: const InputDecoration(
+  //             labelText: 'GST Amount (₹)',
+  //             border: OutlineInputBorder(),
+  //           ),
+  //         ),
+  //         const SizedBox(height: 16),
+  //
+  //         TextField(
+  //           controller: _otherChargesController,
+  //           keyboardType: const TextInputType.numberWithOptions(decimal: true),
+  //           decoration: const InputDecoration(
+  //             labelText: 'Other Charges (₹)',
+  //             border: OutlineInputBorder(),
+  //           ),
+  //         ),
+  //         const SizedBox(height: 24),
+  //
+  //         const Text(
+  //           'Payment Terms',
+  //           style: TextStyle(
+  //             fontSize: 16,
+  //             fontWeight: FontWeight.bold,
+  //           ),
+  //         ),
+  //         const SizedBox(height: 16),
+  //
+  //         DropdownButtonFormField<String>(
+  //           value: _paymentTerms,
+  //           decoration: const InputDecoration(
+  //             labelText: 'Payment Terms',
+  //             border: OutlineInputBorder(),
+  //           ),
+  //           items: ['To Pay', 'Paid', 'To Be Billed'].map((term) {
+  //             return DropdownMenuItem(value: term, child: Text(term));
+  //           }).toList(),
+  //           onChanged: (value) {
+  //             setState(() {
+  //               _paymentTerms = value!;
+  //             });
+  //           },
+  //         ),
+  //         const SizedBox(height: 16),
+  //
+  //         DropdownButtonFormField<String>(
+  //           value: _paidBy,
+  //           decoration: const InputDecoration(
+  //             labelText: 'Paid By',
+  //             border: OutlineInputBorder(),
+  //           ),
+  //           items: ['Consignor', 'Consignee'].map((payer) {
+  //             return DropdownMenuItem(value: payer, child: Text(payer));
+  //           }).toList(),
+  //           onChanged: (value) {
+  //             setState(() {
+  //               _paidBy = value;
+  //             });
+  //           },
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
 
   Widget _buildStep4Summary() {
     final freight = double.tryParse(_freightAmountController.text) ?? 0;
@@ -1025,7 +1208,7 @@ class _CreateLRScreenState extends State<CreateLRScreen> {
           style: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
-            color: Colors.blue,
+            color: AppColors.info,
           ),
         ),
         const SizedBox(height: 8),
@@ -1088,18 +1271,18 @@ class _CreateLRScreenState extends State<CreateLRScreen> {
       if (!mounted) return;
 
       if (result != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ToastHelper.showSnackBarToast(context, 
           const SnackBar(content: Text('LR created successfully')),
         );
         Navigator.pop(context, true);
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ToastHelper.showSnackBarToast(context, 
           const SnackBar(content: Text('Failed to create LR')),
         );
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         SnackBar(content: Text('Error: $e')),
       );
     } finally {
@@ -1116,11 +1299,36 @@ class _CreateLRScreenState extends State<CreateLRScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Create LR'),
-        centerTitle: true,
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
         elevation: 0,
+        backgroundColor: AppColors.info,
+        centerTitle: true,
+        automaticallyImplyLeading: false,
+
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            bottom: Radius.circular(20),
+          ),
+        ),
+
+        titleSpacing: 0,
+
+        leading: IconButton(
+          icon: const Icon(
+            Icons.arrow_back_ios_new,
+            color: Colors.white,
+            size: 20,
+          ),
+          onPressed: () => Navigator.pop(context),
+        ),
+
+        title: const Text(
+          'Create LR',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ),
       body: Column(
         children: [
@@ -1137,7 +1345,7 @@ class _CreateLRScreenState extends State<CreateLRScreen> {
                     height: 30,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: _currentStep >= i ? const Color(0xFF2196F3) : const Color(0xFFE0E0E0),
+                      color: _currentStep >= i ? AppColors.info : const Color(0xFFE0E0E0),
                     ),
                     child: Center(
                       child: Text(
@@ -1210,25 +1418,25 @@ class _CreateLRScreenState extends State<CreateLRScreen> {
                       if (_currentStep < 3) {
                         // Validate current step
                         if (_currentStep == 0 && _companyNameController.text.isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          ToastHelper.showSnackBarToast(context, 
                             const SnackBar(content: Text('Please enter company name')),
                           );
                           return;
                         }
                         if (_currentStep == 1 && _lrNumberController.text.isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          ToastHelper.showSnackBarToast(context, 
                             const SnackBar(content: Text('Please enter LR number')),
                           );
                           return;
                         }
                         if (_currentStep == 1 && _consignorNameController.text.isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          ToastHelper.showSnackBarToast(context, 
                             const SnackBar(content: Text('Please add consignor')),
                           );
                           return;
                         }
                         if (_currentStep == 1 && _consigneeNameController.text.isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          ToastHelper.showSnackBarToast(context, 
                             const SnackBar(content: Text('Please add consignee')),
                           );
                           return;
@@ -1243,7 +1451,7 @@ class _CreateLRScreenState extends State<CreateLRScreen> {
                     },
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
-                      backgroundColor: const Color(0xFF2196F3),
+                      backgroundColor: AppColors.info,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
@@ -1254,9 +1462,8 @@ class _CreateLRScreenState extends State<CreateLRScreen> {
                         ? const SizedBox(
                             width: 20,
                             height: 20,
-                            child: CircularProgressIndicator(
+                            child: AppLoader(
                               strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                             ),
                           )
                         : Text(
@@ -1276,3 +1483,5 @@ class _CreateLRScreenState extends State<CreateLRScreen> {
     );
   }
 }
+
+

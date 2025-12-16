@@ -1,5 +1,7 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:transport_book_app/utils/appbar.dart';
 import '../../../services/api_service.dart';
 import '../../../utils/app_colors.dart';
 import 'invoice_pdf_screen.dart';
@@ -51,9 +53,100 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
       case 'Pending':
         return Colors.orange;
       case 'Partially Paid':
-        return Colors.blue;
+        return AppColors.info;
       default:
         return Colors.grey;
+    }
+  }
+
+  Future<void> _sendWhatsAppReminder() async {
+    if (_invoice == null) return;
+
+    final partyName = _invoice!['partyName']?.toString() ?? '';
+    final partyPhone = _invoice!['partyPhone']?.toString() ?? '';
+    final invoiceNumber = _invoice!['invoiceNumber']?.toString() ?? '';
+    final balanceAmount = (_invoice!['balanceAmount'] ?? 0.0) as num;
+    final dueDate = _invoice!['dueDate']?.toString() ?? '';
+
+    // Format the balance amount
+    final formattedBalance = NumberFormat.currency(
+      locale: 'en_IN',
+      symbol: '₹',
+      decimalDigits: 0,
+    ).format(balanceAmount);
+
+    // Format due date if available
+    String formattedDueDate = '';
+    if (dueDate.isNotEmpty) {
+      try {
+        final date = DateTime.parse(dueDate);
+        formattedDueDate = DateFormat('dd MMM yyyy').format(date);
+      } catch (e) {
+        formattedDueDate = dueDate;
+      }
+    }
+
+    // Build reminder message
+    final message = '''
+Dear $partyName,
+
+This is a friendly reminder regarding your pending payment.
+
+Invoice No: $invoiceNumber
+Outstanding Amount: $formattedBalance
+${formattedDueDate.isNotEmpty ? 'Due Date: $formattedDueDate' : ''}
+
+Kindly arrange the payment at your earliest convenience.
+
+Thank you for your business!
+
+Regards,
+TMS Book
+''';
+
+    // Clean phone number (remove spaces, dashes, etc.)
+    String cleanPhone = partyPhone.replaceAll(RegExp(r'[^\d+]'), '');
+
+    // Add country code if not present
+    if (!cleanPhone.startsWith('+')) {
+      if (cleanPhone.startsWith('0')) {
+        cleanPhone = '+91${cleanPhone.substring(1)}';
+      } else if (!cleanPhone.startsWith('91')) {
+        cleanPhone = '+91$cleanPhone';
+      } else {
+        cleanPhone = '+$cleanPhone';
+      }
+    }
+
+    // Encode message for URL
+    final encodedMessage = Uri.encodeComponent(message.trim());
+
+    // Try WhatsApp URL
+    final whatsappUrl = 'https://wa.me/$cleanPhone?text=$encodedMessage';
+
+    try {
+      final uri = Uri.parse(whatsappUrl);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Could not open WhatsApp. Please check if WhatsApp is installed.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error opening WhatsApp: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -61,22 +154,18 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return Scaffold(
-        appBar: AppBar(
-          backgroundColor: AppColors.appBarColor,
-          foregroundColor: AppColors.appBarTextColor,
-          title: const Text('Invoice Details'),
-        ),
+        appBar: CustomAppBar(title: "Invoice Detail",onBack: () {
+          Navigator.pop(context);
+        },),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
 
     if (_invoice == null) {
       return Scaffold(
-        appBar: AppBar(
-          backgroundColor: AppColors.appBarColor,
-          foregroundColor: AppColors.appBarTextColor,
-          title: const Text('Invoice Details'),
-        ),
+        appBar: CustomAppBar(title: "Invoice Detail",onBack: () {
+          Navigator.pop(context);
+        },),
         body: const Center(child: Text('Invoice not found')),
       );
     }
@@ -97,36 +186,9 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        backgroundColor: AppColors.appBarColor,
-        foregroundColor: AppColors.appBarTextColor,
-        title: Text(
-          '$invoiceNumber | $formattedDate',
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-        ),
-        actions: [
-          OutlinedButton(
-            onPressed: () {
-              // TODO: Navigate to edit invoice screen
-            },
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.blue,
-              side: const BorderSide(color: Colors.blue),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            child: const Text('Edit'),
-          ),
-          const SizedBox(width: 8),
-          IconButton(
-            icon: const Icon(Icons.more_vert),
-            onPressed: () {
-              // TODO: Show more options
-            },
-          ),
-        ],
-      ),
+      appBar: CustomAppBar(title: "$invoiceNumber | $formattedDate",onBack: () {
+        Navigator.pop(context);
+      },),
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -145,8 +207,8 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
                           _invoice!['partyName']?.toString() ?? '',
                           style: const TextStyle(
                             fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimary,
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -154,24 +216,23 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
                           _invoice!['partyPhone']?.toString() ?? '',
                           style: TextStyle(
                             fontSize: 14,
-                            color: Colors.grey[600],
+                            color: AppColors.textSecondary,
                           ),
                         ),
                       ],
                     ),
                   ),
-                  OutlinedButton(
-                    onPressed: () {
-                      // TODO: Send reminder
-                    },
+                  OutlinedButton.icon(
+                    onPressed: _sendWhatsAppReminder,
+                    icon: const Icon(Icons.message, size: 18),
+                    label: const Text('Send Reminder'),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFF2E8B57),
-                      side: const BorderSide(color: Color(0xFF2E8B57)),
+                      foregroundColor: AppColors.primaryGreen,
+                      side: const BorderSide(color: AppColors.primaryGreen),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
-                    child: const Text('Send Reminder'),
                   ),
                 ],
               ),
@@ -193,12 +254,17 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
 
             // Financial Breakdown Section
             Container(
-              color: Colors.white,
+              color:AppColors.textWhite,
               child: Column(
                 children: [
                   _buildFinancialRow('Taxable Amount', totalAmount, false),
+                  SizedBox(height: 20,),
                   _buildFinancialRow('Total Invoice Value', totalAmount, true, isHighlighted: true),
+                  SizedBox(height: 20,),
+
                   if (paidAmount > 0) _buildPaymentRow(),
+                  SizedBox(height: 20,),
+
                   _buildFinancialRow('Total Balance', balanceAmount, true, isBalance: true),
                 ],
               ),
@@ -232,8 +298,8 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
             );
           },
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF2E8B57),
-            foregroundColor: Colors.white,
+            backgroundColor:AppColors.primaryGreen,
+            foregroundColor: AppColors.primaryGreen,
             minimumSize: const Size(double.infinity, 50),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8),
@@ -241,7 +307,7 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
           ),
           child: const Text(
             'View PDF',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600,color: AppColors.textWhite),
           ),
         ),
       ),
@@ -280,8 +346,8 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
                         origin,
                         style: const TextStyle(
                           fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
                         ),
                       ),
                       const Padding(
@@ -292,8 +358,8 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
                         destination,
                         style: const TextStyle(
                           fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
                         ),
                       ),
                     ],
@@ -303,8 +369,8 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
                   '₹${amount.toStringAsFixed(0)}',
                   style: const TextStyle(
                     fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
                   ),
                 ),
               ],
@@ -316,7 +382,7 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
                   formattedDate,
                   style: TextStyle(
                     fontSize: 14,
-                    color: Colors.grey[600],
+                    color:AppColors.textSecondary,
                   ),
                 ),
                 if (truckNumber.isNotEmpty) ...[
@@ -349,10 +415,10 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
 
   Widget _buildFinancialRow(String label, double amount, bool isBold, {bool isHighlighted = false, bool isBalance = false}) {
     Color? bgColor;
-    Color textColor = Colors.black87;
+    Color textColor = AppColors.textPrimary;
 
     if (isHighlighted) {
-      bgColor = Colors.blueGrey[100];
+      bgColor = AppColors.info.withOpacity(0.1);
     } else if (isBalance) {
       bgColor = amount == 0 ? Colors.green.shade50 : Colors.red.shade50;
       textColor = amount == 0 ? Colors.green.shade700 : Colors.red.shade700;
@@ -375,8 +441,8 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
           Text(
             '₹${amount.toStringAsFixed(0)}',
             style: TextStyle(
-              fontSize: isBold ? 18 : 16,
-              fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
+              fontSize: isBold ? 16 : 14,
+              fontWeight: isBold ? FontWeight.w600 : FontWeight.w400,
               color: textColor,
             ),
           ),
@@ -411,7 +477,7 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.normal,
-                  color: Colors.black87,
+                  color: AppColors.textPrimary,
                 ),
               ),
               if (formattedDate.isNotEmpty) ...[
@@ -420,7 +486,7 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
                   width: 6,
                   height: 6,
                   decoration: const BoxDecoration(
-                    color: Colors.grey,
+                    color: AppColors.textSecondary,
                     shape: BoxShape.circle,
                   ),
                 ),
@@ -429,7 +495,7 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
                   formattedDate,
                   style: TextStyle(
                     fontSize: 14,
-                    color: Colors.grey[600],
+                    color:AppColors.textSecondary,
                   ),
                 ),
               ],
@@ -440,7 +506,7 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
-              color: Colors.black87,
+              color: AppColors.textSecondary,
             ),
           ),
         ],

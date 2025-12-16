@@ -1,7 +1,13 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:transport_book_app/utils/appbar.dart';
+import 'package:transport_book_app/utils/custom_button.dart';
+import 'package:transport_book_app/utils/custom_dropdown.dart';
+import 'package:transport_book_app/utils/custom_textfield.dart';
 import '../../../services/api_service.dart';
 import '../../../utils/app_colors.dart';
+import 'package:transport_book_app/utils/toast_helper.dart';
 
 class AddMyExpenseScreen extends StatefulWidget {
   final String category; // 'truck_expense', 'trip_expense', 'office_expense'
@@ -23,6 +29,7 @@ class _AddMyExpenseScreenState extends State<AddMyExpenseScreen> {
   String? _selectedExpenseType;
   String? _selectedTruckNumber;
   int? _selectedTripId;
+  int? _selectedShopId;
   String _selectedPaymentMode = 'Cash';
   DateTime _selectedDate = DateTime.now();
 
@@ -31,21 +38,10 @@ class _AddMyExpenseScreenState extends State<AddMyExpenseScreen> {
 
   List<dynamic> _trucks = [];
   List<dynamic> _trips = [];
+  List<dynamic> _shops = [];
+  List<Map<String, dynamic>> _expenseTypes = [];
   bool _isLoading = false;
-
-  // Expense types based on category
-  List<String> _getExpenseTypes() {
-    switch (widget.category) {
-      case 'truck_expense':
-        return ['Fuel Expense', 'Servicing', 'Maintenance', 'Tyre', 'Insurance', 'Other'];
-      case 'trip_expense':
-        return ['Toll', 'Loading', 'Unloading', 'Detention', 'Other'];
-      case 'office_expense':
-        return ['Salary', 'Rent', 'Electricity', 'Internet', 'Stationery', 'Other'];
-      default:
-        return ['Other'];
-    }
-  }
+  bool _isLoadingExpenseTypes = true;
 
   String _getScreenTitle() {
     final isEditing = widget.expense != null;
@@ -64,26 +60,24 @@ class _AddMyExpenseScreenState extends State<AddMyExpenseScreen> {
   @override
   void initState() {
     super.initState();
+    _loadExpenseTypes();
 
     // If editing, populate fields with existing data
     if (widget.expense != null) {
       _amountController.text = widget.expense!['amount']?.toString() ?? '';
       _noteController.text = widget.expense!['note']?.toString() ?? '';
-
-      // Validate expense type exists in dropdown list before setting
-      String? expenseTypeFromDb = widget.expense!['expenseType'];
-      List<String> validTypes = _getExpenseTypes();
-      if (expenseTypeFromDb != null && validTypes.contains(expenseTypeFromDb)) {
-        _selectedExpenseType = expenseTypeFromDb;
-      } else {
-        // Default to 'Other' if the value doesn't exist in the dropdown list
-        _selectedExpenseType = validTypes.contains('Other') ? 'Other' : null;
-        print('Warning: Expense type "$expenseTypeFromDb" not found in valid types for ${widget.category}. Defaulting to "Other".');
-      }
-
+      _selectedExpenseType = widget.expense!['expenseType'];
       _selectedPaymentMode = widget.expense!['paymentMode']?.toString() ?? 'Cash';
       _selectedTruckNumber = widget.expense!['truckNumber'];
       _selectedTripId = widget.expense!['tripId'];
+
+      // Parse shopId - handle both int and string
+      final shopIdValue = widget.expense!['shopId'];
+      if (shopIdValue != null) {
+        _selectedShopId = shopIdValue is int ? shopIdValue : int.tryParse(shopIdValue.toString());
+      }
+
+      print('DEBUG Edit: paymentMode=$_selectedPaymentMode, shopId=$_selectedShopId');
 
       // Parse date
       if (widget.expense!['date'] != null) {
@@ -97,9 +91,162 @@ class _AddMyExpenseScreenState extends State<AddMyExpenseScreen> {
 
     if (widget.category == 'truck_expense') {
       _loadTrucks();
+      _loadShops(); // Always load shops for truck expenses
     } else if (widget.category == 'trip_expense') {
       _loadTrips();
     }
+  }
+
+  Future<void> _loadShops() async {
+    try {
+      final shops = await ApiService.getShops();
+      if (mounted) {
+        setState(() {
+          _shops = shops;
+        });
+        print('DEBUG: Loaded ${shops.length} shops, selectedShopId=$_selectedShopId');
+      }
+    } catch (e) {
+      print('Error loading shops: $e');
+    }
+  }
+
+  Future<void> _loadExpenseTypes() async {
+    try {
+      final types = await ApiService.getExpenseTypes();
+      if (mounted) {
+        setState(() {
+          _expenseTypes = types;
+          _isLoadingExpenseTypes = false;
+        });
+      }
+    } catch (e) {
+      print('Error loading expense types: $e');
+      if (mounted) {
+        setState(() => _isLoadingExpenseTypes = false);
+      }
+    }
+  }
+
+  void _showExpenseTypePickerDialog() {
+    String searchQuery = '';
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          final filteredTypes = _expenseTypes.where((type) {
+            final name = type['name']?.toString().toLowerCase() ?? '';
+            return name.contains(searchQuery.toLowerCase());
+          }).toList();
+
+          return AlertDialog(
+            title: const Text('Select Expense Type'),
+            content: SizedBox(
+              width: double.maxFinite,
+              height: 400,
+              child: Column(
+                children: [
+                  TextField(
+                    decoration: const InputDecoration(
+                      hintText: 'Search expense type...',
+                      prefixIcon: Icon(Icons.search),
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: (value) {
+                      setDialogState(() => searchQuery = value);
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  // Add new expense type option
+                  ListTile(
+                    leading: const CircleAvatar(
+                      backgroundColor: AppColors.primaryGreen,
+                      child: Icon(Icons.add, color: Colors.white),
+                    ),
+                    title: const Text('Add New Expense Type'),
+                    onTap: () => _showAddExpenseTypeDialog(setDialogState),
+                  ),
+                  const Divider(),
+                  Expanded(
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: filteredTypes.length,
+                      itemBuilder: (context, index) {
+                        final type = filteredTypes[index];
+                        return ListTile(
+                          title: Text(type['name'] ?? ''),
+                          onTap: () {
+                            setState(() => _selectedExpenseType = type['name']);
+                            Navigator.pop(context);
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  void _showAddExpenseTypeDialog(StateSetter setDialogState) {
+    final controller = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add New Expense Type'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            hintText: 'Enter expense type name',
+            border: OutlineInputBorder(),
+          ),
+          textCapitalization: TextCapitalization.words,
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (controller.text.trim().isEmpty) return;
+
+              final result = await ApiService.addExpenseType(controller.text.trim());
+              if (result != null && mounted) {
+                // Extract expense type from response
+                final expenseType = result['expenseType'] ?? result;
+                // Add to local list and select it
+                setState(() {
+                  _expenseTypes.add(expenseType);
+                  _selectedExpenseType = expenseType['name'];
+                });
+                setDialogState(() {}); // Refresh dialog list
+                Navigator.pop(context); // Close add dialog
+                Navigator.pop(context); // Close picker dialog
+                ToastHelper.showSnackBarToast(context,
+                  const SnackBar(content: Text('Expense type added successfully')),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryGreen),
+            child: const Text('Add', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -150,16 +297,25 @@ class _AddMyExpenseScreenState extends State<AddMyExpenseScreen> {
       return;
     }
 
+    // Validate expense type is selected
+    if (_selectedExpenseType == null) {
+      ToastHelper.showSnackBarToast(context,
+        const SnackBar(content: Text('Please select expense type')),
+      );
+      return;
+    }
+
     // Validate category-specific fields
     if (widget.category == 'truck_expense' && _selectedTruckNumber == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         const SnackBar(content: Text('Please select a truck')),
       );
       return;
     }
 
+    print('widget.category ${widget.category} _selectedTripId ${_selectedTripId}');
     if (widget.category == 'trip_expense' && _selectedTripId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ToastHelper.showSnackBarToast(context, 
         const SnackBar(content: Text('Please select a trip')),
       );
       return;
@@ -185,6 +341,10 @@ class _AddMyExpenseScreenState extends State<AddMyExpenseScreen> {
         if (_selectedTripId != null) {
           expenseData['tripId'] = _selectedTripId;
         }
+        // Include shopId for Credit payment mode
+        if (_selectedPaymentMode == 'Credit' && _selectedShopId != null) {
+          expenseData['shopId'] = _selectedShopId;
+        }
         if (_noteController.text.isNotEmpty) {
           expenseData['note'] = _noteController.text;
         }
@@ -192,6 +352,9 @@ class _AddMyExpenseScreenState extends State<AddMyExpenseScreen> {
         result = await ApiService.updateMyExpense(widget.expense!['id'], expenseData);
       } else {
         // Add new expense
+        final shopIdToSend = _selectedPaymentMode == 'Credit' ? _selectedShopId : null;
+        print('DEBUG: Adding expense - paymentMode=$_selectedPaymentMode, shopId=$shopIdToSend');
+
         result = await ApiService.addMyExpense(
           category: widget.category,
           expenseType: _selectedExpenseType!,
@@ -200,6 +363,7 @@ class _AddMyExpenseScreenState extends State<AddMyExpenseScreen> {
           date: DateFormat('yyyy-MM-dd').format(_selectedDate),
           truckNumber: _selectedTruckNumber,
           tripId: _selectedTripId,
+          shopId: shopIdToSend,
           note: _noteController.text.isNotEmpty ? _noteController.text : null,
         );
       }
@@ -207,7 +371,7 @@ class _AddMyExpenseScreenState extends State<AddMyExpenseScreen> {
       setState(() => _isLoading = false);
 
       if (result != null && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ToastHelper.showSnackBarToast(context, 
           SnackBar(
             content: Text(widget.expense != null ? 'Expense updated successfully' : 'Expense added successfully'),
             backgroundColor: Colors.green,
@@ -216,7 +380,7 @@ class _AddMyExpenseScreenState extends State<AddMyExpenseScreen> {
         Navigator.pop(context, true); // Return true to indicate success
       } else {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
+          ToastHelper.showSnackBarToast(context, 
             SnackBar(
               content: Text(widget.expense != null ? 'Failed to update expense' : 'Failed to add expense'),
               backgroundColor: Colors.red,
@@ -227,7 +391,7 @@ class _AddMyExpenseScreenState extends State<AddMyExpenseScreen> {
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ToastHelper.showSnackBarToast(context, 
           SnackBar(
             content: Text('Error: $e'),
             backgroundColor: Colors.red,
@@ -241,298 +405,244 @@ class _AddMyExpenseScreenState extends State<AddMyExpenseScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: AppColors.appBarColor,
-        foregroundColor: AppColors.appBarTextColor,
-        title: Text(_getScreenTitle()),
-        elevation: 0,
+      appBar: CustomAppBar(
+        title: _getScreenTitle(), onBack: () {
+        Navigator.pop(context);
+      },
       ),
       body: Form(
         key: _formKey,
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            // Expense Type dropdown
-            DropdownButtonFormField<String>(
-              value: _selectedExpenseType,
-              decoration: InputDecoration(
-                labelText: 'Expense Type',
-                border: OutlineInputBorder(
+
+            // ---------------- EXPENSE TYPE ----------------
+            const Text(
+              "Expense Type",
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            GestureDetector(
+              onTap: _isLoadingExpenseTypes ? null : _showExpenseTypePickerDialog,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey.shade300),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                filled: true,
-                fillColor: Colors.grey[50],
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-              ),
-              items: _getExpenseTypes().map((type) {
-                return DropdownMenuItem(
-                  value: type,
-                  child: Text(type),
-                );
-              }).toList(),
-              onChanged: (value) {
-                setState(() {
-                  _selectedExpenseType = value;
-                });
-              },
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please select expense type';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-
-            // Truck Number dropdown (for truck expenses)
-            if (widget.category == 'truck_expense') ...[
-              DropdownButtonFormField<String>(
-                value: _selectedTruckNumber,
-                decoration: InputDecoration(
-                  labelText: 'Truck No.',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  filled: true,
-                  fillColor: Colors.grey[50],
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                ),
-                items: _trucks.map<DropdownMenuItem<String>>((truck) {
-                  return DropdownMenuItem<String>(
-                    value: truck['number'] as String,
-                    child: Text(truck['number'] as String),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _selectedTruckNumber = value;
-                  });
-                },
-              ),
-              const SizedBox(height: 16),
-            ],
-
-            // Trip dropdown (for trip expenses)
-            if (widget.category == 'trip_expense') ...[
-              DropdownButtonFormField<int>(
-                value: _selectedTripId,
-                decoration: InputDecoration(
-                  labelText: 'Trip',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  filled: true,
-                  fillColor: Colors.grey[50],
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                ),
-                items: _trips.map<DropdownMenuItem<int>>((trip) {
-                  return DropdownMenuItem<int>(
-                    value: trip['id'] as int,
-                    child: Text('${trip['truckNumber']} - ${trip['origin']} to ${trip['destination']}'),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _selectedTripId = value;
-                  });
-                },
-              ),
-              const SizedBox(height: 16),
-            ],
-
-            // Expense Amount
-            TextFormField(
-              controller: _amountController,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                labelText: 'Expense Amount',
-                prefixText: '₹ ',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                filled: true,
-                fillColor: Colors.grey[50],
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-              ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter amount';
-                }
-                if (double.tryParse(value) == null) {
-                  return 'Please enter valid amount';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-
-            // Payment Mode
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Payment Mode',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.black87,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Row(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Expanded(
-                      child: ChoiceChip(
-                        label: const Text('Cash'),
-                        selected: _selectedPaymentMode == 'Cash',
-                        onSelected: (selected) {
-                          if (selected) {
-                            setState(() => _selectedPaymentMode = 'Cash');
-                          }
-                        },
-                        selectedColor: const Color(0xFFE3F2FD),
-                        side: BorderSide(
-                          color: _selectedPaymentMode == 'Cash' ? const Color(0xFF2196F3) : Colors.grey[300]!,
-                          width: 2,
-                        ),
-                        backgroundColor: Colors.grey[200],
-                        labelStyle: TextStyle(
-                          color: _selectedPaymentMode == 'Cash' ? const Color(0xFF2196F3) : Colors.black87,
-                          fontWeight: FontWeight.w500,
-                        ),
+                    Text(
+                      _isLoadingExpenseTypes
+                          ? 'Loading...'
+                          : (_selectedExpenseType ?? 'Select Expense Type'),
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: _selectedExpenseType != null ? Colors.black : Colors.grey,
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ChoiceChip(
-                        label: const Text('Credit'),
-                        selected: _selectedPaymentMode == 'Credit',
-                        onSelected: (selected) {
-                          if (selected) {
-                            setState(() => _selectedPaymentMode = 'Credit');
-                          }
-                        },
-                        selectedColor: const Color(0xFFE3F2FD),
-                        side: BorderSide(
-                          color: _selectedPaymentMode == 'Credit' ? const Color(0xFF2196F3) : Colors.grey[300]!,
-                          width: 2,
-                        ),
-                        backgroundColor: Colors.grey[200],
-                        labelStyle: TextStyle(
-                          color: _selectedPaymentMode == 'Credit' ? const Color(0xFF2196F3) : Colors.black87,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ChoiceChip(
-                        label: const Text('Online'),
-                        selected: _selectedPaymentMode == 'Online',
-                        onSelected: (selected) {
-                          if (selected) {
-                            setState(() => _selectedPaymentMode = 'Online');
-                          }
-                        },
-                        selectedColor: const Color(0xFFE3F2FD),
-                        side: BorderSide(
-                          color: _selectedPaymentMode == 'Online' ? const Color(0xFF2196F3) : Colors.grey[300]!,
-                          width: 2,
-                        ),
-                        backgroundColor: Colors.grey[200],
-                        labelStyle: TextStyle(
-                          color: _selectedPaymentMode == 'Online' ? const Color(0xFF2196F3) : Colors.black87,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
+                    Icon(Icons.arrow_drop_down, color: Colors.grey.shade600),
                   ],
                 ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // ---------------- TRUCK NUMBER (IF TRUCK EXPENSE) ----------------
+            if (widget.category == 'truck_expense') ...[
+              CustomDropdown(
+                label: "Truck No.",
+                value: _selectedTruckNumber,
+                items: _trucks.map<String>((t) => t['number']).toList(),
+                onChanged: (value) {
+                  setState(() => _selectedTruckNumber = value);
+                },
+              ),
+              const SizedBox(height: 16),
+            ],
+
+            // ---------------- TRIP LIST (IF TRIP EXPENSE) ----------------
+            if (widget.category == 'trip_expense') ...[
+              CustomDropdown(
+                label: "Trip",
+                value: _selectedTripId?.toString(),
+                items: _trips
+                    .map<String>((trip) =>
+                "${trip['id']} | ${trip['truckNumber']} - ${trip['origin']} to ${trip['destination']}")
+                    .toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _selectedTripId = int.tryParse(value ?? "");
+                  });
+                },
+              ),
+              const SizedBox(height: 16),
+            ],
+
+            // ---------------- AMOUNT ----------------
+            CustomTextField(
+              label: "Expense Amount",
+              controller: _amountController,
+              keyboard: TextInputType.number,
+              hint: "Enter amount",
+              suffix: const Icon(Icons.currency_rupee, size: 18),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
               ],
             ),
             const SizedBox(height: 16),
 
-            // Expense Date
+            // ---------------- PAYMENT MODE ----------------
+            const Text(
+              "Payment Mode",
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            Row(
+              children: [
+                _buildPaymentChip("Cash"),
+                const SizedBox(width: 10),
+                _buildPaymentChip("Credit"),
+                const SizedBox(width: 10),
+                _buildPaymentChip("Online"),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // ---------------- SHOP DROPDOWN (IF CREDIT PAYMENT FOR TRUCK EXPENSE) ----------------
+            if (widget.category == 'truck_expense' && _selectedPaymentMode == 'Credit') ...[
+              const Text(
+                "Select Shop",
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey.shade300),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<int?>(
+                    isExpanded: true,
+                    value: _shops.any((s) => s['id'] == _selectedShopId) ? _selectedShopId : null,
+                    hint: const Text('Select Shop'),
+                    items: [
+                      const DropdownMenuItem<int?>(
+                        value: null,
+                        child: Text('No Shop'),
+                      ),
+                      ..._shops.map<DropdownMenuItem<int?>>((shop) {
+                        final shopId = shop['id'] is int ? shop['id'] : int.tryParse(shop['id'].toString());
+                        return DropdownMenuItem<int?>(
+                          value: shopId,
+                          child: Text(shop['name'] ?? 'Unknown Shop'),
+                        );
+                      }).toList(),
+                    ],
+                    onChanged: (value) {
+                      print('DEBUG: Shop selected - id=$value');
+                      setState(() => _selectedShopId = value);
+                    },
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+
+            // ---------------- DATE PICKER ----------------
             GestureDetector(
               onTap: () => _selectDate(context),
               child: AbsorbPointer(
-                child: TextFormField(
-                  decoration: InputDecoration(
-                    labelText: 'Expense Date',
-                    hintText: DateFormat('dd MMM yyyy').format(_selectedDate),
-                    suffixIcon: const Icon(Icons.calendar_today),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    filled: true,
-                    fillColor: Colors.grey[50],
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                  ),
+                child: CustomTextField(
+                  label: "Expense Date",
                   controller: TextEditingController(
                     text: DateFormat('dd MMM yyyy').format(_selectedDate),
                   ),
+                  readOnly: true,
+                  suffix: const Icon(Icons.calendar_today),
                 ),
               ),
             ),
             const SizedBox(height: 16),
 
-            // Note
-            TextFormField(
+            // ---------------- NOTE ----------------
+            CustomTextField(
+              label: "Note",
+              hint: "Add any additional notes",
               controller: _noteController,
               maxLines: 4,
-              decoration: InputDecoration(
-                labelText: 'Note',
-                hintText: 'Add any additional notes',
-                alignLabelWithHint: true,
-                prefixIcon: const Padding(
-                  padding: EdgeInsets.only(bottom: 60),
-                  child: Icon(Icons.subject),
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                filled: true,
-                fillColor: Colors.grey[50],
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-              ),
             ),
             const SizedBox(height: 24),
 
-            // Confirm button
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                onPressed: _isLoading ? null : _submitExpense,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF2196F3),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  disabledBackgroundColor: Colors.grey[400],
-                ),
-                child: _isLoading
-                    ? const SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2,
-                        ),
-                      )
-                    : const Text(
-                        'Confirm',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-              ),
+            // ---------------- CONFIRM BUTTON ----------------
+            CustomButton(
+              text: _isLoading ? "Please wait..." : "Confirm",
+              onPressed: _isLoading ? () {} : _submitExpense,
             ),
           ],
         ),
+      ));
+
+
+
+
+  }
+
+  Widget _buildPaymentChip(String mode) {
+    bool selected = _selectedPaymentMode == mode;
+
+    return SizedBox(
+      height: 48, // better height for a clean pill look
+      child: ChoiceChip(
+        label: Text(
+          mode,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: selected ? AppColors.info : Colors.black87,
+          ),
+        ),
+
+        selected: selected,
+        selectedColor: const Color(0xFFE3F2FD),
+        backgroundColor: Colors.grey[200],
+
+        // ðŸ”¥ MAIN CHANGE â†’ Circular pill shape (radius 14)
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: BorderSide(
+            color: selected ? AppColors.info : Colors.grey!,
+            width: 1,
+          ),
+        ),
+
+        // Tap Handling
+        onSelected: (val) {
+          if (val) {
+            setState(() {
+              _selectedPaymentMode = mode;
+              // Clear shop selection when payment mode changes from Credit
+              if (mode != 'Credit') {
+                _selectedShopId = null;
+              }
+            });
+          }
+        },
       ),
     );
   }
+
 }
+
