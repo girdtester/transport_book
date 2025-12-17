@@ -361,35 +361,19 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                       const SizedBox(height: 16),
 
                       // ------------------ RESEND OTP ------------------
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          TextButton(
-                            onPressed:
-                                _canResend && !_isLoading ? _resendOTP : null,
-                            child: Text(
-                              "Resend OTP",
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: _canResend
-                                    ? AppColors.primaryGreen
-                                    : Colors.grey,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
+                      TextButton(
+                        onPressed:
+                            _canResend && !_isLoading ? _resendOTP : null,
+                        child: Text(
+                          "Resend OTP",
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: _canResend
+                                ? AppColors.primaryGreen
+                                : Colors.grey,
+                            fontWeight: FontWeight.w600,
                           ),
-                          const Text("|",
-                              style:
-                                  TextStyle(fontSize: 14, color: Colors.grey)),
-                          TextButton(
-                            onPressed: () {},
-                            child: const Text(
-                              "Get OTP on Call",
-                              style:
-                                  TextStyle(fontSize: 14, color: Colors.grey),
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
 
                       const SizedBox(height: 20),
