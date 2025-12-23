@@ -73,12 +73,16 @@ class _DocumentsBookScreenState extends State<DocumentsBookScreen> {
       } catch (e) {}
     }
 
-    // Get image URL
+    // Get image URL (handle both Storj URLs and local files) - Same logic as documents_screen.dart
     String? imageUrl;
     if (doc['image_url'] != null) {
-      imageUrl = '${AppConstants.serverUrl}${doc['image_url']}';
+      final url = doc['image_url'].toString();
+      // If already a full URL (starts with http), use it directly, otherwise prepend server URL
+      imageUrl = url.startsWith('http') ? url : '${AppConstants.serverUrl}${url}';
     } else if (doc['image_path'] != null) {
-      imageUrl = '${AppConstants.serverUrl}/api/v1/documents/file/${doc['image_path']}';
+      final path = doc['image_path'].toString();
+      // If already a full URL (starts with http), use it directly, otherwise construct local URL
+      imageUrl = path.startsWith('http') ? path : '${AppConstants.serverUrl}/api/v1/documents/file/${path}';
     }
 
     showModalBottomSheet(
@@ -543,8 +547,10 @@ class _DocumentsBookScreenState extends State<DocumentsBookScreen> {
 
     if (confirm == true) {
       final docId = doc['id'] as int?;
+      print('DELETE DEBUG: doc=$doc, docId=$docId');
       if (docId != null) {
         final success = await ApiService.deleteDocument(docId);
+        print('DELETE DEBUG: success=$success');
         if (success) {
           await _loadDocuments();
           if (mounted) {
@@ -893,12 +899,16 @@ class _DocumentsBookScreenState extends State<DocumentsBookScreen> {
                               final expiryDate = doc['expiry_date'] ?? doc['expiryDate'];
                               final documentNumber = doc['document_number'] ?? doc['documentNumber'];
 
-                              // Get image URL
+                              // Get image URL (handle both Storj URLs and local files) - Same logic as documents_screen.dart
                               String? imageUrl;
                               if (doc['image_url'] != null) {
-                                imageUrl = '${AppConstants.serverUrl}${doc['image_url']}';
+                                final url = doc['image_url'].toString();
+                                // If already a full URL (starts with http), use it directly, otherwise prepend server URL
+                                imageUrl = url.startsWith('http') ? url : '${AppConstants.serverUrl}${url}';
                               } else if (doc['image_path'] != null) {
-                                imageUrl = '${AppConstants.serverUrl}/api/v1/documents/file/${doc['image_path']}';
+                                final path = doc['image_path'].toString();
+                                // If already a full URL (starts with http), use it directly, otherwise construct local URL
+                                imageUrl = path.startsWith('http') ? path : '${AppConstants.serverUrl}/api/v1/documents/file/${path}';
                               }
 
                               return Container(
